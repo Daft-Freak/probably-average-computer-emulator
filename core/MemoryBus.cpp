@@ -13,16 +13,16 @@ void MemoryBus::reset()
 
 }
 
-uint8_t MemoryBus::read(uint16_t addr) const
+uint8_t MemoryBus::read(uint32_t addr) const
 {
     return 0;
 }
 
-const uint8_t *MemoryBus::mapAddress(uint16_t addr) const
+const uint8_t *MemoryBus::mapAddress(uint32_t addr) const
 {
     return nullptr;
 }
 
-void MemoryBus::write(uint16_t addr, uint8_t data)
+void MemoryBus::write(uint32_t addr, uint8_t data)
 {
 }
