@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -11,6 +12,8 @@ static bool turbo = false;
 static CPU cpu;
 
 static uint16_t screenData[240 * 160];
+
+static uint8_t biosROM[0x2000];
 
 static void audioCallback(void *userdata, Uint8 *stream, int len)
 {
@@ -70,6 +73,20 @@ int main(int argc, char *argv[])
 
   
     // emu init
+
+    std::ifstream biosFile(basePath + "bios.rom", std::ios::binary);
+    if(biosFile)
+    {
+        biosFile.read(reinterpret_cast<char *>(biosROM), sizeof(biosROM));
+
+        cpu.getMem().setBIOSROM(biosROM);
+    }
+    else
+    {
+        std::cerr << "bios.rom not found in " << basePath << "\n";
+        return 1;
+    }
+
     cpu.reset();
 
     // SDL init
