@@ -18,27 +18,27 @@ private:
     enum class Reg8
     {
         AL = 0,
-        AH,
-        BL,
-        BH,
         CL,
-        CH,
         DL,
+        BL,
+        AH,
+        CH,
         DH,
+        BH,
     };
 
     enum class Reg16
     {
         AX = 0,
-        BX,
         CX,
         DX,
+        BX,
 
         // index registers
+        SP,
+        BP,
         SI,
         DI,
-        BP,
-        SP,
 
         // program counter
         IP,
@@ -63,8 +63,8 @@ private:
         Flag_O = (1 << 11),
     };
 
-    uint8_t reg(Reg8 r) const {return reinterpret_cast<const uint8_t *>(regs)[static_cast<int>(r)];}
-    uint8_t &reg(Reg8 r) {return reinterpret_cast<uint8_t *>(regs)[static_cast<int>(r)];}
+    uint8_t reg(Reg8 r) const {return reinterpret_cast<const uint8_t *>(regs)[((static_cast<int>(r) & 3) << 1) + (static_cast<int>(r) >> 2)];}
+    uint8_t &reg(Reg8 r) {return reinterpret_cast<uint8_t *>(regs)[((static_cast<int>(r) & 3) << 1) + (static_cast<int>(r) >> 2)];}
     uint16_t reg(Reg16 r) const {return regs[static_cast<int>(r)];}
     uint16_t &reg(Reg16 r) {return regs[static_cast<int>(r)];}
 
