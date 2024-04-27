@@ -44,10 +44,10 @@ private:
         IP,
 
         // segment registers
-        CS,
-        DS,
         ES,
+        CS,
         SS,
+        DS,
     };
 
     enum Flags
