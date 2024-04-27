@@ -70,7 +70,7 @@ private:
 
     void executeInstruction();
 
-    void cycleExecuted();
+    void cyclesExecuted(int cycles);
 
     static const uint32_t clockSpeed = 4772726;
 
