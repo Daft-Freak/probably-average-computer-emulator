@@ -120,6 +120,21 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x9E: // SAHF
+        {
+            auto mask = Flag_C | Flag_P | Flag_A | Flag_Z | Flag_S;
+            flags = (flags & ~mask) | (reg(Reg8::AH) & mask);
+            cyclesExecuted(4);
+            break;
+        }
+
+        case 0x9F: // LAHF
+        {
+            reg(Reg8::AH) = flags;
+            cyclesExecuted(4);
+            break;
+        }
+
         case 0xB0: // MOV imm -> reg8
         case 0xB1:
         case 0xB2:
@@ -243,6 +258,27 @@ void CPU::executeInstruction()
             cyclesExecuted(8);
             break;
         }
+
+        case 0xF8: // CLC
+        {
+            flags &= ~Flag_C;
+            cyclesExecuted(2);
+            break;
+        }
+        case 0xF9: // STC
+        {
+            flags |= Flag_C;
+            cyclesExecuted(2);
+            break;
+        }
+
+        case 0xFA: // CLI
+        {
+            flags &= ~Flag_I;
+            cyclesExecuted(2);
+            break;
+        }
+
 
         default:
             printf("op %x @%05x\n", (int)opcode, addr);
