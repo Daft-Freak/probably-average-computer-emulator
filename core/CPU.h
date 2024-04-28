@@ -13,6 +13,8 @@ public:
 
     void run(int ms);
 
+    uint32_t getCycleCount() const {return cycleCount;}
+
     MemoryBus &getMem() {return mem;}
 private:
     enum class Reg8
