@@ -152,6 +152,37 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xC3: // RET near
+        {
+            // pop from stack
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
+            auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+
+            reg(Reg16::IP) = newIP;
+            break;
+        }
+
+
+        case 0xE2: // LOOP
+        {
+            auto off = static_cast<int8_t>(mem.read(addr + 1));
+
+            uint16_t count = --reg(Reg16::CX);
+
+            if(count == 0)
+            {
+                // done
+                reg(Reg16::IP)++;
+                cyclesExecuted(5);
+            }
+            else
+            {
+                reg(Reg16::IP) = reg(Reg16::IP) + 1 + off;
+                cyclesExecuted(17);
+            }
+            break;
+        }
 
         case 0xE4: // IN AL from imm8
         {
@@ -175,6 +206,14 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xE9: // JMP near
+        {
+            auto off = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            reg(Reg16::IP) = reg(Reg16::IP) + 2 + off;
+            cyclesExecuted(15);
+            break;
+        }
         case 0xEA: // JMP far
         {
             auto newIP = mem.read(addr + 1) | mem.read(addr + 2) << 8;
