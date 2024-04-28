@@ -114,6 +114,38 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xB0: // MOV imm -> reg8
+        case 0xB1:
+        case 0xB2:
+        case 0xB3:
+        case 0xB4:
+        case 0xB5:
+        case 0xB6:
+        case 0xB7:
+        {
+            auto r = static_cast<Reg8>(opcode & 7);
+            reg(r) = mem.read(addr + 1);
+            reg(Reg16::IP)++;
+            cyclesExecuted(4);
+            break;
+        }
+
+        case 0xB8: // MOV imm -> reg16
+        case 0xB9:
+        case 0xBA:
+        case 0xBB:
+        case 0xBC:
+        case 0xBD:
+        case 0xBE:
+        case 0xBF:
+        {
+            auto r = static_cast<Reg16>(opcode & 7);
+            reg(r) = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(4);
+            break;
+        }
+
         case 0xEA: // JMP far
         {
             auto newIP = mem.read(addr + 1) | mem.read(addr + 2) << 8;
