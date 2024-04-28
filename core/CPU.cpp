@@ -114,6 +114,12 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x90: // NOP
+        {
+            cyclesExecuted(3);
+            break;
+        }
+
         case 0xB0: // MOV imm -> reg8
         case 0xB1:
         case 0xB2:
