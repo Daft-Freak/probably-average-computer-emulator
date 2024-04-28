@@ -17,6 +17,9 @@ public:
 
     const uint8_t *mapAddress(uint32_t addr) const;
 
+    uint8_t readIOPort(uint16_t addr);
+    void writeIOPort(uint16_t addr, uint8_t data);
+
 private:
     uint8_t ram[64 * 1024];
 

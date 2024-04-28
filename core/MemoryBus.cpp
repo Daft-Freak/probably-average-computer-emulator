@@ -34,6 +34,15 @@ const uint8_t *MemoryBus::mapAddress(uint32_t addr) const
     return nullptr;
 }
 
+uint8_t MemoryBus::readIOPort(uint16_t addr)
+{
+    return 0;
+}
+
+void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
+{
+}
+
 void MemoryBus::write(uint32_t addr, uint8_t data)
 {
     if(addr < 0x10000)

@@ -146,6 +146,29 @@ void CPU::executeInstruction()
             break;
         }
 
+
+        case 0xE4: // IN AL from imm8
+        {
+            auto port = mem.read(addr + 1);
+            reg(Reg8::AL) = mem.readIOPort(port);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(10);
+            break;
+        }
+
+        case 0xE6: // OUT AL to imm8
+        {
+            auto port = mem.read(addr + 1);
+            auto data = reg(Reg8::AL);
+
+            mem.writeIOPort(port, data);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(10);
+            break;
+        }
+
         case 0xEA: // JMP far
         {
             auto newIP = mem.read(addr + 1) | mem.read(addr + 2) << 8;
@@ -164,6 +187,18 @@ void CPU::executeInstruction()
             cyclesExecuted(15);
             break;
         }
+
+        case 0xEE: // OUT AL to DX
+        {
+            auto port = reg(Reg16::DX);
+            auto data = reg(Reg8::AL);
+
+            mem.writeIOPort(port, data);
+
+            cyclesExecuted(8);
+            break;
+        }
+
         default:
             printf("op %x @%05x\n", (int)opcode, addr);
             exit(1);
