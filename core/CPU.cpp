@@ -248,6 +248,16 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xEC: // IN AL from DX
+        {
+            auto port = reg(Reg16::DX);
+
+            reg(Reg8::AL) = mem.readIOPort(port);
+
+            cyclesExecuted(8);
+            break;
+        }
+
         case 0xEE: // OUT AL to DX
         {
             auto port = reg(Reg16::DX);
