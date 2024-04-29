@@ -98,6 +98,80 @@ void CPU::executeInstruction()
 
     switch(opcode)
     {
+        case 0x06: // PUSH seg
+        case 0x0E:
+        case 0x16:
+        case 0x1E:
+        {
+            auto r = static_cast<Reg16>(((opcode >> 3) & 7) + static_cast<int>(Reg16::ES));
+
+            reg(Reg16::SP) -= 2;
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            mem.write(stackAddr, reg(r) & 0xFF);
+            mem.write(stackAddr + 1, reg(r) >> 8);
+
+            cyclesExecuted(10 + 4);
+            break;
+        }
+
+        case 0x07: // POP seg
+        // 0x0F (CS) illegal
+        case 0x17:
+        case 0x1F:
+        {
+            auto r = static_cast<Reg16>(((opcode >> 3) & 7) + static_cast<int>(Reg16::ES));
+
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            reg(r) = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+            reg(Reg16::SP) += 2;
+
+            cyclesExecuted(8 + 4);
+            break;
+        }
+
+        case 0x50: // PUSH
+        case 0x51:
+        case 0x52:
+        case 0x53:
+        case 0x54:
+        case 0x55:
+        case 0x56:
+        case 0x57:
+        {
+            auto r = static_cast<Reg16>(opcode & 7);
+
+            reg(Reg16::SP) -= 2;
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            mem.write(stackAddr, reg(r) & 0xFF);
+            mem.write(stackAddr + 1, reg(r) >> 8);
+
+            cyclesExecuted(11 + 4);
+            break;
+        }
+
+        case 0x58: // POP
+        case 0x59:
+        case 0x5A:
+        case 0x5B:
+        case 0x5C:
+        case 0x5D:
+        case 0x5E:
+        case 0x5F:
+        {
+            auto r = static_cast<Reg16>(opcode & 7);
+
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            reg(r) = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+            reg(Reg16::SP) += 2;
+
+            cyclesExecuted(8 + 4);
+            break;
+        }
+
         case 0x70: // JO
         case 0x71: // JNO
         case 0x72: // JB/JNAE
@@ -117,6 +191,28 @@ void CPU::executeInstruction()
         case 0x90: // NOP
         {
             cyclesExecuted(3);
+            break;
+        }
+
+        case 0x9C: // PUSHF
+        {
+            reg(Reg16::SP) -= 2;
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            mem.write(stackAddr, flags & 0xFF);
+            mem.write(stackAddr + 1, flags >> 8);
+
+            cyclesExecuted(10 + 4);
+            break;
+        }
+        case 0x9D: // POPF
+        {
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            flags = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+            reg(Reg16::SP) += 2;
+
+            cyclesExecuted(8 + 4);
             break;
         }
 
