@@ -281,14 +281,30 @@ void CPU::executeInstruction()
             cyclesExecuted(2);
             break;
         }
-
         case 0xFA: // CLI
         {
             flags &= ~Flag_I;
             cyclesExecuted(2);
             break;
         }
-
+        case 0xFB: // STI
+        {
+            flags |= Flag_I;
+            cyclesExecuted(2);
+            break;
+        }
+        case 0xFC: // CLD
+        {
+            flags &= ~Flag_D;
+            cyclesExecuted(2);
+            break;
+        }
+        case 0xFD: // STD
+        {
+            flags |= Flag_D;
+            cyclesExecuted(2);
+            break;
+        }
 
         default:
             printf("op %x @%05x\n", (int)opcode, addr);
