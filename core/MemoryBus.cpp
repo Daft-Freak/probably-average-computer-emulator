@@ -38,6 +38,41 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
 {
     switch(addr)
     {
+        case 0x00: // DMA channel 0 addr
+        case 0x02: // DMA channel 1 addr
+        case 0x04: // DMA channel 2 addr
+        case 0x06: // DMA channel 3 addr
+        {
+            int channel = addr / 2;
+
+            uint8_t ret;
+            if(dma.flipFlop)
+                ret = dma.currentAddress[channel] >> 8;
+            else
+                ret = dma.currentAddress[channel] & 0xFF;
+
+            dma.flipFlop = !dma.flipFlop;
+
+            return ret;
+        }
+        case 0x01: // DMA channel 0 word count
+        case 0x03: // DMA channel 1 word count
+        case 0x05: // DMA channel 2 word count
+        case 0x07: // DMA channel 3 word count
+        {
+            int channel = addr / 2;
+
+            uint8_t ret;
+            if(dma.flipFlop)
+                ret = dma.currentWordCount[channel] >> 8;
+            else
+                ret = dma.currentWordCount[channel] & 0xFF;
+
+            dma.flipFlop = !dma.flipFlop;
+
+            return ret;
+        }
+    
         case 0x40: // PIT counter 0
         case 0x41: // PIT counter 1
         case 0x42: // PIT counter 2
@@ -81,6 +116,55 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
 {
     switch(addr)
     {
+        case 0x00: // DMA channel 0 addr
+        case 0x02: // DMA channel 1 addr
+        case 0x04: // DMA channel 2 addr
+        case 0x06: // DMA channel 3 addr
+        {
+            int channel = addr / 2;
+
+            if(dma.flipFlop)
+                dma.currentAddress[channel] = dma.baseAddress[channel] = (dma.baseAddress[channel] & 0xFF) | data << 8;
+            else
+                dma.baseAddress[channel] = (dma.baseAddress[channel] & 0xFF00) | data;
+
+            dma.flipFlop = !dma.flipFlop;
+            break;
+        }
+
+        case 0x01: // DMA channel 0 word count
+        case 0x03: // DMA channel 1 word count
+        case 0x05: // DMA channel 2 word count
+        case 0x07: // DMA channel 3 word count
+        {
+            int channel = addr / 2;
+
+            if(dma.flipFlop)
+                dma.currentWordCount[channel] = dma.baseWordCount[channel] = (dma.baseWordCount[channel] & 0xFF) | data << 8;
+            else
+                dma.baseWordCount[channel] = (dma.baseWordCount[channel] & 0xFF00) | data;
+
+            dma.flipFlop = !dma.flipFlop;
+            break;
+        }
+
+        case 0x08: // DMA command
+        {
+            dma.command = data;
+            break;
+        }
+
+        case 0x0D: // DMA master clear
+        {
+            dma.command = 0;
+            dma.status = 0;
+            dma.request = 0;
+            dma.tempData = 0;
+            dma.flipFlop = false;
+            dma.mask = 0xF;
+            break;
+        }
+
         case 0x40: // PIT counter 0
         case 0x41: // PIT counter 1
         case 0x42: // PIT counter 2

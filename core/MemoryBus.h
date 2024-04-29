@@ -27,6 +27,28 @@ private:
 
     const uint8_t *biosROM = nullptr; // at 0xFE000
 
+    struct DMA
+    {
+        uint16_t baseAddress[4];
+        uint16_t baseWordCount[4];
+        uint16_t currentAddress[4];
+        uint16_t currentWordCount[4];
+
+        uint16_t tempAddress;
+        uint16_t tempWordCount;
+        uint8_t tempData;
+
+        uint8_t status;
+        uint8_t command;
+        uint8_t request;
+
+        uint8_t mode[4];
+
+        uint8_t mask = 0xF;
+
+        bool flipFlop = false;
+    };
+
     struct PIT
     {
         uint8_t control[3]{0, 0, 0};
@@ -41,6 +63,9 @@ private:
 
         uint32_t lastUpdateCycle = 0;
     };
+
+
+    DMA dma;
 
     PIT pit;
 
