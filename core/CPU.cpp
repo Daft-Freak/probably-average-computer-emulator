@@ -317,6 +317,24 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xE8: // CALL
+        {
+            auto off = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            // push
+            reg(Reg16::SP) -= 2;
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            auto retAddr = reg(Reg16::IP) + 2;
+
+            mem.write(stackAddr, retAddr & 0xFF);
+            mem.write(stackAddr + 1, retAddr >> 8);
+
+            reg(Reg16::IP) = reg(Reg16::IP) + 2 + off;
+            cyclesExecuted(19);
+            break;
+        }
+
         case 0xE9: // JMP near
         {
             auto off = mem.read(addr + 1) | mem.read(addr + 2) << 8;
