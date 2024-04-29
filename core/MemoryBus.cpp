@@ -52,10 +52,12 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
 
                 auto value = pit.latched & (1 << channel) ? pit.latch[channel] : pit.counter[channel];
 
+                uint8_t ret;
+
                 if(access == 1 || (access == 3 && !(pit.highByte & (1 << channel))))
-                    return value & 0xFF;
+                    ret = value & 0xFF;
                 else // access == 2 || (access == 3 && high byte)
-                    return value >> 8;
+                    ret = value >> 8;
 
                 // clear latch status if fully read
                 if(access != 3 || (pit.highByte & (1 << channel)))
@@ -64,6 +66,8 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
                 // flip hi/lo
                 if(access == 3)
                     pit.highByte ^= (1 << channel);
+
+                return ret;
             }
             break;
         }
