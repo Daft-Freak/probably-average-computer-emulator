@@ -235,10 +235,15 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                 {
                     int mode = (pit.control[channel] >> 1) & 7;
                     // modes 1 and 5 start on gate input instead
-                    if(mode == 2 || mode == 3 || mode == 4)
+                    if(mode != 1 && mode != 5)
                     {
                         pit.active |= (1 << channel);
                         pit.counter[channel] = pit.reload[channel];
+
+                        if(mode == 0) // mode 0 goes low immediately
+                            pit.outState &= ~(1 << channel);
+                        else // mode 2/3/4 start high
+                            pit.outState |= (1 << channel);
                     }
                 }
 
@@ -308,6 +313,15 @@ void MemoryBus::updatePIT()
                 pit.counter[i] = pit.reload[i]; // reload after reaching 1 on the last cycle
             else
                 pit.counter[i]--; // mode 3 decrements twice
+
+            if(mode == 0 && pit.counter[i] == 0 && !(pit.outState & (1 << i)))
+            {
+                // go high
+                pit.outState |= 1 << i;
+            
+                // ch0 should trigger interrupt here
+                printf("PIT0 intr!\n");
+            }
         }
 
         pit.lastUpdateCycle += 4;

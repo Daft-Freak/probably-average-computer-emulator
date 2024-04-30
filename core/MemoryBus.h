@@ -71,6 +71,8 @@ private:
         uint8_t latched = 0;
         uint8_t highByte = 0; // lo/hi access mode
 
+        uint8_t outState = 0;
+
         uint32_t lastUpdateCycle = 0;
     };
 
