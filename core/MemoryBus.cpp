@@ -322,6 +322,29 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
     }
 }
 
+uint8_t MemoryBus::acknowledgeInterrupt()
+{
+    auto serviceable = pic.request & ~pic.mask;
+
+    int serviceIndex;
+
+    for(serviceIndex = 0; serviceIndex < 8; serviceIndex++)
+    {
+        if(serviceable & (1 << serviceIndex))
+            break;
+    }
+
+    pic.service |= 1 << serviceIndex;
+    pic.request &= ~(1 << serviceIndex);
+
+    return serviceIndex | (pic.initCommand[1] & 0xF8);
+}
+
+void MemoryBus::flagPICInterrupt(int index)
+{
+    pic.request |= 1 << index;
+}
+
 void MemoryBus::updatePIT()
 {
     auto elapsed = cpu.getCycleCount() - pit.lastUpdateCycle;

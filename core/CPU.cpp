@@ -26,6 +26,9 @@ void CPU::run(int ms)
 
     while(cyclesToRun > 0)
     {
+        if(mem.hasInterrupt() && (flags & Flag_I))
+            serviceInterrupt(mem.acknowledgeInterrupt());
+
         executeInstruction();
     }
 }
@@ -432,4 +435,44 @@ void CPU::cyclesExecuted(int cycles)
 {
     cyclesToRun -= cycles;
     cycleCount += cycles;
+}
+
+void CPU::serviceInterrupt(uint8_t vector)
+{
+    auto addr = vector * 4;
+
+    auto newIP = mem.read(addr) | mem.read(addr + 1) << 8;
+    auto newCS = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+
+    auto ss = reg(Reg16::SS) << 4;
+
+    // push flags
+    reg(Reg16::SP) -= 2;
+    auto stackAddr = ss + reg(Reg16::SP);
+    mem.write(stackAddr, flags & 0xFF);
+    mem.write(stackAddr + 1, flags >> 8);
+
+    // clear I/T
+    flags &= ~(Flag_T | Flag_I);
+
+    // inter-segment indirect call
+
+    // push CS
+    reg(Reg16::SP) -= 2;
+    stackAddr = ss + reg(Reg16::SP);
+    mem.write(stackAddr, reg(Reg16::CS) & 0xFF);
+    mem.write(stackAddr + 1, reg(Reg16::CS) >> 8);
+
+    // push IP
+    reg(Reg16::SP) -= 2;
+    stackAddr = ss + reg(Reg16::SP);
+
+    auto retAddr = reg(Reg16::IP) + 2;
+
+    mem.write(stackAddr, retAddr & 0xFF);
+    mem.write(stackAddr + 1, retAddr >> 8);
+
+    reg(Reg16::CS) = newCS;
+    reg(Reg16::IP) = newIP;
+    cyclesExecuted(37 + 6 + 4 * 4); // maybe? roughly cycles for indirect call with disp
 }

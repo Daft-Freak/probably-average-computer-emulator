@@ -74,6 +74,8 @@ private:
 
     void cyclesExecuted(int cycles);
 
+    void serviceInterrupt(uint8_t vector);
+
     static const uint32_t clockSpeed = 4772726;
 
     // internal state

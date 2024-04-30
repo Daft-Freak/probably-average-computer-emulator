@@ -20,6 +20,9 @@ public:
     uint8_t readIOPort(uint16_t addr);
     void writeIOPort(uint16_t addr, uint8_t data);
 
+    bool hasInterrupt() const {return pic.request & ~pic.mask;}
+    uint8_t acknowledgeInterrupt();
+
 private:
     void updatePIT();
 
