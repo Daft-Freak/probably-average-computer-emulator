@@ -41,6 +41,11 @@ void CPU::executeInstruction()
 
     auto opcode = mem.read(addr);
 
+    auto parity = [](uint8_t v) -> bool
+    {
+        return ~(0x6996 >> ((v ^ (v >> 4)) & 0xF)) & 1;
+    };
+
     // 7x
     auto jump8 = [this, addr](int cond)
     {
@@ -133,6 +138,53 @@ void CPU::executeInstruction()
             reg(Reg16::SP) += 2;
 
             cyclesExecuted(8 + 4);
+            break;
+        }
+        case 0x42: // INC reg16
+        case 0x43:
+        case 0x44:
+        case 0x45:
+        case 0x46:
+        case 0x47:
+        {
+            auto destReg = static_cast<Reg16>(opcode & 7);
+
+            auto res = reg(destReg) + 1;
+            reg(destReg) = res;
+
+            flags = (flags & ~(Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
+                    | (parity(res) ? Flag_P : 0)
+                    | ((res & 0xF) == 0 ? Flag_A : 0)
+                    | ((res & 0xFFFF) == 0 ? Flag_Z : 0)
+                    | (res & 0x8000 ? Flag_S : 0)
+                    | (res == 0x8000 ? Flag_O : 0);
+
+            cyclesExecuted(3);
+            break;
+        }
+
+        case 0x48: // DEC reg16
+        case 0x49:
+        case 0x4A:
+        case 0x4B:
+        case 0x4C:
+        case 0x4D:
+        case 0x4E:
+        case 0x4F:
+        {
+            auto destReg = static_cast<Reg16>(opcode & 7);
+
+            auto res = reg(destReg) - 1;
+            reg(destReg) = res;
+
+            flags = (flags & ~(Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
+                    | (parity(res) ? Flag_P : 0)
+                    | ((res & 0xF) == 0xF ? Flag_A : 0)
+                    | ((res & 0xFFFF) == 0 ? Flag_Z : 0)
+                    | (res & 0x8000 ? Flag_S : 0)
+                    | (res == 0x7FFF ? Flag_O : 0);
+
+            cyclesExecuted(3);
             break;
         }
 
