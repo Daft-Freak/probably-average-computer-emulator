@@ -169,17 +169,45 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
             break;
         }
 
-        case 0x20: // PIC ICW1
+        case 0x20: // PIC ICW1, OCW 2/3
         {
-            assert(data & (1 << 0)); // ICW4 needed
-            assert(data & (1 << 1)); // single
-            assert(!(data & (1 << 3))); // not level triggered
-            assert(data & (1 << 4)); // 1
+            if(data & (1 << 4)) // ICW1
+            {
+                assert(data & (1 << 0)); // ICW4 needed
+                assert(data & (1 << 1)); // single
+                assert(!(data & (1 << 3))); // not level triggered
 
-            pic.initCommand[0] = data;
-            pic.nextInit = 1;
+                pic.initCommand[0] = data;
+                pic.nextInit = 1;
 
-            pic.mask = 0;
+                pic.mask = 0;
+            }
+            else if(data & (1 << 4)) // OCW3
+            {
+                printf("PIC OCW3 %02X\n", data);
+            }
+            else // OCW2
+            {
+                auto command = data >> 5;
+
+                switch(command)
+                {
+                    case 1: // non-specific EOI
+                    {
+                        for(int i = 0; i < 8; i++)
+                        {
+                            if(pic.service & (1 << i))
+                            {
+                                pic.service &= ~(1 << i);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    default:
+                        printf("PIC OCW2 %02X\n", data);
+                }
+            }
 
             break;
         }
