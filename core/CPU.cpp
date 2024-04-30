@@ -271,6 +271,7 @@ void CPU::executeInstruction()
             auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             reg(Reg16::IP) = newIP;
+            cyclesExecuted(16 + 4);
             break;
         }
 
