@@ -281,6 +281,29 @@ void CPU::executeInstruction()
         }
 
 
+        case 0xCF: // IRET
+        {
+            // pop IP
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
+            auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+
+            // pop CS
+            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
+            auto newCS = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+
+            // pop flags
+            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
+            flags = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+
+            reg(Reg16::CS) = newCS;
+            reg(Reg16::IP) = newIP;
+            cyclesExecuted(32 + 3 * 4);
+            break;
+        }
+
         case 0xE2: // LOOP
         {
             auto off = static_cast<int8_t>(mem.read(addr + 1));
