@@ -467,7 +467,7 @@ void CPU::serviceInterrupt(uint8_t vector)
     reg(Reg16::SP) -= 2;
     stackAddr = ss + reg(Reg16::SP);
 
-    auto retAddr = reg(Reg16::IP) + 2;
+    auto retAddr = reg(Reg16::IP);
 
     mem.write(stackAddr, retAddr & 0xFF);
     mem.write(stackAddr + 1, retAddr >> 8);
