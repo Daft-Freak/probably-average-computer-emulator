@@ -20,10 +20,13 @@ public:
     uint8_t readIOPort(uint16_t addr);
     void writeIOPort(uint16_t addr, uint8_t data);
 
+    void updateForInterrupts();
+
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
     uint8_t acknowledgeInterrupt();
 
 private:
+    void flagPICInterrupt(int index);
     void updatePIT();
 
     uint8_t ram[64 * 1024];

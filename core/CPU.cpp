@@ -26,6 +26,8 @@ void CPU::run(int ms)
 
     while(cyclesToRun > 0)
     {
+        mem.updateForInterrupts();
+
         if(mem.hasInterrupt() && (flags & Flag_I))
             serviceInterrupt(mem.acknowledgeInterrupt());
 

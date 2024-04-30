@@ -116,6 +116,15 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
     return 0;
 }
 
+void MemoryBus::updateForInterrupts()
+{
+    // TODO: usual target for optimisation...
+
+    // timer
+    if(!(pic.mask & 1))
+        updatePIT();
+}
+
 void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
 {
     switch(addr)
@@ -371,7 +380,8 @@ void MemoryBus::updatePIT()
                 pit.outState |= 1 << i;
             
                 // ch0 should trigger interrupt here
-                printf("PIT0 intr!\n");
+                if(i == 0)
+                    flagPICInterrupt(0);
             }
         }
 
