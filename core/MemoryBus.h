@@ -49,6 +49,16 @@ private:
         bool flipFlop = false;
     };
 
+    struct PIC
+    {
+        uint8_t initCommand[4];
+        int nextInit = 0;
+
+        uint8_t request = 0;
+        uint8_t service = 0;
+        uint8_t mask = 0;
+    };
+
     struct PIT
     {
         uint8_t control[3]{0, 0, 0};
@@ -66,6 +76,8 @@ private:
 
 
     DMA dma;
+
+    PIC pic;
 
     PIT pit;
 

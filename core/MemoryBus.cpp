@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdio>
 #include <cstring>
 
@@ -72,6 +73,9 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
 
             return ret;
         }
+
+        case 0x21: // PIC mask
+            return pic.mask;
     
         case 0x40: // PIT counter 0
         case 0x41: // PIT counter 1
@@ -162,6 +166,50 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
             dma.tempData = 0;
             dma.flipFlop = false;
             dma.mask = 0xF;
+            break;
+        }
+
+        case 0x20: // PIC ICW1
+        {
+            assert(data & (1 << 0)); // ICW4 needed
+            assert(data & (1 << 1)); // single
+            assert(!(data & (1 << 3))); // not level triggered
+            assert(data & (1 << 4)); // 1
+
+            pic.initCommand[0] = data;
+            pic.nextInit = 1;
+
+            pic.mask = 0;
+
+            break;
+        }
+
+        case 0x21: // PIC
+        {
+            if(pic.nextInit == 1) // ICW2
+            {
+                pic.initCommand[1] = data;
+
+                if(!(pic.initCommand[0] & (1 << 1)))
+                    pic.nextInit = 2; // ICW3 needed
+                else
+                    pic.nextInit = 3; // ICW4 (assuming needed)
+            }
+            else if(pic.nextInit == 3) // ICW4
+            {
+                assert(data & (1 << 0)); // 8086/88 mode
+                assert(!(data & (1 << 1))); // not auto EOI
+                assert(!(data & (1 << 2))); // slave
+                assert(data & (1 << 3)); // buffered mode
+                assert(!(data & (1 << 4))); // not special fully nested mode
+
+                pic.initCommand[3] = data;
+                pic.nextInit = 0;
+            }
+            else // mask
+            {
+                pic.mask = data;
+            }
             break;
         }
 
