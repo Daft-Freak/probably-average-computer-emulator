@@ -450,6 +450,42 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xA0: // MOV off16 -> AL
+        {
+            auto memAddr = mem.read(addr + 1) + mem.read(addr + 2);
+            memAddr += reg(Reg16::DS) << 4;
+
+            reg(Reg8::AL) = mem.read(memAddr);
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(10);
+            break;
+        }
+        case 0xA1: // MOV off16 -> AX
+        {
+            auto memAddr = mem.read(addr + 1) + mem.read(addr + 2);
+            memAddr += reg(Reg16::DS) << 4;
+
+            reg(Reg16::AX) = mem.read(memAddr) | mem.read(memAddr + 1) << 8;
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(10 + 4);
+            break;
+        }
+
+        case 0xA3: // MOV AX -> off16
+        {
+            auto memAddr = mem.read(addr + 1) + mem.read(addr + 2);
+            memAddr += reg(Reg16::DS) << 4;
+
+            mem.write(memAddr, reg(Reg8::AL));
+            mem.write(memAddr + 1, reg(Reg8::AH));
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(10 + 4);
+            break;
+        }
+
         case 0xB0: // MOV imm -> reg8
         case 0xB1:
         case 0xB2:
