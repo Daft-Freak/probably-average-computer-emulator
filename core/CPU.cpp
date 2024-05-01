@@ -4,6 +4,19 @@
 #include "CPU.h"
 #include "MemoryBus.h"
 
+enum Flags
+{
+    Flag_C = (1 << 0),
+    Flag_P = (1 << 2),
+    Flag_A = (1 << 4),
+    Flag_Z = (1 << 6),
+    Flag_S = (1 << 7),
+    Flag_T = (1 << 8),
+    Flag_I = (1 << 9),
+    Flag_D = (1 << 10),
+    Flag_O = (1 << 11),
+};
+
 
 CPU::CPU() : mem(*this)
 {}

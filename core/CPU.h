@@ -52,19 +52,6 @@ private:
         DS,
     };
 
-    enum Flags
-    {
-        Flag_C = (1 << 0),
-        Flag_P = (1 << 2),
-        Flag_A = (1 << 4),
-        Flag_Z = (1 << 6),
-        Flag_S = (1 << 7),
-        Flag_T = (1 << 8),
-        Flag_I = (1 << 9),
-        Flag_D = (1 << 10),
-        Flag_O = (1 << 11),
-    };
-
     uint8_t reg(Reg8 r) const {return reinterpret_cast<const uint8_t *>(regs)[((static_cast<int>(r) & 3) << 1) + (static_cast<int>(r) >> 2)];}
     uint8_t &reg(Reg8 r) {return reinterpret_cast<uint8_t *>(regs)[((static_cast<int>(r) & 3) << 1) + (static_cast<int>(r) >> 2)];}
     uint16_t reg(Reg16 r) const {return regs[static_cast<int>(r)];}
