@@ -17,11 +17,99 @@ enum Flags
     Flag_O = (1 << 11),
 };
 
+// opcode helpers
+
 static constexpr bool parity(uint8_t v)
 {
     return ~(0x6996 >> ((v ^ (v >> 4)) & 0xF)) & 1;
 };
 
+template<class T>
+static constexpr int signBit()
+{
+    return 1 << ((sizeof(T) * 8) - 1);
+}
+
+template<class T>
+static T doAdd(T dest, T src, uint16_t &flags)
+{
+    T res = dest + src;
+
+    bool overflow = ~(dest ^ src) & (src ^ res) & signBit<T>();
+
+    flags = (flags & ~(Flag_C | Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
+          | (res < dest ? Flag_C : 0) 
+          | (parity(res) ? Flag_P : 0)
+          | ((res & 0xF) < (dest & 0xF) ? Flag_A : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (overflow ? Flag_O : 0);
+
+    return res;
+}
+
+template<class T>
+static T doAnd(T dest, T src, uint16_t &flags)
+{
+    T res = dest & src;
+
+    // c/o cleared
+    // szp set from res
+    flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S | Flag_O))
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (parity(res) ? Flag_P : 0);
+
+    return res;
+}
+
+template<class T>
+static T doOr(T dest, T src, uint16_t &flags)
+{
+    T res = dest | src;
+
+    // c/o cleared
+    // szp set from res
+    flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S | Flag_O))
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (parity(res) ? Flag_P : 0);
+
+    return res;
+}
+
+template<class T>
+static T doSub(T dest, T src, uint16_t &flags)
+{
+    T res = dest - src;
+
+    bool overflow = (dest ^ src) & (src ^ res) & signBit<T>();
+
+    flags = (flags & ~(Flag_C | Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
+          | (src > dest ? Flag_C : 0) 
+          | (parity(res) ? Flag_P : 0)
+          | ((res & 0xF) > (dest & 0xF) ? Flag_A : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (overflow ? Flag_O : 0);
+
+    return res;
+}
+
+template<class T>
+static T doXor(T dest, T src, uint16_t &flags)
+{
+    T res = dest ^ src;
+
+    // c/o cleared
+    // szp set from res
+    flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S | Flag_O))
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (parity(res) ? Flag_P : 0);
+
+    return res;
+}
 
 CPU::CPU() : mem(*this)
 {}
