@@ -101,8 +101,12 @@ void CPU::executeInstruction()
             case 0xB: // JNP/JPO
                 condVal = !(flags & Flag_P);
                 break;
-            // JL/JNGE
-            // JNL/JGE
+            case 0xC: // JL/JNGE
+                condVal = !!(flags & Flag_S) != !!(flags & Flag_O);
+                break;
+            case 0xD: // JNL/JGE
+                condVal = !!(flags & Flag_S) == !!(flags & Flag_O);
+                break;
             // JLE/JNG
             // JNLE/JG
         }
@@ -253,6 +257,8 @@ void CPU::executeInstruction()
         case 0x79: // JNS
         case 0x7A: // JP/JPE
         case 0x7B: // JNP/JPO
+        case 0x7C: // JL/JNGE
+        case 0x7D: // JNL/JGE
         {
             jump8(opcode & 0xF);
             break;
