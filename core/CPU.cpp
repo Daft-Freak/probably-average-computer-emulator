@@ -17,6 +17,11 @@ enum Flags
     Flag_O = (1 << 11),
 };
 
+static constexpr bool parity(uint8_t v)
+{
+    return ~(0x6996 >> ((v ^ (v >> 4)) & 0xF)) & 1;
+};
+
 
 CPU::CPU() : mem(*this)
 {}
@@ -53,11 +58,6 @@ void CPU::executeInstruction()
     auto addr = (reg(Reg16::CS) << 4) + (reg(Reg16::IP)++);
 
     auto opcode = mem.read(addr);
-
-    auto parity = [](uint8_t v) -> bool
-    {
-        return ~(0x6996 >> ((v ^ (v >> 4)) & 0xF)) & 1;
-    };
 
     // 7x
     auto jump8 = [this, addr](int cond)
