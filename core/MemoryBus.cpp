@@ -30,6 +30,12 @@ uint8_t MemoryBus::read(uint32_t addr) const
     return 0;
 }
 
+void MemoryBus::write(uint32_t addr, uint8_t data)
+{
+    if(addr < 0x10000)
+        ram[addr] = data;
+}
+
 const uint8_t *MemoryBus::mapAddress(uint32_t addr) const
 {
     return nullptr;
@@ -387,10 +393,4 @@ void MemoryBus::updatePIT()
 
         pit.lastUpdateCycle += 4;
     }
-}
-
-void MemoryBus::write(uint32_t addr, uint8_t data)
-{
-    if(addr < 0x10000)
-        ram[addr] = data;
 }
