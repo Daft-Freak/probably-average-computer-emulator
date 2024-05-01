@@ -530,6 +530,13 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xCD: // INT
+        {
+            auto imm = mem.read(addr + 1);
+            reg(Reg16::IP)++;
+            serviceInterrupt(imm);
+            break;
+        }
 
         case 0xCF: // IRET
         {
@@ -749,5 +756,5 @@ void CPU::serviceInterrupt(uint8_t vector)
 
     reg(Reg16::CS) = newCS;
     reg(Reg16::IP) = newIP;
-    cyclesExecuted(37 + 6 + 4 * 4); // maybe? roughly cycles for indirect call with disp
+    cyclesExecuted(51 + 5 * 4); // timing for INT
 }
