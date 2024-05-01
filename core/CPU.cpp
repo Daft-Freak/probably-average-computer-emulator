@@ -64,6 +64,36 @@ static T doAnd(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
+static T doDec(T dest, uint16_t &flags)
+{
+    T res = dest - 1;
+
+    flags = (flags & ~(Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
+          | (parity(res) ? Flag_P : 0)
+          | ((res & 0xF) == 0xF ? Flag_A : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (res == signBit<T>() - 1 ? Flag_O : 0);
+
+    return res;
+}
+
+template<class T>
+static T doInc(T dest, uint16_t &flags)
+{
+    T res = dest + 1;
+
+    flags = (flags & ~(Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
+          | (parity(res) ? Flag_P : 0)
+          | ((res & 0xF) == 0 ? Flag_A : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (res == signBit<T>() ? Flag_O : 0);
+
+    return res;
+}
+
+template<class T>
 static T doOr(T dest, T src, uint16_t &flags)
 {
     T res = dest | src;
@@ -298,17 +328,7 @@ void CPU::executeInstruction()
         case 0x47:
         {
             auto destReg = static_cast<Reg16>(opcode & 7);
-
-            auto res = reg(destReg) + 1;
-            reg(destReg) = res;
-
-            flags = (flags & ~(Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
-                    | (parity(res) ? Flag_P : 0)
-                    | ((res & 0xF) == 0 ? Flag_A : 0)
-                    | ((res & 0xFFFF) == 0 ? Flag_Z : 0)
-                    | (res & 0x8000 ? Flag_S : 0)
-                    | (res == 0x8000 ? Flag_O : 0);
-
+            reg(destReg) = doInc(reg(destReg), flags);
             cyclesExecuted(3);
             break;
         }
@@ -323,17 +343,7 @@ void CPU::executeInstruction()
         case 0x4F:
         {
             auto destReg = static_cast<Reg16>(opcode & 7);
-
-            auto res = reg(destReg) - 1;
-            reg(destReg) = res;
-
-            flags = (flags & ~(Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
-                    | (parity(res) ? Flag_P : 0)
-                    | ((res & 0xF) == 0xF ? Flag_A : 0)
-                    | ((res & 0xFFFF) == 0 ? Flag_Z : 0)
-                    | (res & 0x8000 ? Flag_S : 0)
-                    | (res == 0x7FFF ? Flag_O : 0);
-
+            reg(destReg) = doDec(reg(destReg), flags);
             cyclesExecuted(3);
             break;
         }
