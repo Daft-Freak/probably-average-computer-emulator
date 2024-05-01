@@ -213,6 +213,17 @@ void CPU::executeInstruction()
 
     switch(opcode)
     {
+        case 0x04: // ADD AL imm8
+        {
+            uint8_t src = mem.read(addr + 1);
+
+            reg(Reg8::AL) = doAdd(reg(Reg8::AL), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(3);
+            break;
+        }
+
         case 0x06: // PUSH seg
         case 0x0E:
         case 0x16:
@@ -245,6 +256,40 @@ void CPU::executeInstruction()
             cyclesExecuted(8 + 4);
             break;
         }
+
+        case 0x0C: // OR AL imm8
+        {
+            auto imm = mem.read(addr + 1);
+
+            reg(Reg8::AL) = doOr(reg(Reg8::AL), imm, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(4);
+            break;
+        }
+
+        case 0x24: // AND AL imm8
+        {
+            auto imm = mem.read(addr + 1);
+
+            reg(Reg8::AL) = doAnd(reg(Reg8::AL), imm, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(4);
+            break;
+        }
+
+        case 0x3D: // CMP AX imm
+        {
+            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            doSub(reg(Reg16::AX), imm, flags);
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(4);
+            break;
+        }
+
         case 0x42: // INC reg16
         case 0x43:
         case 0x44:
