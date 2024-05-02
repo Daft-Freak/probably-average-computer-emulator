@@ -484,7 +484,17 @@ void CPU::executeInstruction()
             cyclesExecuted(10 + 4);
             break;
         }
+        case 0xA2: // MOV AL -> off16
+        {
+            auto memAddr = mem.read(addr + 1) + mem.read(addr + 2);
+            memAddr += reg(Reg16::DS) << 4;
 
+            mem.write(memAddr, reg(Reg8::AL));
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(10);
+            break;
+        }
         case 0xA3: // MOV AX -> off16
         {
             auto memAddr = mem.read(addr + 1) + mem.read(addr + 2);
