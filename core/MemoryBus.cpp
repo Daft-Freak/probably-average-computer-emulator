@@ -122,15 +122,6 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
     return 0;
 }
 
-void MemoryBus::updateForInterrupts()
-{
-    // TODO: usual target for optimisation...
-
-    // timer
-    if(!(pic.mask & 1))
-        updatePIT();
-}
-
 void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
 {
     switch(addr)
@@ -335,6 +326,15 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
         default:
             printf("IO W %04X = %02X\n", addr, data);
     }
+}
+
+void MemoryBus::updateForInterrupts()
+{
+    // TODO: usual target for optimisation...
+
+    // timer
+    if(!(pic.mask & 1))
+        updatePIT();
 }
 
 uint8_t MemoryBus::acknowledgeInterrupt()
