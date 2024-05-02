@@ -82,12 +82,19 @@ private:
         uint32_t lastUpdateCycle = 0;
     };
 
+    struct PPI
+    {
+        uint8_t mode = 0;
+        uint8_t output[3];
+    };
 
     DMA dma;
 
     PIC pic;
 
     PIT pit;
+
+    PPI ppi;
 
     CPU &cpu;
 };

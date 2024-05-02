@@ -116,6 +116,58 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
             }
             break;
         }
+
+        case 0x60: // PPI port A
+        {
+            if(ppi.mode & (1 << 4)) // input
+            {
+                if(ppi.output[1] & 0x80)
+                {
+                    // switches
+                    return 0 << 0 | // no floppy drives
+                           0 << 1 | // no co-processor
+                           0 << 2 | // 1 memory bank
+                           0 << 4 | // no video output
+                           0 << 6;  // still no floppy drives
+                }
+                else
+                    printf("PPI A keyboard\n");
+            }
+            else
+                return ppi.output[0];
+
+            break;
+        }
+
+        case 0x62: // PPI port C
+        {
+            uint8_t ret = 0;
+
+            if(ppi.mode & (1 << 0)) // input (lower)
+            {
+                if(ppi.output[1] & (1 << 2))
+                {
+                    // SW2 1-4
+                }
+                else
+                {
+                    // SW2 5, other bits read as high
+                    ret = 0xE;
+                }
+            }
+            else
+                ret = ppi.output[2] & 0xF;
+
+            if(ppi.mode & (1 << 3)) // input (upper)
+            {
+                // cassette data, timer chan 2 and RAM errors
+            }
+            else
+                ret |= ppi.output[2] & 0xF0;
+
+            return ret;
+        }
+
         default:
             printf("IO R %04X\n", addr);
     }
@@ -320,6 +372,30 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                 printf("PIT ch%i access %i mode %i\n", channel, access, mode);
             }
 
+            break;
+        }
+
+        case 0x60: // PPI port A
+        case 0x61: // PPI port B
+        case 0x62: // PPI port C
+        {
+            int port = addr & 3;
+            ppi.output[port] = data;
+            break;
+        }
+        case 0x63: // PPI control
+        {
+            if(data & 0x80) // mode set
+            {
+                auto modeA = (data >> 5) & 3;
+                auto modeB = (data >> 2) & 1;
+                assert(!modeA);
+                assert(!modeB);
+
+                ppi.mode = data;
+            }
+            else // bit set/clear
+                printf("PPI control %02X\n", data);
             break;
         }
 
