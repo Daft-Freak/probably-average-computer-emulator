@@ -330,7 +330,9 @@ void CPU::executeInstruction()
             break;
         }
 
-        case 0x42: // INC reg16
+        case 0x40: // INC reg16
+        case 0x41:
+        case 0x42:
         case 0x43:
         case 0x44:
         case 0x45:
