@@ -613,6 +613,21 @@ void CPU::executeInstruction()
             }
             break;
         }
+        case 0xE3: // JCXZ
+        {
+            auto off = static_cast<int8_t>(mem.read(addr + 1));
+            if(reg(Reg16::CX) == 0)
+            {
+                reg(Reg16::IP) = reg(Reg16::IP) + 1 + off;
+                cyclesExecuted(18);
+            }
+            else
+            {
+                reg(Reg16::IP)++;
+                cyclesExecuted(6);
+            }
+            break;
+        }
 
         case 0xE4: // IN AL from imm8
         {
