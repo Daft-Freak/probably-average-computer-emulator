@@ -250,7 +250,7 @@ void CPU::executeInstruction()
             reg(Reg8::AL) = doAdd(reg(Reg8::AL), src, flags);
 
             reg(Reg16::IP)++;
-            cyclesExecuted(3);
+            cyclesExecuted(4);
             break;
         }
 
@@ -309,6 +309,16 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x3C: // CMP AL imm
+        {
+            auto imm = mem.read(addr + 1);
+
+            doSub(reg(Reg8::AL), imm, flags);
+
+            reg(Reg16::IP) += 1;
+            cyclesExecuted(4);
+            break;
+        }
         case 0x3D: // CMP AX imm
         {
             uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
@@ -483,6 +493,17 @@ void CPU::executeInstruction()
 
             reg(Reg16::IP) += 2;
             cyclesExecuted(10 + 4);
+            break;
+        }
+
+        case 0xA8: // TEST AL imm8
+        {
+            auto imm = mem.read(addr + 1);
+
+            doAnd(reg(Reg8::AL), imm, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(4);
             break;
         }
 
