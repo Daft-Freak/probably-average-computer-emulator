@@ -594,6 +594,44 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xE0: // LOOPNE/LOOPNZ
+        {
+            auto off = static_cast<int8_t>(mem.read(addr + 1));
+
+            uint16_t count = --reg(Reg16::CX);
+
+            if(count == 0 && !(flags & Flag_Z))
+            {
+                // done
+                reg(Reg16::IP)++;
+                cyclesExecuted(5);
+            }
+            else
+            {
+                reg(Reg16::IP) = reg(Reg16::IP) + 1 + off;
+                cyclesExecuted(19);
+            }
+            break;
+        }
+        case 0xE1: // LOOPE/LOOPZ
+        {
+            auto off = static_cast<int8_t>(mem.read(addr + 1));
+
+            uint16_t count = --reg(Reg16::CX);
+
+            if(count == 0 && (flags & Flag_Z))
+            {
+                // done
+                reg(Reg16::IP)++;
+                cyclesExecuted(6);
+            }
+            else
+            {
+                reg(Reg16::IP) = reg(Reg16::IP) + 1 + off;
+                cyclesExecuted(18);
+            }
+            break;
+        }
         case 0xE2: // LOOP
         {
             auto off = static_cast<int8_t>(mem.read(addr + 1));
