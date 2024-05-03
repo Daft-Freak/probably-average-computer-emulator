@@ -29,6 +29,8 @@ private:
     void flagPICInterrupt(int index);
     void updatePIT();
 
+    void updateCGA();
+
     uint8_t ram[64 * 1024];
 
     const uint8_t *biosROM = nullptr; // at 0xFE000
@@ -88,6 +90,22 @@ private:
         uint8_t output[3];
     };
 
+    // an entire separate card...
+    struct CGA
+    {
+        // 6845 registers
+        uint8_t regSelect;
+        uint8_t regs[18];
+
+        uint8_t mode = 0;
+        uint8_t colSelect;
+        uint8_t status = 0;
+
+        uint32_t lastUpdateCycle = 0;
+        uint8_t scanline = 0;
+        uint16_t scanlineCycle = 0;
+    };
+
     DMA dma;
 
     PIC pic;
@@ -95,6 +113,8 @@ private:
     PIT pit;
 
     PPI ppi;
+
+    CGA cga;
 
     CPU &cpu;
 };

@@ -127,7 +127,7 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
                     return 0 << 0 | // no floppy drives
                            0 << 1 | // no co-processor
                            0 << 2 | // 1 memory bank
-                           0 << 4 | // no video output
+                           1 << 4 | // 40-col CGA
                            0 << 6;  // still no floppy drives
                 }
                 else
@@ -166,6 +166,12 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
                 ret |= ppi.output[2] & 0xF0;
 
             return ret;
+        }
+
+        case 0x3DA: // CGA status
+        {
+            updateCGA();
+            return cga.status;
         }
 
         default:
@@ -398,6 +404,31 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                 printf("PPI control %02X\n", data);
             break;
         }
+        
+        case 0x3D4: // CGA reg select
+        {
+            cga.regSelect = data;
+            break;
+        }
+        case 0x3D5: // CGA reg
+        {
+            updateCGA();
+            cga.regs[cga.regSelect] = data;
+            break;
+        }
+
+        case 0x3D8: // CGA mode
+        {
+            updateCGA();
+            cga.mode = data;
+            break;
+        }
+        case 0x3D9: // CGA colour select
+        {
+            updateCGA();
+            cga.colSelect = data;
+            break;
+        }
 
         default:
             printf("IO W %04X = %02X\n", addr, data);
@@ -468,5 +499,55 @@ void MemoryBus::updatePIT()
         }
 
         pit.lastUpdateCycle += 4;
+    }
+}
+
+void MemoryBus::updateCGA()
+{
+    auto elapsed = cpu.getCycleCount() - cga.lastUpdateCycle;
+
+    elapsed *= 3; // system clock
+
+    // 80-col mode uses full system clock, other modes use half
+    if(!(cga.mode & (1 << 0)))
+        elapsed /= 2;
+    
+    // FIXME: this loses a cycle sometimes in 40-col mode
+    cga.lastUpdateCycle = cpu.getCycleCount();
+
+    // check enabled
+    if(!(cga.mode & (1 << 3)))
+        return;
+
+    int lineClocks = (cga.regs[0/*h total*/] + 1) * 8;
+    int hBlankStart = cga.regs[2/*h sync*/] * 8;
+
+    int charHeight = cga.regs[9/*max char scan*/] + 1;
+    int totalLines = (cga.regs[4/* v total*/] + 1) *charHeight + cga.regs[5 /*v adjust*/];
+    int vBlankStart = cga.regs[7/*v sync*/] * charHeight;
+
+    while(elapsed--)
+    {
+        cga.scanlineCycle++;
+
+        if(cga.scanlineCycle >= lineClocks)
+        {
+            cga.scanlineCycle = 0;
+            cga.scanline++;
+
+            cga.status &= ~(1 << 0); // clear accessible
+
+            // check new scanline
+            if(cga.scanline >= totalLines)
+            {
+                cga.scanline = 0;
+                cga.status &= ~(1 << 0 | 1 << 3); // clear accessible / vblank
+            }
+            else if(cga.scanline >= vBlankStart)
+                cga.status |= 1 << 0 | 1 << 3; // accessible / vblank
+        }
+        else if(cga.scanlineCycle >= hBlankStart)
+            cga.status |= 1 << 0; // accessible
+        // else if < displayed && !vblank, draw
     }
 }
