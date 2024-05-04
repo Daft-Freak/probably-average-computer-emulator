@@ -23,6 +23,7 @@ public:
     void writeIOPort(uint16_t addr, uint8_t data);
 
     void updateForInterrupts();
+    void updateForDisplay();
 
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
     uint8_t acknowledgeInterrupt();

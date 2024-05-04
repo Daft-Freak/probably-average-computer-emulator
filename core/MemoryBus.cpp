@@ -450,6 +450,11 @@ void MemoryBus::updateForInterrupts()
         updatePIT();
 }
 
+void MemoryBus::updateForDisplay()
+{
+    updateCGA();
+}
+
 uint8_t MemoryBus::acknowledgeInterrupt()
 {
     auto serviceable = pic.request & ~pic.mask;
