@@ -4,6 +4,7 @@
 
 #include "MemoryBus.h"
 #include "CPU.h"
+#include "CGAFont.h"
 
 MemoryBus::MemoryBus(CPU &cpu) : cpu(cpu)
 {
@@ -578,12 +579,13 @@ void MemoryBus::updateCGA()
             else
             {
                 // text mode
+                // assuming 8x8 chars...
                 auto charAddr = cga.curAddr + (cga.scanlineCycle / 8) * 2;
                 auto ch = cga.ram[charAddr];
                 auto attr = cga.ram[charAddr + 1];
 
-                // TODO: font
-                auto col = ch != 0x20 ? attr & 0xF : (attr >> 4) & 7;
+                auto fontData = cgaFont[ch * 8 + (cga.scanline & 7)];
+                auto col = (fontData & 1 << (cga.scanlineCycle & 7)) ? attr & 0xF : (attr >> 4) & 7;
 
                 if(cga.scanlineCycle & 1)
                     cga.scanlineBuf[cga.scanlineCycle / 2] |= col << 4;
