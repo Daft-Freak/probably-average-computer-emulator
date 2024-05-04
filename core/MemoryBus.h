@@ -7,6 +7,8 @@ class CPU;
 class MemoryBus
 {
 public:
+    using ScanlineCallback = void(*)(const uint8_t *data, int line, int w);
+
     MemoryBus(CPU &cpu);
     void reset();
 
@@ -24,6 +26,8 @@ public:
 
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
     uint8_t acknowledgeInterrupt();
+
+    void setCGAScanlineCallback(ScanlineCallback cb);
 
 private:
     void flagPICInterrupt(int index);
@@ -102,8 +106,14 @@ private:
         uint8_t status = 0;
 
         uint32_t lastUpdateCycle = 0;
-        uint8_t scanline = 0;
+        uint16_t scanline = 0;
         uint16_t scanlineCycle = 0;
+        uint16_t curAddr = 0;
+        uint8_t scanlineBuf[320];
+
+        uint8_t ram[16 * 1024]; // at B8000
+
+        ScanlineCallback scanCb;
     };
 
     DMA dma;

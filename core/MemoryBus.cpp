@@ -24,6 +24,9 @@ uint8_t MemoryBus::read(uint32_t addr) const
     if(addr < 0x10000)
         return ram[addr];
 
+    if(addr >= 0xB8000 && addr < 0xBC000)
+        return cga.ram[addr & 0x3FFF];
+
     if(addr >= 0xFE000)
         return biosROM[addr & 0x1FFF];
 
@@ -34,6 +37,8 @@ void MemoryBus::write(uint32_t addr, uint8_t data)
 {
     if(addr < 0x10000)
         ram[addr] = data;
+    else if(addr >= 0xB8000 && addr < 0xBC000)
+        cga.ram[addr & 0x3FFF] = data;
 }
 
 const uint8_t *MemoryBus::mapAddress(uint32_t addr) const
@@ -462,6 +467,11 @@ uint8_t MemoryBus::acknowledgeInterrupt()
     return serviceIndex | (pic.initCommand[1] & 0xF8);
 }
 
+void MemoryBus::setCGAScanlineCallback(ScanlineCallback cb)
+{
+    cga.scanCb = cb;
+}
+
 void MemoryBus::flagPICInterrupt(int index)
 {
     pic.request |= 1 << index;
@@ -515,15 +525,13 @@ void MemoryBus::updateCGA()
     // FIXME: this loses a cycle sometimes in 40-col mode
     cga.lastUpdateCycle = cpu.getCycleCount();
 
-    // check enabled
-    if(!(cga.mode & (1 << 3)))
-        return;
-
     int lineClocks = (cga.regs[0/*h total*/] + 1) * 8;
+    int hDisplayed = cga.regs[1/* h disp*/] * 8;
     int hBlankStart = cga.regs[2/*h sync*/] * 8;
 
     int charHeight = cga.regs[9/*max char scan*/] + 1;
-    int totalLines = (cga.regs[4/* v total*/] + 1) *charHeight + cga.regs[5 /*v adjust*/];
+    int totalLines = (cga.regs[4/* v total*/] + 1) * charHeight + cga.regs[5 /*v adjust*/];
+    int vDisplayed = cga.regs[6/*v displayed*/] * charHeight;
     int vBlankStart = cga.regs[7/*v sync*/] * charHeight;
 
     while(elapsed--)
@@ -532,8 +540,15 @@ void MemoryBus::updateCGA()
 
         if(cga.scanlineCycle >= lineClocks)
         {
+            // display line
+            if(cga.scanline < vDisplayed && cga.scanCb)
+                cga.scanCb(cga.scanlineBuf, cga.scanline, hDisplayed);
+
             cga.scanlineCycle = 0;
             cga.scanline++;
+
+            if((cga.scanline % charHeight) == 0)
+                cga.curAddr += cga.regs[1/* h disp*/] * 2;
 
             cga.status &= ~(1 << 0); // clear accessible
 
@@ -541,6 +556,7 @@ void MemoryBus::updateCGA()
             if(cga.scanline >= totalLines)
             {
                 cga.scanline = 0;
+                cga.curAddr = cga.regs[12] | cga.regs[13] << 8;
                 cga.status &= ~(1 << 0 | 1 << 3); // clear accessible / vblank
             }
             else if(cga.scanline >= vBlankStart)
@@ -548,6 +564,32 @@ void MemoryBus::updateCGA()
         }
         else if(cga.scanlineCycle >= hBlankStart)
             cga.status |= 1 << 0; // accessible
-        // else if < displayed && !vblank, draw
+
+        if(cga.scanlineCycle < hDisplayed && cga.scanline < vDisplayed)
+        {
+            // in visible area
+
+            if(!(cga.mode & (1 << 3))) // check enabled
+                cga.scanlineBuf[cga.scanlineCycle / 2] = 0; // black
+            else if(cga.mode & (1 << 1))
+            {
+                // graphics mode
+            }
+            else
+            {
+                // text mode
+                auto charAddr = cga.curAddr + (cga.scanlineCycle / 8) * 2;
+                auto ch = cga.ram[charAddr];
+                auto attr = cga.ram[charAddr + 1];
+
+                // TODO: font
+                auto col = ch != 0x20 ? attr & 0xF : (attr >> 4) & 7;
+
+                if(cga.scanlineCycle & 1)
+                    cga.scanlineBuf[cga.scanlineCycle / 2] |= col << 4;
+                else
+                    cga.scanlineBuf[cga.scanlineCycle / 2] = col;
+            }
+        }
     }
 }
