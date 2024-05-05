@@ -311,6 +311,28 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x2D: // SUB AX imm16
+        {
+            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            reg(Reg16::AX) = doSub(reg(Reg16::AX), imm, flags);
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(4);
+            break;
+        }
+
+        case 0x35: // XOR AX imm16
+        {
+            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            reg(Reg16::AX) = doXor(reg(Reg16::AX), imm, flags);
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(4);
+            break;
+        }
+
         case 0x3C: // CMP AL imm
         {
             auto imm = mem.read(addr + 1);
