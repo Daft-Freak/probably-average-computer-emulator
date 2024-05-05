@@ -70,6 +70,8 @@ private:
         uint8_t request = 0;
         uint8_t service = 0;
         uint8_t mask = 0;
+
+        uint8_t statusRead = 0;
     };
 
     struct PIT

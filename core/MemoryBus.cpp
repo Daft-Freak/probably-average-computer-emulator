@@ -89,7 +89,9 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
         case 0x08: // DMA status
             return dma.status;
 
-        case 0x21: // PIC mask
+        case 0x20: // PIC request/service (OCW3)
+            return pic.statusRead & 1 ? pic.request : pic.service;
+        case 0x21: // PIC mask (OCW1)
             return pic.mask;
     
         case 0x40: // PIT counter 0
@@ -254,10 +256,17 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                 pic.nextInit = 1;
 
                 pic.mask = 0;
+                pic.statusRead = 2; // read IRR
             }
-            else if(data & (1 << 4)) // OCW3
+            else if(data & (1 << 3)) // OCW3
             {
-                printf("PIC OCW3 %02X\n", data);
+                assert(!(data & (1 << 7)));
+
+                if(data & 0x62)
+                    printf("PIC OCW3 %02X\n", data);
+
+                if(data & 2)
+                    pic.statusRead = (pic.statusRead & 0xFC) | (data & 3);
             }
             else // OCW2
             {
