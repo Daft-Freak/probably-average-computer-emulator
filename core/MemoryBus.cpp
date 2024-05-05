@@ -90,7 +90,7 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
             return dma.status;
 
         case 0x20: // PIC request/service (OCW3)
-            return pic.statusRead & 1 ? pic.request : pic.service;
+            return pic.statusRead & 1 ? pic.service : pic.request;
         case 0x21: // PIC mask (OCW1)
             return pic.mask;
     
