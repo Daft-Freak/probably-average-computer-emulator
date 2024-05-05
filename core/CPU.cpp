@@ -206,7 +206,9 @@ void CPU::executeInstruction()
             case 0x6: // JBE/JNA
                 condVal = flags & (Flag_C | Flag_Z);
                 break;
-            // JNBE/JA
+            case 0x7: // JNBE/JA
+                condVal = !(flags & (Flag_C | Flag_Z));
+                break;
             case 0x8: // JS
                 condVal = flags & Flag_S;
                 break;
@@ -408,6 +410,7 @@ void CPU::executeInstruction()
         case 0x74: // JE/JZ
         case 0x75: // JNE/JNZ
         case 0x76: // JBE/JNA
+        case 0x77: // JNBE/JA
         case 0x78: // JS
         case 0x79: // JNS
         case 0x7A: // JP/JPE
