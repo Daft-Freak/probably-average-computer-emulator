@@ -262,7 +262,7 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
             {
                 assert(!(data & (1 << 7)));
 
-                if(data & 0x62)
+                if(data & 0x64)
                     printf("PIC OCW3 %02X\n", data);
 
                 if(data & 2)
