@@ -31,7 +31,7 @@ uint8_t MemoryBus::read(uint32_t addr) const
     if(addr >= 0xFE000)
         return biosROM[addr & 0x1FFF];
 
-    return 0;
+    return 0xFF;
 }
 
 void MemoryBus::write(uint32_t addr, uint8_t data)
