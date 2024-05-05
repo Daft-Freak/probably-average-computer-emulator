@@ -183,7 +183,7 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
         default:
             printf("IO R %04X\n", addr);
     }
-    return 0;
+    return 0xFF;
 }
 
 void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
