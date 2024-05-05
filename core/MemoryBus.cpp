@@ -86,6 +86,9 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
             return ret;
         }
 
+        case 0x08: // DMA status
+            return dma.status;
+
         case 0x21: // PIC mask
             return pic.mask;
     
