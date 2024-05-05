@@ -491,7 +491,7 @@ void MemoryBus::updatePIT()
 
     while(elapsed--)
     {
-        for(int i = 0; i < 2; i++)
+        for(int i = 0; i < 3; i++)
         {
             if(!(pit.active & (1 << i)))
                 continue;
