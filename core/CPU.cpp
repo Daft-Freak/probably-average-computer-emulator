@@ -255,6 +255,16 @@ void CPU::executeInstruction()
             cyclesExecuted(4);
             break;
         }
+        case 0x05: // ADD AX imm16
+        {
+            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            reg(Reg16::AX) = doAdd(reg(Reg16::AX), imm, flags);
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(4);
+            break;
+        }
 
         case 0x06: // PUSH seg
         case 0x0E:
@@ -311,6 +321,16 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x2C: // SUB AL imm8
+        {
+            auto imm = mem.read(addr + 1);
+
+            reg(Reg16::AX) = doSub(reg(Reg8::AL), imm, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(4);
+            break;
+        }
         case 0x2D: // SUB AX imm16
         {
             uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
