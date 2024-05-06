@@ -13,6 +13,7 @@ public:
     void reset();
 
     void setBIOSROM(const uint8_t *rom);
+    void setBASICROM(const uint8_t *rom);
 
     uint8_t read(uint32_t addr) const;
     void write(uint32_t addr, uint8_t data);
@@ -39,6 +40,7 @@ private:
     uint8_t ram[64 * 1024];
 
     const uint8_t *biosROM = nullptr; // at 0xFE000
+    const uint8_t *basicROM = nullptr; // at 0xF6000
 
     struct DMA
     {

@@ -20,6 +20,11 @@ void MemoryBus::setBIOSROM(const uint8_t *rom)
     biosROM = rom;
 }
 
+void MemoryBus::setBASICROM(const uint8_t *rom)
+{
+    basicROM = rom;
+}
+
 uint8_t MemoryBus::read(uint32_t addr) const
 {
     if(addr < 0x10000)
@@ -27,6 +32,9 @@ uint8_t MemoryBus::read(uint32_t addr) const
 
     if(addr >= 0xB8000 && addr < 0xBC000)
         return cga.ram[addr & 0x3FFF];
+
+    if(addr >= 0xF6000 && addr < 0xFE000 && basicROM)
+        return basicROM[addr - 0xF6000];
 
     if(addr >= 0xFE000)
         return biosROM[addr & 0x1FFF];
