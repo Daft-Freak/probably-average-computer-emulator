@@ -196,6 +196,22 @@ void CPU::executeInstruction()
     auto addr = (reg(Reg16::CS) << 4) + (reg(Reg16::IP)++);
 
     auto opcode = mem.read(addr);
+    bool rep = false;
+    Reg16 segmentOverride = Reg16::AX; // not a segment reg, also == 0
+
+    // prefixes
+    while(true)
+    {
+        if((opcode & 0xE7) == 0x26) // segment override (26 = ES, 2E = CS, 36 = SS, 3E = DS)
+            segmentOverride = static_cast<Reg16>(static_cast<int>(Reg16::ES) + ((opcode >> 3) & 3)); // the middle two bits
+        else if(opcode == 0xF3) // REP/REPE
+            rep = true;
+        else
+            break;
+
+        opcode = mem.read(++addr);
+        reg(Reg16::IP)++;
+    }
 
     // 7x
     auto jump8 = [this, addr](int cond)
