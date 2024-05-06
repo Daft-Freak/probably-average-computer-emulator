@@ -147,6 +147,26 @@ static T doSub(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
+static T doSubWithBorrow(T dest, T src, uint16_t &flags)
+{
+    int c = flags & Flag_C ? 1 : 0;
+    T res = dest - src - 1;
+
+    bool carry = src > dest || (src == dest && c);
+    bool overflow = (dest ^ src) & (src ^ res) & signBit<T>();
+
+    flags = (flags & ~(Flag_C | Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
+          | (carry ? Flag_C : 0) 
+          | (parity(res) ? Flag_P : 0)
+          | ((res & 0xF) > (dest & 0xF) - c ? Flag_A : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (overflow ? Flag_O : 0);
+
+    return res;
+}
+
+template<class T>
 static T doXor(T dest, T src, uint16_t &flags)
 {
     T res = dest ^ src;
