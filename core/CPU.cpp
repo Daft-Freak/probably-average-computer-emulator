@@ -1218,6 +1218,13 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xF5: // CMC
+        {
+            flags ^= Flag_C;
+            cyclesExecuted(2);
+            break;
+        }
+
         case 0xF8: // CLC
         {
             flags &= ~Flag_C;
