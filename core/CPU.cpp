@@ -49,6 +49,26 @@ static T doAdd(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
+static T doAddWithCarry(T dest, T src, uint16_t &flags)
+{
+    int c = flags & Flag_C ? 1 : 0;
+    T res = dest + src + c;
+
+    bool carry = res < dest || (res == dest && c);
+    bool overflow = ~(dest ^ src) & (src ^ res) & signBit<T>();
+
+    flags = (flags & ~(Flag_C | Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
+          | (carry ? Flag_C : 0) 
+          | (parity(res) ? Flag_P : 0)
+          | ((res & 0xF) < (dest & 0xF) + c ? Flag_A : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0)
+          | (overflow ? Flag_O : 0);
+
+    return res;
+}
+
+template<class T>
 static T doAnd(T dest, T src, uint16_t &flags)
 {
     T res = dest & src;
@@ -304,6 +324,17 @@ void CPU::executeInstruction()
             auto imm = mem.read(addr + 1);
 
             reg(Reg8::AL) = doOr(reg(Reg8::AL), imm, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(4);
+            break;
+        }
+
+        case 0x14: // ADC AL imm8
+        {
+            uint8_t src = mem.read(addr + 1);
+
+            reg(Reg8::AL) = doAddWithCarry(reg(Reg8::AL), src, flags);
 
             reg(Reg16::IP)++;
             cyclesExecuted(4);
