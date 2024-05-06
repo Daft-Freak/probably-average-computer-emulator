@@ -137,7 +137,7 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
                     // switches
                     return 0 << 0 | // no floppy drives
                            0 << 1 | // no co-processor
-                           0 << 2 | // 1 memory bank
+                           3 << 2 | // 4 memory banks
                            1 << 4 | // 40-col CGA
                            0 << 6;  // still no floppy drives
                 }
