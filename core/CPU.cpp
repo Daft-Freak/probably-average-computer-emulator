@@ -557,6 +557,17 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x98: // CBW
+        {
+            if(reg(Reg8::AL) & 0x80)
+                reg(Reg8::AH) = 0xFF;
+            else
+                reg(Reg8::AH) = 0;
+
+            cyclesExecuted(2);
+            break;
+        }
+
         case 0x9C: // PUSHF
         {
             reg(Reg16::SP) -= 2;
