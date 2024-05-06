@@ -1044,6 +1044,19 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xD7: // XLAT
+        {
+            auto addr = (reg(Reg16::BX) + reg(Reg8::AL)) & 0xFFFF;
+            if(segmentOverride != Reg16::AX)
+                addr += reg(segmentOverride) << 4;
+            else
+                addr += reg(Reg16::DS) << 4;
+
+            reg(Reg8::AL) = mem.read(addr);
+            cyclesExecuted(11);
+            break;
+        }
+
         case 0xE0: // LOOPNE/LOOPNZ
         {
             auto off = static_cast<int8_t>(mem.read(addr + 1));
