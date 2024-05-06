@@ -597,6 +597,8 @@ void CPU::executeInstruction()
         case 0xA0: // MOV off16 -> AL
         {
             auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            memAddr += reg(segment) << 4;
 
             reg(Reg8::AL) = mem.read(memAddr);
 
@@ -607,6 +609,8 @@ void CPU::executeInstruction()
         case 0xA1: // MOV off16 -> AX
         {
             auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            memAddr += reg(segment) << 4;
 
             reg(Reg16::AX) = mem.read(memAddr) | mem.read(memAddr + 1) << 8;
 
@@ -617,6 +621,8 @@ void CPU::executeInstruction()
         case 0xA2: // MOV AL -> off16
         {
             auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            memAddr += reg(segment) << 4;
 
             mem.write(memAddr, reg(Reg8::AL));
 
@@ -627,6 +633,8 @@ void CPU::executeInstruction()
         case 0xA3: // MOV AX -> off16
         {
             auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            memAddr += reg(segment) << 4;
 
             mem.write(memAddr, reg(Reg8::AL));
             mem.write(memAddr + 1, reg(Reg8::AH));
