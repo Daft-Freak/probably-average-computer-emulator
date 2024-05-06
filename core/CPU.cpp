@@ -644,6 +644,115 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xA4: // MOVS byte
+        {
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
+                    auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                    mem.write(destAddr, mem.read(srcAddr));
+
+                    if(flags & Flag_D)
+                    {
+                        reg(Reg16::SI)--;
+                        reg(Reg16::DI)--;
+                    }
+                    else
+                    {
+                        reg(Reg16::SI)++;
+                        reg(Reg16::DI)++;
+                    }
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(17);
+                }
+            }
+            else
+            {
+                auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
+                auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                mem.write(destAddr, mem.read(srcAddr));
+
+                if(flags & Flag_D)
+                {
+                    reg(Reg16::SI)--;
+                    reg(Reg16::DI)--;
+                }
+                else
+                {
+                    reg(Reg16::SI)++;
+                    reg(Reg16::DI)++;
+                }
+
+                cyclesExecuted(18);
+            }
+            break;
+        }
+        case 0xA5: // MOVS word
+        {
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
+                    auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                    mem.write(destAddr, mem.read(srcAddr));
+                    mem.write(destAddr + 1,  mem.read(srcAddr + 1));
+
+                    if(flags & Flag_D)
+                    {
+                        reg(Reg16::SI) -= 2;
+                        reg(Reg16::DI) -= 2;
+                    }
+                    else
+                    {
+                        reg(Reg16::SI) += 2;
+                        reg(Reg16::DI) += 2;
+                    }
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(17 + 2 * 4);
+                }
+            }
+            else
+            {
+                auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
+                auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                mem.write(destAddr, mem.read(srcAddr));
+                mem.write(destAddr + 1,  mem.read(srcAddr + 1));
+
+                if(flags & Flag_D)
+                {
+                    reg(Reg16::SI) -= 2;
+                    reg(Reg16::DI) -= 2;
+                }
+                else
+                {
+                    reg(Reg16::SI) += 2;
+                    reg(Reg16::DI) += 2;
+                }
+
+                cyclesExecuted(18 + 2 * 4);
+            }
+            break;
+        }
+
         case 0xA8: // TEST AL imm8
         {
             auto imm = mem.read(addr + 1);
@@ -652,6 +761,200 @@ void CPU::executeInstruction()
 
             reg(Reg16::IP)++;
             cyclesExecuted(4);
+            break;
+        }
+
+        case 0xAA: // STOS byte
+        {
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+                    mem.write(addr, reg(Reg8::AL));
+
+                    if(flags & Flag_D)
+                        reg(Reg16::DI)--;
+                    else
+                        reg(Reg16::DI)++;
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(10);
+                }
+            }
+            else
+            {
+                auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+                mem.write(addr, reg(Reg8::AL));
+
+                if(flags & Flag_D)
+                    reg(Reg16::DI)--;
+                else
+                    reg(Reg16::DI)++;
+
+                cyclesExecuted(11);
+            }
+            break;
+        }
+        case 0xAB: // STOS word
+        {
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+                    mem.write(addr, reg(Reg8::AL));
+                    mem.write(addr + 1, reg(Reg8::AH));
+
+                    if(flags & Flag_D)
+                        reg(Reg16::DI) -= 2;
+                    else
+                        reg(Reg16::DI) += 2;
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(10 + 4);
+                }
+            }
+            else
+            {
+                auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+                mem.write(addr, reg(Reg8::AL));
+                mem.write(addr + 1, reg(Reg8::AH));
+
+                if(flags & Flag_D)
+                    reg(Reg16::DI) -= 2;
+                else
+                    reg(Reg16::DI) += 2;
+
+                cyclesExecuted(11 + 4);
+            }
+            break;
+        }
+        case 0xAC: // LODS byte
+        {
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto addr = (reg(segment) << 4) + reg(Reg16::SI);
+                    reg(Reg8::AL) = mem.read(addr);
+
+                    if(flags & Flag_D)
+                        reg(Reg16::SI)--;
+                    else
+                        reg(Reg16::SI)++;
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(13);
+                }
+            }
+            else
+            {
+                auto addr = (reg(segment) << 4) + reg(Reg16::SI);
+                reg(Reg8::AL) = mem.read(addr);
+
+                if(flags & Flag_D)
+                    reg(Reg16::SI)--;
+                else
+                    reg(Reg16::SI)++;
+
+                cyclesExecuted(12);
+            }
+            break;
+        }
+        case 0xAD: // LODS word
+        {
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto addr = (reg(segment) << 4) + reg(Reg16::SI);
+                    reg(Reg16::AX) = mem.read(addr) | mem.read(addr + 1) << 8;
+
+                    if(flags & Flag_D)
+                        reg(Reg16::SI) -= 2;
+                    else
+                        reg(Reg16::SI) += 2;
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(13 + 4);
+                }
+            }
+            else
+            {
+                auto addr = (reg(segment) << 4) + reg(Reg16::SI);
+                reg(Reg16::AX) = mem.read(addr) | mem.read(addr + 1) << 8;
+
+                if(flags & Flag_D)
+                    reg(Reg16::SI) -= 2;
+                else
+                    reg(Reg16::SI) += 2;
+
+                cyclesExecuted(12 + 4);
+            }
+            break;
+        }
+
+        case 0xAF: // SCAS word
+        {
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX) && (flags & Flag_Z))
+                {
+                    // TODO: interrupt
+
+                    auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                    uint16_t rSrc = mem.read(addr) | mem.read(addr + 1) << 8;
+
+                    doSub(reg(Reg16::AX), rSrc, flags);
+
+                    if(flags & Flag_D)
+                        reg(Reg16::DI) -= 2;
+                    else
+                        reg(Reg16::DI) += 2;
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(15 + 4);
+                }
+            }
+            else
+            {
+                auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                uint16_t rSrc = mem.read(addr) | mem.read(addr + 1) << 8;
+
+                doSub(reg(Reg16::AX), rSrc, flags);
+
+                if(flags & Flag_D)
+                    reg(Reg16::DI) -= 2;
+                else
+                    reg(Reg16::DI) += 2;
+
+                reg(Reg16::CX)--;
+
+                cyclesExecuted(15 + 4);
+            }
             break;
         }
 
