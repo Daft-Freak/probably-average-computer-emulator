@@ -30,7 +30,7 @@ uint8_t MemoryBus::read(uint32_t addr) const
     if(addr < 0x10000)
         return ram[addr];
 
-    if(addr >= 0xB8000 && addr < 0xBC000)
+    if(addr >= 0xB8000 && addr < 0xC0000)
         return cga.ram[addr & 0x3FFF];
 
     if(addr >= 0xF6000 && addr < 0xFE000 && basicROM)
@@ -46,7 +46,7 @@ void MemoryBus::write(uint32_t addr, uint8_t data)
 {
     if(addr < 0x10000)
         ram[addr] = data;
-    else if(addr >= 0xB8000 && addr < 0xBC000)
+    else if(addr >= 0xB8000 && addr < 0xC0000)
         cga.ram[addr & 0x3FFF] = data;
 }
 
