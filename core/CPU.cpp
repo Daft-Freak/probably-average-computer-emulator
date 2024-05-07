@@ -950,7 +950,53 @@ void CPU::executeInstruction()
             }
             break;
         }
+        case 0xAE: // SCAS byte
+        {
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
 
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                    auto rSrc = mem.read(addr);
+
+                    doSub(reg(Reg8::AL), rSrc, flags);
+
+                    if(flags & Flag_D)
+                        reg(Reg16::DI)--;
+                    else
+                        reg(Reg16::DI)++;
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(15);
+
+                    if((flags & Flag_Z) != repZ)
+                        break;
+                }
+            }
+            else
+            {
+                auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                auto rSrc = mem.read(addr);
+
+                doSub(reg(Reg8::AL), rSrc, flags);
+
+                if(flags & Flag_D)
+                    reg(Reg16::DI)--;
+                else
+                    reg(Reg16::DI)++;
+
+                reg(Reg16::CX)--;
+
+                cyclesExecuted(15);
+            }
+            break;
+        }
         case 0xAF: // SCAS word
         {
             if(rep)
