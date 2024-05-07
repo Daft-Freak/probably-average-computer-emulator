@@ -5,6 +5,7 @@
 #include <SDL.h>
 
 #include "CPU.h"
+#include "Scancode.h"
 
 static bool quit = false;
 static bool turbo = false;
@@ -15,6 +16,262 @@ static uint8_t screenData[640 * 200 * 4];
 static int curScreenW = 0;
 
 static uint8_t biosROM[0x2000];
+
+static XTScancode scancodeMap[SDL_NUM_SCANCODES]
+{
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+
+    XTScancode::A,
+    XTScancode::B,
+    XTScancode::C,
+    XTScancode::D,
+    XTScancode::E,
+    XTScancode::F,
+    XTScancode::G,
+    XTScancode::H,
+    XTScancode::I,
+    XTScancode::J,
+    XTScancode::K,
+    XTScancode::L,
+    XTScancode::M,
+    XTScancode::N,
+    XTScancode::O,
+    XTScancode::P,
+    XTScancode::Q,
+    XTScancode::R,
+    XTScancode::S,
+    XTScancode::T,
+    XTScancode::U,
+    XTScancode::V,
+    XTScancode::W,
+    XTScancode::X,
+    XTScancode::Y,
+    XTScancode::Z,
+    
+    XTScancode::_1,
+    XTScancode::_2,
+    XTScancode::_3,
+    XTScancode::_4,
+    XTScancode::_5,
+    XTScancode::_6,
+    XTScancode::_7,
+    XTScancode::_8,
+    XTScancode::_9,
+    XTScancode::_0,
+
+    XTScancode::Return,
+    XTScancode::Escape,
+    XTScancode::Backspace,
+    XTScancode::Tab,
+    XTScancode::Space,
+
+    XTScancode::Minus,
+    XTScancode::Equals,
+    XTScancode::LeftBracket,
+    XTScancode::RightBracket,
+    XTScancode::Backslash,
+    XTScancode::Backslash, // same key
+    XTScancode::Semicolon,
+    XTScancode::Apostrophe,
+    XTScancode::Grave,
+    XTScancode::Comma,
+    XTScancode::Period,
+    XTScancode::Slash,
+
+    XTScancode::CapsLock,
+
+    XTScancode::F1,
+    XTScancode::F2,
+    XTScancode::F3,
+    XTScancode::F4,
+    XTScancode::F5,
+    XTScancode::F6,
+    XTScancode::F7,
+    XTScancode::F8,
+    XTScancode::F9,
+    XTScancode::F10,
+    XTScancode::F11,
+    XTScancode::F12,
+
+    XTScancode::Invalid, // PrintScreen
+    XTScancode::ScrollLock,
+    XTScancode::Invalid, // Pause
+    XTScancode::Invalid, // Insert
+    
+    XTScancode::Invalid, // Home
+    XTScancode::Invalid, // PageUp
+    XTScancode::Invalid, // Delete
+    XTScancode::Invalid, // End
+    XTScancode::Invalid, // PageDown
+    XTScancode::Invalid, // Right
+    XTScancode::Invalid, // Left
+    XTScancode::Invalid, // Down
+    XTScancode::Invalid, // Up
+
+    XTScancode::NumLock,
+
+    XTScancode::Invalid, // KPDivide
+    XTScancode::KPMultiply,
+    XTScancode::KPMinus,
+    XTScancode::KPPlus,
+    XTScancode::Invalid, // KPEnter
+    XTScancode::KP1,
+    XTScancode::KP2,
+    XTScancode::KP3,
+    XTScancode::KP4,
+    XTScancode::KP5,
+    XTScancode::KP6,
+    XTScancode::KP7,
+    XTScancode::KP8,
+    XTScancode::KP9,
+    XTScancode::KP0,
+    XTScancode::KPPeriod,
+
+    XTScancode::NonUSBackslash,
+
+    XTScancode::Invalid, // Application
+    XTScancode::Invalid, // Power
+
+    XTScancode::KPEquals,
+
+    // F13-F24
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+
+    // no mapping
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+
+    XTScancode::KPComma,
+    XTScancode::Invalid,
+
+    XTScancode::International1,
+    XTScancode::International2,
+    XTScancode::International3,
+    XTScancode::International4,
+    XTScancode::International5,
+    XTScancode::International6,
+    XTScancode::Invalid, // ...7
+    XTScancode::Invalid, // ...8
+    XTScancode::Invalid, // ...9
+    XTScancode::Lang1,
+    XTScancode::Lang2,
+    XTScancode::Lang3,
+    XTScancode::Lang4,
+    XTScancode::Lang5,
+    XTScancode::Invalid, // ...6
+    XTScancode::Invalid, // ...7
+    XTScancode::Invalid, // ...8
+    XTScancode::Invalid, // ...9
+
+    // no mapping
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+
+    XTScancode::LeftCtrl,
+    XTScancode::LeftShift,
+    XTScancode::LeftAlt,
+    XTScancode::Invalid, // LeftGUI
+    XTScancode::Invalid, // RightCtrl
+    XTScancode::RightShift,
+};
 
 static void audioCallback(void *userdata, Uint8 *stream, int len)
 {
@@ -28,6 +285,22 @@ static void pollEvents()
     {
         switch(event.type)
         {
+            case SDL_KEYDOWN:
+            {
+                auto code = scancodeMap[event.key.keysym.scancode];
+
+                if(code != XTScancode::Invalid)
+                    cpu.getMem().sendKey(static_cast<uint8_t>(code));
+                break;
+            }
+            case SDL_KEYUP:
+            {
+                auto code = scancodeMap[event.key.keysym.scancode];
+
+                if(code != XTScancode::Invalid)
+                    cpu.getMem().sendKey(0x80 | static_cast<uint8_t>(code)); // break code
+                break;
+            }
             case SDL_QUIT:
                 quit = true;
                 break;
