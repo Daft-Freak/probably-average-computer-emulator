@@ -33,6 +33,14 @@ public:
         return ret;
     }
 
+    T peek()
+    {
+        if(empty())
+            return T(0);
+
+        return data[readOff];
+    }
+
     bool empty() const
     {
         return !fullFlag && readOff == writeOff;
