@@ -3,6 +3,8 @@
 #include <functional>
 #include <list>
 
+#include "FIFO.h"
+
 class CPU;
 class MemoryBus
 {
@@ -30,6 +32,8 @@ public:
     uint8_t acknowledgeInterrupt();
 
     void setCGAScanlineCallback(ScanlineCallback cb);
+
+    void sendKey(uint8_t scancode);
 
 private:
     void flagPICInterrupt(int index);
@@ -130,6 +134,11 @@ private:
     PPI ppi;
 
     CGA cga;
+
+    FIFO<uint8_t, 8> keyboardQueue;
+    uint32_t keyboardClockLowCycle = 0;
+    uint32_t keyboardTestReplyCycle = 0;
+    int keyboardTestDelay = 0; // need to delay sending back test result
 
     CPU &cpu;
 };

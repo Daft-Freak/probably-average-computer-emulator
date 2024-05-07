@@ -149,8 +149,8 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
                            1 << 4 | // 40-col CGA
                            0 << 6;  // still no floppy drives
                 }
-                else
-                    printf("PPI A keyboard\n");
+                else // keyboard
+                    return keyboardQueue.peek();
             }
             else
                 return ppi.output[0];
@@ -422,7 +422,34 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
         case 0x62: // PPI port C
         {
             int port = addr & 3;
+
+            auto changed = ppi.output[port] ^ data;
+
+            if(port == 1 && (changed & (1 << 7)))
+            {
+                if(data & (1 << 7))
+                    keyboardQueue.pop();
+            }
+
+            if(port == 1 && (changed & (1 << 6)))
+            {
+                // check for B6 going high (end of soft reset/self-test pulse)
+                if(data & (1 << 6))
+                {
+                    // needs to be a long pulse (BIOS is going for 20ms)
+                    if(cpu.getCycleCount() - keyboardClockLowCycle > 100000)
+                    {
+                        // send reply a little later
+                        keyboardTestReplyCycle = cpu.getCycleCount();
+                        keyboardTestDelay = 1000;
+                    }
+                }
+                else
+                    keyboardClockLowCycle = cpu.getCycleCount();
+            }
+
             ppi.output[port] = data;
+
             break;
         }
         case 0x63: // PPI control
@@ -475,6 +502,21 @@ void MemoryBus::updateForInterrupts()
 {
     // TODO: usual target for optimisation...
 
+    // response from keyboard self-test
+    if(keyboardTestDelay)
+    {
+        keyboardTestDelay -= cpu.getCycleCount() - keyboardTestReplyCycle;
+
+        if(keyboardTestDelay <= 0)
+        {
+            keyboardTestDelay = 0;
+            keyboardQueue.push(0xAA);
+            flagPICInterrupt(1);
+        }
+        else
+            keyboardTestReplyCycle = cpu.getCycleCount();
+    }
+
     // timer
     if(!(pic.mask & 1))
         updatePIT();
@@ -506,6 +548,12 @@ uint8_t MemoryBus::acknowledgeInterrupt()
 void MemoryBus::setCGAScanlineCallback(ScanlineCallback cb)
 {
     cga.scanCb = cb;
+}
+
+void MemoryBus::sendKey(uint8_t scancode)
+{
+    keyboardQueue.push(scancode);
+    flagPICInterrupt(1);
 }
 
 void MemoryBus::flagPICInterrupt(int index)
