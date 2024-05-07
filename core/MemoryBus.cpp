@@ -157,7 +157,17 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
 
             break;
         }
+        case 0x61: // PPI port B
+        {
+            if(ppi.mode & (1 << 1)) // input
+            {
+                printf("PPI B input\n");
+            }
+            else
+                return ppi.output[1];
 
+            break;
+        }
         case 0x62: // PPI port C
         {
             uint8_t ret = 0;
