@@ -204,8 +204,10 @@ void CPU::run(int ms)
     {
         mem.updateForInterrupts();
 
-        if(mem.hasInterrupt() && (flags & Flag_I))
+        if(!delayInterrupt && mem.hasInterrupt() && (flags & Flag_I))
             serviceInterrupt(mem.acknowledgeInterrupt());
+
+        delayInterrupt = false;
 
         executeInstruction();
     }
@@ -1051,6 +1053,8 @@ void CPU::executeInstruction()
 
         case 0xCF: // IRET
         {
+            delayInterrupt = true;
+
             // pop IP
             auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
             reg(Reg16::SP) += 2;
@@ -1274,6 +1278,7 @@ void CPU::executeInstruction()
         case 0xFB: // STI
         {
             flags |= Flag_I;
+            delayInterrupt = true;
             cyclesExecuted(2);
             break;
         }

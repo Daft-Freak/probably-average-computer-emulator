@@ -73,6 +73,9 @@ private:
     uint16_t regs[13];
     uint16_t flags;
 
+    // enabling interrupts happens one opcode later
+    bool delayInterrupt = false;
+
     // RAM
     MemoryBus mem;
 };
