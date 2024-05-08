@@ -368,6 +368,10 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                         pit.active |= (1 << channel);
                         pit.counter[channel] = pit.reload[channel];
 
+                        // round down odd count for mode 3
+                        if(mode == 3 && (pit.reload[channel] & 1))
+                            pit.counter[channel]--;
+
                         if(mode == 0) // mode 0 goes low immediately
                             pit.outState &= ~(1 << channel);
                         else // mode 2/3/4 start high
@@ -574,12 +578,16 @@ void MemoryBus::updatePIT()
             if(!(pit.active & (1 << i)))
                 continue;
 
+            // TODO: ch2 gate
+
             int mode = (pit.control[i] >> 1) & 7;
 
             if(mode == 2 && pit.counter[i] == 1)
                 pit.counter[i] = pit.reload[i]; // reload after reaching 1 on the last cycle
+            else if(mode == 3) // mode 3 decrements twice
+                pit.counter[i] -= 2;
             else
-                pit.counter[i]--; // mode 3 decrements twice
+                pit.counter[i]--;
 
             if(mode == 0 && pit.counter[i] == 0 && !(pit.outState & (1 << i)))
             {
@@ -589,6 +597,13 @@ void MemoryBus::updatePIT()
                 // ch0 should trigger interrupt here
                 if(i == 0)
                     flagPICInterrupt(0);
+            }
+            else if(mode == 3 && pit.counter[i] == 0)
+            {
+                // toggle out and reload
+                // TODO: should delay low by one cycle if odd count
+                pit.outState ^= 1 << i;
+                pit.counter[i] = pit.reload[i] & ~1;
             }
         }
 
