@@ -618,6 +618,8 @@ void MemoryBus::updateCGA()
     int vDisplayed = cga.regs[6/*v displayed*/] * charHeight;
     int vBlankStart = cga.regs[7/*v sync*/] * charHeight;
 
+    uint16_t cursorAddr = cga.regs[14] << 8 | cga.regs[15];
+
     while(elapsed--)
     {
         cga.scanlineCycle++;
@@ -640,7 +642,8 @@ void MemoryBus::updateCGA()
             if(cga.scanline >= totalLines)
             {
                 cga.scanline = 0;
-                cga.curAddr = cga.regs[12] | cga.regs[13] << 8;
+                cga.frame++;
+                cga.curAddr = cga.regs[12] << 8 | cga.regs[13];
                 cga.status &= ~(1 << 0 | 1 << 3); // clear accessible / vblank
             }
             else if(cga.scanline >= vBlankStart)
@@ -667,8 +670,22 @@ void MemoryBus::updateCGA()
                 auto ch = cga.ram[charAddr];
                 auto attr = cga.ram[charAddr + 1];
 
-                auto fontData = cgaFont[ch * 8 + (cga.scanline & 7)];
-                auto col = (fontData & 1 << (cga.scanlineCycle & 7)) ? attr & 0xF : (attr >> 4) & 7;
+                int charLine = cga.scanline & 7;
+
+                // check if in cursor
+                bool cursor = charAddr == cursorAddr * 2 && charLine >= (cga.regs[10/*cursor start*/] & 0x1F) && charLine <= (cga.regs[11/*cursor end*/] & 0x1F);
+
+                int col;
+
+                // also check for blinking (handled outside 6845, 8/8 frames)
+                if(cursor && (cga.frame & 8))
+                    col = attr & 0xF;
+                else
+                {
+                    // not cursor or cursor off
+                    auto fontData = cgaFont[ch * 8 + charLine];
+                    col = (fontData & 1 << (cga.scanlineCycle & 7)) ? attr & 0xF : (attr >> 4) & 7;
+                }
 
                 if(cga.scanlineCycle & 1)
                     cga.scanlineBuf[cga.scanlineCycle / 2] |= col << 4;

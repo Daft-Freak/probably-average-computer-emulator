@@ -118,6 +118,7 @@ private:
         uint16_t scanline = 0;
         uint16_t scanlineCycle = 0;
         uint16_t curAddr = 0;
+        uint16_t frame = 0;
         uint8_t scanlineBuf[320];
 
         uint8_t ram[16 * 1024]; // at B8000
