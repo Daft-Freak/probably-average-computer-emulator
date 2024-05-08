@@ -150,7 +150,7 @@ template<class T>
 static T doSubWithBorrow(T dest, T src, uint16_t &flags)
 {
     int c = flags & Flag_C ? 1 : 0;
-    T res = dest - src - 1;
+    T res = dest - src - c;
 
     bool carry = src > dest || (src == dest && c);
     bool overflow = (dest ^ src) & (src ^ res) & signBit<T>();
