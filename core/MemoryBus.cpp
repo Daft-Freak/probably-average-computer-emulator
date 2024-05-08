@@ -748,6 +748,7 @@ void MemoryBus::updateCGA()
                 int charLine = cga.scanline & 7;
 
                 // check if in cursor
+                // for more accuracy, should toggle when reaching those lines (resulting in wrap around sometimes)
                 bool cursor = charAddr == cursorAddr * 2 && charLine >= (cga.regs[10/*cursor start*/] & 0x1F) && charLine <= (cga.regs[11/*cursor end*/] & 0x1F);
 
                 int col;
@@ -760,6 +761,10 @@ void MemoryBus::updateCGA()
                     // not cursor or cursor off
                     auto fontData = cgaFont[ch * 8 + charLine];
                     col = (fontData & 1 << (cga.scanlineCycle & 7)) ? attr & 0xF : (attr >> 4) & 7;
+
+                    // blink character
+                    if((attr & 0x80) && !(cga.frame & 16))
+                        col = (attr >> 4) & 7;
                 }
 
                 if(cga.scanlineCycle & 1)
