@@ -365,6 +365,9 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                     // modes 1 and 5 start on gate input instead
                     if(mode != 1 && mode != 5)
                     {
+                        if(channel == 2)
+                            updateSpeaker(cpu.getCycleCount());
+
                         pit.active |= (1 << channel);
                         pit.counter[channel] = pit.reload[channel];
 
@@ -428,6 +431,13 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
             int port = addr & 3;
 
             auto changed = ppi.output[port] ^ data;
+
+            // timer gate or speaker output
+            if(port == 1 && (changed & 3))
+            {
+                updatePIT();
+                updateSpeaker(cpu.getCycleCount());
+            }
 
             if(port == 1 && (changed & (1 << 7)))
             {
@@ -529,6 +539,10 @@ void MemoryBus::updateForInterrupts()
 void MemoryBus::updateForDisplay()
 {
     updateCGA();
+
+    // PIT may update speaker, so we need to run that first
+    updatePIT();
+    updateSpeaker(cpu.getCycleCount());
 }
 
 uint8_t MemoryBus::acknowledgeInterrupt()
@@ -558,6 +572,16 @@ void MemoryBus::sendKey(uint8_t scancode)
 {
     keyboardQueue.push(scancode);
     flagPICInterrupt(1);
+}
+
+bool MemoryBus::hasSpeakerSample() const
+{
+    return !speakerQueue.empty();
+}
+
+int8_t MemoryBus::getSpeakerSample()
+{
+    return speakerQueue.pop();
 }
 
 void MemoryBus::flagPICInterrupt(int index)
@@ -600,6 +624,9 @@ void MemoryBus::updatePIT()
             }
             else if(mode == 3 && pit.counter[i] == 0)
             {
+                if(i == 2)
+                    updateSpeaker(pit.lastUpdateCycle);
+
                 // toggle out and reload
                 // TODO: should delay low by one cycle if odd count
                 pit.outState ^= 1 << i;
@@ -608,6 +635,39 @@ void MemoryBus::updatePIT()
         }
 
         pit.lastUpdateCycle += 4;
+    }
+}
+
+void MemoryBus::updateSpeaker(uint32_t target)
+{
+    static const int fracBits = 8;
+    static const int sampleRate = 22050;
+    static const int divider = (4772726 << fracBits) / sampleRate;
+
+    target &= ~3; // avoid getting ahead of PIT
+
+    auto elapsed = target - lastSpeakerUpdateCycle;
+    lastSpeakerUpdateCycle = target;
+
+    assert(elapsed < 0xFFFFFF);
+
+    speakerSampleTimer += elapsed << fracBits;
+
+    bool gate = ppi.output[1] & (1 << 0);
+    bool ppiData = ppi.output[1] & (1 << 1);
+    bool pitData = pit.outState & (1 << 2);
+
+    // gate low makes timer output high
+    // FIXME: that should be handled in the PIT... and gate should also stop timer counting
+    bool value = !((pitData || !gate) && ppiData);
+
+    while(speakerSampleTimer >= divider)
+    {
+        speakerSampleTimer -= divider;
+
+        while(speakerQueue.full()); // wait
+
+        speakerQueue.push(value ? 127 : -128);
     }
 }
 

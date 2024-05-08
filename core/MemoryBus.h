@@ -35,9 +35,13 @@ public:
 
     void sendKey(uint8_t scancode);
 
+    bool hasSpeakerSample() const;
+    int8_t getSpeakerSample();
+
 private:
     void flagPICInterrupt(int index);
     void updatePIT();
+    void updateSpeaker(uint32_t target);
 
     void updateCGA();
 
@@ -140,6 +144,10 @@ private:
     uint32_t keyboardClockLowCycle = 0;
     uint32_t keyboardTestReplyCycle = 0;
     int keyboardTestDelay = 0; // need to delay sending back test result
+
+    uint32_t lastSpeakerUpdateCycle = 0;
+    uint32_t speakerSampleTimer = 0;
+    FIFO<int8_t, 1024> speakerQueue; // somewhat unsafe
 
     CPU &cpu;
 };

@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 
 #include <SDL.h>
 
@@ -275,7 +276,14 @@ static XTScancode scancodeMap[SDL_NUM_SCANCODES]
 
 static void audioCallback(void *userdata, Uint8 *stream, int len)
 {
+    auto ptr = reinterpret_cast<int16_t *>(stream);
+    for(int i = 0; i < len / 2; i++)
+    {
+        while(!quit && !cpu.getMem().hasSpeakerSample())
+            std::this_thread::yield();
 
+        *ptr++ = cpu.getMem().getSpeakerSample() << 4;
+    }
 }
 
 static void pollEvents()
