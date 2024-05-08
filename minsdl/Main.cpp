@@ -17,6 +17,7 @@ static uint8_t screenData[640 * 200 * 4];
 static int curScreenW = 0;
 
 static uint8_t biosROM[0x2000];
+static uint8_t basicROM[0x8000];
 
 static XTScancode scancodeMap[SDL_NUM_SCANCODES]
 {
@@ -416,6 +417,16 @@ int main(int argc, char *argv[])
         std::cerr << "bios.rom not found in " << basePath << "\n";
         return 1;
     }
+
+    std::ifstream basicFile(basePath + "basic.rom", std::ios::binary);
+    if(basicFile)
+    {
+        basicFile.read(reinterpret_cast<char *>(basicROM), sizeof(basicROM));
+
+        cpu.getMem().setBASICROM(basicROM);
+    }
+    else
+        std::cerr << "basic.rom not found in " << basePath << "\n";
 
     cpu.getMem().setCGAScanlineCallback(scanlineCallback);
 
