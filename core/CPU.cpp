@@ -974,7 +974,7 @@ void CPU::executeInstruction()
                     reg(Reg16::CX)--;
                     cyclesExecuted(15);
 
-                    if((flags & Flag_Z) != repZ)
+                    if(!!(flags & Flag_Z) != repZ)
                         break;
                 }
             }
@@ -1021,7 +1021,7 @@ void CPU::executeInstruction()
                     reg(Reg16::CX)--;
                     cyclesExecuted(15 + 4);
 
-                    if((flags & Flag_Z) != repZ)
+                    if(!!(flags & Flag_Z) != repZ)
                         break;
                 }
             }
