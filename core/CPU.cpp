@@ -439,7 +439,7 @@ void CPU::executeInstruction()
         {
             auto imm = mem.read(addr + 1);
 
-            reg(Reg16::AX) = doSub(reg(Reg8::AL), imm, flags);
+            reg(Reg8::AL) = doSub(reg(Reg8::AL), imm, flags);
 
             reg(Reg16::IP)++;
             cyclesExecuted(4);
