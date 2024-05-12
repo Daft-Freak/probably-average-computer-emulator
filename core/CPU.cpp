@@ -1141,7 +1141,7 @@ void CPU::executeInstruction()
 
             uint16_t count = --reg(Reg16::CX);
 
-            if(count == 0 && !(flags & Flag_Z))
+            if(count == 0 || (flags & Flag_Z))
             {
                 // done
                 reg(Reg16::IP)++;
@@ -1160,7 +1160,7 @@ void CPU::executeInstruction()
 
             uint16_t count = --reg(Reg16::CX);
 
-            if(count == 0 && (flags & Flag_Z))
+            if(count == 0 || !(flags & Flag_Z))
             {
                 // done
                 reg(Reg16::IP)++;
