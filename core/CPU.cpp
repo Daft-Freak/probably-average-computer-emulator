@@ -613,6 +613,32 @@ void CPU::executeInstruction()
             cyclesExecuted(5);
             break;
         }
+    
+        case 0x9A: // CALL far
+        {
+            auto newIP = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto newCS = mem.read(addr + 3) | mem.read(addr + 4) << 8;
+
+            // push CS
+            reg(Reg16::SP) -= 2;
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            mem.write(stackAddr, reg(Reg16::CS) & 0xFF);
+            mem.write(stackAddr + 1, reg(Reg16::CS) >> 8);
+
+            // push IP
+            reg(Reg16::SP) -= 2;
+            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            auto retAddr = reg(Reg16::IP) + 4;
+
+            mem.write(stackAddr, retAddr & 0xFF);
+            mem.write(stackAddr + 1, retAddr >> 8);
+
+            reg(Reg16::CS) = newCS;
+            reg(Reg16::IP) = newIP;
+            cyclesExecuted(28 + 2 * 4);
+            break;
+        }
 
         case 0x9C: // PUSHF
         {
@@ -1108,6 +1134,45 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xCA: // RET far, add to SP
+        {
+            // pop IP
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
+            auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+
+            // pop CS
+            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
+            auto newCS = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+
+            // add imm to SP
+            auto imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            reg(Reg16::SP) += imm;
+
+            reg(Reg16::CS) = newCS;
+            reg(Reg16::IP) = newIP;
+            cyclesExecuted(25 + 2 * 4);
+            break;
+        }
+        case 0xCB: // RET far
+        {
+            // pop IP
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
+            auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+
+            // pop CS
+            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
+            auto newCS = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+
+            reg(Reg16::CS) = newCS;
+            reg(Reg16::IP) = newIP;
+            cyclesExecuted(26 + 2 * 4);
+            break;
+        }
+
         case 0xCD: // INT
         {
             auto imm = mem.read(addr + 1);
@@ -1263,7 +1328,7 @@ void CPU::executeInstruction()
             mem.write(stackAddr + 1, retAddr >> 8);
 
             reg(Reg16::IP) = reg(Reg16::IP) + 2 + off;
-            cyclesExecuted(19);
+            cyclesExecuted(19 + 4);
             break;
         }
 
