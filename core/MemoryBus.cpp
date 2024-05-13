@@ -203,6 +203,30 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
             return cga.status;
         }
 
+        case 0x3F4: // floppy main status
+        {
+            // no drives busy, dma-mode
+            return 0 |
+                   (fdc.resultLen ? 1 << 4 : 0) | // fdc busy if there's a result to read
+                   (fdc.resultLen ? 1 << 6 : 0) | // fdc->cpu if we have result data else cpu->fdc
+                   1 << 7; // ready
+        }
+        case 0x3F5: // floppy command/data
+        {
+            if(fdc.resultLen)
+            {
+                auto ret = fdc.result[fdc.resultOff++];
+
+                // end of result
+                if(fdc.resultOff == fdc.resultLen)
+                    fdc.resultLen = 0;
+
+                return ret;
+            }
+
+            return 0xFF;
+        }
+
         default:
             printf("IO R %04X\n", addr);
     }
@@ -510,6 +534,178 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
             break;
         }
 
+        case 0x3F2: // floppy digital output
+        {
+            auto changed = fdc.digitalOutput ^ data;
+
+            if((changed & (1 << 2)) && (data & (1 << 2)))
+            {
+                // leaving reset
+                // because RDY is high, this generates an interrupt
+                if(data & (1 << 3))
+                    flagPICInterrupt(6);
+
+                fdc.status[0] = 0xC0; // ready changed state
+            }
+
+            fdc.digitalOutput = data;
+            break;
+        }
+
+        case 0x3F5: // floppy command/data
+        {
+            if(fdc.commandLen == 0)
+            {
+                fdc.command[0] = data;
+
+                if(data == 0x03) // specify
+                    fdc.commandLen = 3;
+                else if((data & 0x1F) == 0x06) // read
+                    fdc.commandLen = 9;
+                else if(data == 0x07) // recalibrate
+                    fdc.commandLen = 2;
+                else if(data == 0x08) // sense interrupt status
+                    fdc.commandLen = 1;
+                else if(data == 0x0F)
+                    fdc.commandLen = 3;
+                else
+                    printf("FCD = %02X\n", data);
+
+                if(fdc.commandLen)
+                    fdc.commandOff = 1;
+            }
+            else
+                fdc.command[fdc.commandOff++] = data;
+
+            if(fdc.commandLen && fdc.commandOff == fdc.commandLen)
+            {
+                // got full command
+                if(fdc.command[0] == 0x03) // specify
+                {
+                    // auto stepRateTime = fdc.command[1] >> 4;
+                    // auto headUnloadTime = fdc.command[1] & 0xF;
+                    // auto headLoadTime = fdc.command[2] >> 1;
+                    // bool nonDMA = fdc.command[2] & 1;
+                }
+                else if((fdc.command[0] & 0x1F) == 0x06) // read
+                {
+                    // multitrack mfm skip
+                    bool multiTrack = fdc.command[0] & (1 << 7);
+                    bool mfm = fdc.command[0] & (1 << 6);
+                    // bool skipDeleted = fdc.command[0] & (1 << 5);
+
+                    int unit = fdc.command[1] & 3;
+                    int head = (fdc.command[1] >> 2) & 1;
+
+                    auto cylinder = fdc.command[2];
+                    auto headAgain = fdc.command[3];
+                    auto record = fdc.command[4];
+                    auto number = fdc.command[5];
+                    auto endOfTrack = fdc.command[6];
+                    //auto gapLength = fdc.command[7];
+                    //auto dataLength = fdc.command[8];
+
+                    assert(head == headAgain);
+                    assert(number == 2);
+                    assert(multiTrack);
+                    assert(mfm);
+
+                    auto sectorSize = 128 << number;
+
+                    // transfers data through DMA...
+                    // super-hack
+                    auto dmaSize = dma.currentWordCount[2] + 1;
+                    auto destAddr = dma.currentAddress[2]; // + high byte from port 0x81!
+                    while(dmaSize)
+                    {
+                        uint8_t buf[512];
+
+                        if(fdc.readCb)
+                            fdc.readCb(buf, cylinder, head, record, endOfTrack);
+                        // should probably fail the read otherwise...
+
+                        for(int i = 0; i < sectorSize; i++)
+                            write(destAddr + i, buf[i]);
+
+                        dmaSize -= sectorSize;
+                        destAddr += sectorSize;
+
+                        // update offset
+                        record++;
+                        if(record > endOfTrack)
+                        {
+                            record = 1;
+                            if(head == 0)
+                                head = 1;
+                            else
+                            {
+                                head = 0;
+                                cylinder++;
+                            }
+                        }
+                    }
+
+                    // FIXME: if !auto else reload
+                    dma.currentAddress[2] = destAddr;
+                    dma.currentWordCount[2] = 0;
+                    // resets every time anyway...
+
+                    fdc.status[0] = unit | head << 2;
+
+                    fdc.resultLen = 7;
+                    fdc.result[0] = fdc.status[0];
+                    fdc.result[1] = fdc.status[1];
+                    fdc.result[2] = fdc.status[2];
+                    fdc.result[3] = cylinder;
+                    fdc.result[4] = head;
+                    fdc.result[5] = record;
+                    fdc.result[6] = number;
+
+                    if(fdc.digitalOutput & (1 << 3))
+                        flagPICInterrupt(6);
+                }
+                else if(fdc.command[0] == 0x07) // recalibrate
+                {
+                    int unit = fdc.command[1] & 3;
+
+                    fdc.presentCylinder[unit] = 0;
+
+                    // set seek end
+                    fdc.status[0] |= 1 << 5;
+
+                    if(fdc.digitalOutput & (1 << 3))
+                        flagPICInterrupt(6);
+                }
+                else if(fdc.command[0] == 0x08) // sense interrupt status
+                {
+                    fdc.result[0] = fdc.status[0];
+                    fdc.result[1] = fdc.presentCylinder[fdc.status[0] & 3];
+                    fdc.resultLen = 2;
+
+                    fdc.status[0] &= ~0xC0; // clear error bits
+                }
+                else if(fdc.command[0] == 0x0F) // seek
+                {
+                    int unit = fdc.command[1] & 3;
+                    // int head = (fdc.command[1] >> 2) & 1;
+                    auto cylinder = fdc.command[2];
+
+                    fdc.presentCylinder[unit] = cylinder;
+
+                    // set seek end
+                    fdc.status[0] |= 1 << 5;
+
+                    if(fdc.digitalOutput & (1 << 3))
+                        flagPICInterrupt(6);
+                }
+
+                fdc.commandLen = 0;
+                fdc.resultOff = 0;
+            }
+
+            break;
+        }
+
         default:
             printf("IO W %04X = %02X\n", addr, data);
     }
@@ -569,6 +765,11 @@ uint8_t MemoryBus::acknowledgeInterrupt()
 void MemoryBus::setCGAScanlineCallback(ScanlineCallback cb)
 {
     cga.scanCb = cb;
+}
+
+void MemoryBus::setFloppyReadCallback(FloppyReadCallback cb)
+{
+    fdc.readCb = cb;
 }
 
 void MemoryBus::sendKey(uint8_t scancode)
