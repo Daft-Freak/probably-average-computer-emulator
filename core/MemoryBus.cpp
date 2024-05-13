@@ -441,8 +441,11 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
 
             if(port == 1 && (changed & (1 << 7)))
             {
+                // keyboard data/irq clear
                 if(data & (1 << 7))
                     keyboardQueue.pop();
+                else if(!keyboardQueue.empty())
+                    flagPICInterrupt(1);
             }
 
             if(port == 1 && (changed & (1 << 6)))
