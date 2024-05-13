@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib> // exit
 #include <cstring>
 
 #include "CPU.h"
