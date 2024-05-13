@@ -1282,6 +1282,43 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xD4: // AAM
+        {
+            auto imm = mem.read(addr + 1);
+
+            auto v = reg(Reg8::AL);
+
+            reg(Reg8::AH) = v / imm;
+            auto res = reg(Reg8::AL) = v % imm;
+
+            flags = (flags & ~(Flag_P | Flag_Z | Flag_S))
+                  | (parity(res) ? Flag_P : 0)
+                  | (res == 0 ? Flag_Z : 0)
+                  | (res & 0x80 ? Flag_S : 0);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(83);
+            break; 
+        }
+        case 0xD5: // AAD
+        {
+            auto imm = mem.read(addr + 1);
+
+            uint8_t res = reg(Reg8::AL) + reg(Reg8::AH) * imm;
+
+            reg(Reg8::AL) = res;
+            reg(Reg8::AH) = 0;
+
+            flags = (flags & ~(Flag_P | Flag_Z | Flag_S))
+                  | (parity(res) ? Flag_P : 0)
+                  | (res == 0 ? Flag_Z : 0)
+                  | (res & 0x80 ? Flag_S : 0);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(60);
+            break;
+        }
+
         case 0xD7: // XLAT
         {
             auto addr = (reg(Reg16::BX) + reg(Reg8::AL)) & 0xFFFF;
