@@ -572,8 +572,23 @@ void CPU::executeInstruction()
             break;
         }
 
-        case 0x90: // NOP
+        case 0x90: // NOP (XCHG AX AX)
+            cyclesExecuted(3);
+            break;
+        case 0x91: // XCHG AX r16
+        case 0x92:
+        case 0x93:
+        case 0x94:
+        case 0x95:
+        case 0x96:
+        case 0x97:
         {
+            auto srcReg = static_cast<Reg16>(opcode & 7);
+
+            auto tmp = reg(Reg16::AX);
+            reg(Reg16::AX) = reg(srcReg);
+            reg(srcReg) = tmp;
+
             cyclesExecuted(3);
             break;
         }
