@@ -855,6 +855,62 @@ void CPU::executeInstruction()
             }
             break;
         }
+        case 0xA6: // CMPS byte
+        {
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
+                    auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                    doSub(mem.read(srcAddr), mem.read(destAddr), flags);
+
+                    if(flags & Flag_D)
+                    {
+                        reg(Reg16::SI)--;
+                        reg(Reg16::DI)--;
+                    }
+                    else
+                    {
+                        reg(Reg16::SI)++;
+                        reg(Reg16::DI)++;
+                    }
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(22);
+
+                    if(!!(flags & Flag_Z) != repZ)
+                        break;
+                }
+            }
+            else
+            {
+                auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
+                auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                doSub(mem.read(srcAddr), mem.read(destAddr), flags);
+
+                if(flags & Flag_D)
+                {
+                    reg(Reg16::SI)--;
+                    reg(Reg16::DI)--;
+                }
+                else
+                {
+                    reg(Reg16::SI)++;
+                    reg(Reg16::DI)++;
+                }
+
+                cyclesExecuted(22);
+            }
+            break;
+        }
 
         case 0xA8: // TEST AL imm8
         {
