@@ -364,6 +364,16 @@ void CPU::executeInstruction()
             cyclesExecuted(4);
             break;
         }
+        case 0x0D: // OR AX imm16
+        {
+            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            reg(Reg16::AX) = doOr(reg(Reg16::AX), imm, flags);
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(4);
+            break;
+        }
 
         case 0x14: // ADC AL imm8
         {
@@ -383,6 +393,16 @@ void CPU::executeInstruction()
             reg(Reg8::AL) = doAnd(reg(Reg8::AL), imm, flags);
 
             reg(Reg16::IP)++;
+            cyclesExecuted(4);
+            break;
+        }
+        case 0x25: // AND AX imm16
+        {
+            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            reg(Reg16::AX) = doAnd(reg(Reg16::AX), imm, flags);
+
+            reg(Reg16::IP) += 2;
             cyclesExecuted(4);
             break;
         }
