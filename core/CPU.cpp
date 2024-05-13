@@ -603,6 +603,16 @@ void CPU::executeInstruction()
             cyclesExecuted(2);
             break;
         }
+        case 0x99: // CWD
+        {
+            if(reg(Reg16::AX) & 0x8000)
+                reg(Reg16::DX) = 0xFFFF;
+            else
+                reg(Reg16::DX) = 0;
+
+            cyclesExecuted(5);
+            break;
+        }
 
         case 0x9C: // PUSHF
         {
