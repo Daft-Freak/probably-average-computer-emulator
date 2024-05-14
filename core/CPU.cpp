@@ -2069,6 +2069,158 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xFE: // group2 byte
+        {
+            auto modRM = mem.read(addr + 1);
+            auto exOp = (modRM >> 3) & 0x7;
+
+            bool isReg = (modRM >> 6) == 3;
+
+            int cycles = 0;
+            auto v = readRM8(modRM, cycles);
+
+            switch(exOp)
+            {
+                case 0: // INC
+                {
+                    auto res = doInc(v, flags);
+                    writeRM8(modRM, res, cycles, true);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 3 : 15 + cycles);
+                    break;
+                }
+                case 1: // DEC
+                {
+                    auto res = doDec(v, flags);
+                    writeRM8(modRM, res, cycles, true);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 3 : 15 + cycles);
+                    break;
+                }
+                // 2-5 are CALL/JMP (only valid for 16 bit)
+                // 6 is PUSH
+                // 7 is invalid
+                default:
+                    assert(!"invalid group2!");
+            }
+            break;
+        }
+        case 0xFF: // group2 word
+        {
+            auto modRM = mem.read(addr + 1);
+            auto exOp = (modRM >> 3) & 0x7;
+
+            bool isReg = (modRM >> 6) == 3;
+
+            int cycles = 0;
+            auto v = readRM16(modRM, cycles);
+
+            switch(exOp)
+            {
+                case 0: // INC
+                {
+                    auto res = doInc(v, flags);
+                    writeRM16(modRM, res, cycles, true);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 3 : (15 + 2 * 4) + cycles);
+                    break;
+                }
+                case 1: // DEC
+                {
+                    auto res = doDec(v, flags);
+                    writeRM16(modRM, res, cycles, true);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 3 : (15 + 2 * 4) + cycles);
+                    break;
+                }
+                case 2: // CALL near indirect
+                {
+                    // push
+                    reg(Reg16::SP) -= 2;
+                    auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+                    auto retAddr = reg(Reg16::IP) + 1;
+
+                    mem.write(stackAddr, retAddr & 0xFF);
+                    mem.write(stackAddr + 1, retAddr >> 8);
+
+                    reg(Reg16::IP) = v;
+                    cyclesExecuted(isReg ? 16 + 4 : 21 + 2 * 4 + cycles);
+                    break;
+                }
+                case 3: // CALL far indirect
+                {
+                    assert(!isReg);
+
+                    // need the addr again...
+                    int cycleTmp;
+                    auto memAddr = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true);
+                    auto newCS = mem.read(memAddr + 2) | mem.read(memAddr + 3) << 8;
+
+                    // push CS
+                    reg(Reg16::SP) -= 2;
+                    auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+                    mem.write(stackAddr, reg(Reg16::CS) & 0xFF);
+                    mem.write(stackAddr + 1, reg(Reg16::CS) >> 8);
+
+                    // push IP
+                    reg(Reg16::SP) -= 2;
+                    stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+                    auto retAddr = reg(Reg16::IP) + 1;
+
+                    mem.write(stackAddr, retAddr & 0xFF);
+                    mem.write(stackAddr + 1, retAddr >> 8);
+
+                    reg(Reg16::CS) = newCS;
+                    reg(Reg16::IP) = v;
+                    cyclesExecuted(38 + 4 * 4);
+                    break;
+                }
+                case 4: // JMP near indirect
+                {
+                    reg(Reg16::IP) = v;
+                    cyclesExecuted(isReg ? 11 : 18 + cycles);
+                    break;
+                }
+                case 5: // JMP far indirect
+                {
+                    assert(!isReg);
+
+                    // need the addr again...
+                    int cycleTmp;
+                    auto memAddr = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true);
+                    auto newCS = mem.read(memAddr + 2) | mem.read(memAddr + 3) << 8;
+
+                    reg(Reg16::CS) = newCS;
+                    reg(Reg16::IP) = v;
+                    cyclesExecuted(24 + cycles);
+                    break;
+                }
+                case 6: // PUSH
+                {
+                    reg(Reg16::SP) -= 2;
+                    auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+                    mem.write(stackAddr, v & 0xFF);
+                    mem.write(stackAddr + 1, v >> 8);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 11 : (16 + 2 * 4) + cycles);
+                    break;
+                }
+                // 7 is invalid
+    
+                default:
+                    assert(!"invalid group2!");
+            }
+            break;
+        }
+
         default:
             printf("op %x @%05x\n", (int)opcode, addr);
             exit(1);
