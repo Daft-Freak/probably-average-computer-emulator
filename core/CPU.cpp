@@ -870,6 +870,20 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x8D: // LEA
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = 2;
+            // the only time we don't want the segment added...
+            reg(static_cast<Reg16>(r)) = getEffectiveAddress(modRM >> 6, modRM & 7, cycles, false, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+
         case 0x8E: // MOV r/m -> sreg
         {
             auto modRM = mem.read(addr + 1);
