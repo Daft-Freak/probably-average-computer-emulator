@@ -1574,6 +1574,68 @@ void CPU::executeInstruction()
             }
             break;
         }
+        case 0xA7: // CMPS word
+        {
+            auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
+            if(rep)
+            {
+                cyclesExecuted(2 + 9);
+
+                while(reg(Reg16::CX))
+                {
+                    // TODO: interrupt
+
+                    auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
+                    auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                    auto src = mem.read(srcAddr) | mem.read(srcAddr + 1) << 8;
+                    auto dest = mem.read(destAddr) | mem.read(destAddr + 1) << 8;
+
+                    doSub(src, dest, flags);
+
+                    if(flags & Flag_D)
+                    {
+                        reg(Reg16::SI) -= 2;
+                        reg(Reg16::DI) -= 2;
+                    }
+                    else
+                    {
+                        reg(Reg16::SI) += 2;
+                        reg(Reg16::DI) += 2;
+                    }
+
+                    reg(Reg16::CX)--;
+                    cyclesExecuted(22 + 2 * 4);
+
+                    if(!!(flags & Flag_Z) != repZ)
+                        break;
+                }
+            }
+            else
+            {
+                auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
+                auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
+
+                auto src = mem.read(srcAddr) | mem.read(srcAddr + 1) << 8;
+                auto dest = mem.read(destAddr) | mem.read(destAddr + 1) << 8;
+
+                doSub(src, dest, flags);
+
+                if(flags & Flag_D)
+                {
+                    reg(Reg16::SI) -= 2;
+                    reg(Reg16::DI) -= 2;
+                }
+                else
+                {
+                    reg(Reg16::SI) += 2;
+                    reg(Reg16::DI) += 2;
+                }
+
+                cyclesExecuted(22 + 2 * 4);
+            }
+            break;
+        }
 
         case 0xA8: // TEST AL imm8
         {
