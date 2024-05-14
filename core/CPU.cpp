@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdio>
 #include <cstdlib> // exit
 #include <cstring>
@@ -756,6 +757,153 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x86: // XCHG r/m8 r8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            auto srcReg = static_cast<Reg8>(r);
+
+            int cycles = (modRM >> 6) == 3 ? 4 : 17;
+
+            auto tmp = readRM8(modRM, cycles);
+            writeRM8(modRM, reg(srcReg), cycles, true);
+            reg(srcReg) = tmp;
+
+            reg(Reg16::IP) += 1;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x87: // XCHG r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            auto srcReg = static_cast<Reg16>(r);
+
+            int cycles = (modRM >> 6) == 3 ? 4 : 17 + 2 * 4;
+
+            auto tmp = readRM16(modRM, cycles);
+            writeRM16(modRM, reg(srcReg), cycles, true);
+            reg(srcReg) = tmp;
+
+            reg(Reg16::IP) += 1;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x88: // MOV reg8 -> r/m
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 2 : 9;
+
+            auto srcReg = static_cast<Reg8>(r);
+
+            writeRM8(modRM, reg(srcReg), cycles);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x89: // MOV reg16 -> r/m
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 2 : 9 + 4;
+
+            auto srcReg = static_cast<Reg16>(r);
+
+            writeRM16(modRM, reg(srcReg), cycles);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x8A: // MOV r/m -> reg8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 2 : 8;
+    
+            auto destReg = static_cast<Reg8>(r);
+
+            reg(destReg) = readRM8(modRM, cycles);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+
+            break;
+        }
+        case 0x8B: // MOV r/m -> reg16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 2 : 8 + 4;
+
+            auto destReg = static_cast<Reg16>(r);
+
+            reg(destReg) = readRM16(modRM, cycles);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+
+            break;
+        }
+        case 0x8C: // MOV sreg -> r/m
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 2 : 9 + 4;
+
+            auto srcReg = static_cast<Reg16>(r + static_cast<int>(Reg16::ES));
+
+            writeRM16(modRM, reg(srcReg), cycles);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+
+            break;
+        }
+
+        case 0x8E: // MOV r/m -> sreg
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 2 : 8 + 4;
+
+            auto destReg = static_cast<Reg16>(r + static_cast<int>(Reg16::ES));
+
+            reg(destReg) = readRM16(modRM, cycles);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+
+        case 0x8F: // POP r/m
+        {
+            auto modRM = mem.read(addr + 1);
+
+            assert(((modRM >> 3) & 0x7) == 0);
+
+            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+
+            int cycles = ((modRM >> 6) == 3 ? 8 : 17 + 4) + 4;
+
+            writeRM16(modRM, mem.read(stackAddr) | mem.read(stackAddr + 1) << 8, cycles);
+            reg(Reg16::SP) += 2;
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+
         case 0x90: // NOP (XCHG AX AX)
             cyclesExecuted(3);
             break;
@@ -1371,6 +1519,78 @@ void CPU::executeInstruction()
 
             reg(Reg16::IP) = newIP;
             cyclesExecuted(16 + 4);
+            break;
+        }
+
+        case 0xC4: // LES
+        {
+            auto modRM = mem.read(addr + 1);
+            auto mod = modRM >> 6;
+            auto r = (modRM >> 3) & 0x7;
+            auto rm = modRM & 7;
+
+            assert(mod != 3);
+
+            int cycles = 16 + 2 * 4;
+    
+            auto addr = getEffectiveAddress(mod, rm, cycles, false);
+            reg(static_cast<Reg16>(r)) = mem.read(addr) | mem.read(addr + 1) << 8;
+            reg(Reg16::ES) = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+            
+            reg(Reg16::IP) += 1;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0xC5: // LDS
+        {
+            auto modRM = mem.read(addr + 1);
+            auto mod = modRM >> 6;
+            auto r = (modRM >> 3) & 0x7;
+            auto rm = modRM & 7;
+
+            assert(mod != 3);
+
+            int cycles = 16 + 2 * 4;
+    
+            auto addr = getEffectiveAddress(mod, rm, cycles, false);
+            reg(static_cast<Reg16>(r)) = mem.read(addr) | mem.read(addr + 1) << 8;
+            reg(Reg16::DS) = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+            
+            reg(Reg16::IP) += 1;
+            cyclesExecuted(cycles);
+            break;
+        }
+
+        case 0xC6: // MOV imm8 -> r/m
+        {
+            auto modRM = mem.read(addr + 1);
+            assert(((modRM >> 3) & 0x7) == 0);
+
+            int immOff = 2 + getDispLen(modRM);
+            auto imm = mem.read(addr + immOff);
+
+            int cycles = (modRM >> 6) == 3 ? 4 : 10;
+
+            writeRM8(modRM, imm, cycles);
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0xC7: // MOV imm16 -> r/m
+        {
+            auto modRM = mem.read(addr + 1);
+            assert(((modRM >> 3) & 0x7) == 0);
+
+            int immOff = 2 + getDispLen(modRM);
+            auto imm = mem.read(addr + immOff) | mem.read(addr + immOff + 1) << 8;
+
+            int cycles = (modRM >> 6) == 3 ? 4 : 10 + 4;
+
+            writeRM16(modRM, imm, cycles);
+
+            reg(Reg16::IP) += 3;
+            cyclesExecuted(cycles);
             break;
         }
 
