@@ -2846,6 +2846,206 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xF6: // group1 byte
+        {
+            auto modRM = mem.read(addr + 1);
+            auto exOp = (modRM >> 3) & 0x7;
+
+            bool isReg = (modRM >> 6) == 3;
+
+            int cycles = 0;
+            auto v = readRM8(modRM, cycles); // NOT/NEG write back...
+
+            switch(exOp)
+            {
+                case 0: // TEST imm
+                {
+                    auto imm = mem.read(addr + 2 + getDispLen(modRM));
+
+                    doAnd(v, imm, flags);
+
+                    reg(Reg16::IP) += 2;
+                    cyclesExecuted(isReg ? 5 : 11 + cycles);
+                    break;
+                }
+                // 1 is invalid
+                case 2: // NOT
+                {
+                    writeRM8(modRM, ~v, cycles, true);
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 3 : 16 + cycles);
+                    break;
+                }
+                case 3: // NEG
+                {
+                    writeRM8(modRM, doSub(uint8_t(0), v, flags), cycles, true);
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 3 : 16 + cycles);
+                    break;
+                }
+                case 4: // MUL
+                {
+                    uint16_t res = reg(Reg8::AL) * v;
+
+                    reg(Reg16::AX) = res;
+
+                    if(res >> 8)
+                        flags |= Flag_C | Flag_O;
+                    else
+                        flags &= ~(Flag_C | Flag_O);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 70 : 76 + cycles); // - 77/83
+                    break;
+                }
+                // IMUL
+                case 6: // DIV
+                {
+                    auto num = reg(Reg16::AX);
+
+                    if(v == 0 || num / v > 0xFF)
+                    {
+                        // fault
+                        reg(Reg16::IP)++;
+                        serviceInterrupt(0);
+                    }
+                    else
+                    {
+                        reg(Reg8::AL) = num / v;
+                        reg(Reg8::AH) = num % v;
+
+                        reg(Reg16::IP)++;
+                        cyclesExecuted(isReg ? 80 : 86 + cycles); // - 90/96
+                    }
+                    break;
+                }
+                // IDIV
+                default:
+                    printf("group1 b %x @%05x\n", exOp, addr);
+                    exit(1);
+            }
+            break;
+        }
+        case 0xF7: // group1 word
+        {
+            auto modRM = mem.read(addr + 1);
+            auto exOp = (modRM >> 3) & 0x7;
+
+            bool isReg = (modRM >> 6) == 3;
+
+            int cycles = 0;
+            auto v = readRM16(modRM, cycles);
+
+            switch(exOp)
+            {
+                case 0: // TEST imm
+                {
+                    int immOff = 2 + getDispLen(modRM);
+                    uint16_t imm = mem.read(addr + immOff) | mem.read(addr + immOff + 1) << 8;
+
+                    doAnd(v, imm, flags);
+
+                    reg(Reg16::IP) += 3;
+                    cyclesExecuted(isReg ? 5 : 11 + cycles);
+                    break;
+                }
+                // 1 is invalid
+                case 2: // NOT
+                {
+                    writeRM16(modRM, ~v, cycles, true);
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 3 : 16 + 2 * 4 + cycles);
+                    break;
+                }
+                case 3: // NEG
+                {
+                    writeRM16(modRM, doSub(uint16_t(0), v, flags), cycles, true);
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 3 : 16 + 2 * 4 + cycles);
+                    break;
+                }
+                case 4: // MUL
+                {
+                    auto res = static_cast<uint32_t>(reg(Reg16::AX)) * v;
+
+                    reg(Reg16::AX) = res;
+                    reg(Reg16::DX) = res >> 16;
+
+                    if(res >> 16)
+                        flags |= Flag_C | Flag_O;
+                    else
+                        flags &= ~(Flag_C | Flag_O);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 118 : 124 + 4 + cycles); // - 133/139
+                    break;
+                }
+                case 5: // IMUL
+                {
+                    int32_t a = static_cast<int16_t>(reg(Reg16::AX));
+                    auto res = a * static_cast<int16_t>(v);
+
+                    reg(Reg16::AX) = res;
+                    reg(Reg16::DX) = res >> 16;
+
+                    if(res >> 16 && res >> 15 != 0x1FFFF)
+                        flags |= Flag_C | Flag_O;
+                    else
+                        flags &= ~(Flag_C | Flag_O);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 128 : 134 + 4 + cycles); // - 154/160
+                    break;
+                }
+                case 6: // DIV
+                {
+                    uint32_t num = reg(Reg16::AX) | reg(Reg16::DX) << 16;
+
+                    if(v == 0 || num / v > 0xFFFF)
+                    {
+                        // fault
+                        reg(Reg16::IP)++;
+                        serviceInterrupt(0);
+                    }
+                    else
+                    {
+                        reg(Reg16::AX) = num / v;
+                        reg(Reg16::DX) = num % v;
+
+                        reg(Reg16::IP)++;
+                        cyclesExecuted(isReg ? 144 : 154 + 4 + cycles); // - 162/174
+                    }
+                    break;
+                }
+                case 7: // IDIV
+                {
+                    int32_t num = reg(Reg16::AX) | reg(Reg16::DX) << 16;
+                    int iv = static_cast<int16_t>(v);
+
+                    int res = v == 0 ? 0xFFFF : num / iv;
+
+                    if(res > 0x7FFF && res < -0x7FFF)
+                    {
+                        // fault
+                        reg(Reg16::IP)++;
+                        serviceInterrupt(0);
+                    }
+                    else
+                    {
+                        reg(Reg16::AX) = res;
+                        reg(Reg16::DX) = num % iv;
+
+                        reg(Reg16::IP)++;
+                        cyclesExecuted(isReg ? 165 : 171 + 4 + cycles); // - 184/190
+                    }
+                    break;
+                }
+                default:
+                    assert(!"invalid group1!");
+            }
+            break;
+        }
+    
         case 0xF8: // CLC
         {
             flags &= ~Flag_C;
