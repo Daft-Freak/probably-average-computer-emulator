@@ -943,6 +943,37 @@ void MemoryBus::updateCGA()
             else if(cga.mode & (1 << 1))
             {
                 // graphics mode
+                if(cga.mode & (1 << 4))
+                {
+                    // hi-res
+                }
+                else
+                {
+                    int palIndex = (cga.colSelect >> 5) & 1;
+                    bool bright = (cga.colSelect & (1 << 4));
+                    auto bg = cga.colSelect & 0xF;
+
+                    auto charAddr = cga.curAddr + (cga.scanlineCycle / 4);
+                    if(cga.scanline & 1)
+                        charAddr += 0x2000;
+
+                    auto data = cga.ram[charAddr];
+                    auto col = (data << ((cga.scanlineCycle & 3) * 2) >> 6) & 3;
+
+                    if(col == 0)
+                        col = bg;
+                    else
+                    {
+                        // palette mapping is just shifting up 1 bit, palette select is the low bit
+                        // TODO: mixed palette if b/w bit set
+                        col = (col << 1) | palIndex | (bright ? 8 : 0);
+                    }
+
+                    if(cga.scanlineCycle & 1)
+                        cga.scanlineBuf[cga.scanlineCycle / 2] |= col << 4;
+                    else
+                        cga.scanlineBuf[cga.scanlineCycle / 2] = col;
+                }
             }
             else
             {
