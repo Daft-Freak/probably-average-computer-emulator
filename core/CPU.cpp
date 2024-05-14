@@ -241,6 +241,170 @@ void CPU::executeInstruction()
         reg(Reg16::IP)++;
     }
 
+    // R/M helpers
+
+    // rw is true if this is a write that was read in the same op (to avoid counting disp twice)
+    // TODO: should addr cycles be counted twice?
+    auto getEffectiveAddress = [this, addr, segmentOverride](int mod, int rm, int &cycles, bool rw, bool noSegment = false) -> uint32_t
+    {
+        uint16_t memAddr = 0;
+        Reg16 segBase = Reg16::DS;
+        switch(rm)
+        {
+            case 0: // BX + SI
+                memAddr = reg(Reg16::BX) + reg(Reg16::SI);
+                cycles += 7;
+                break;
+            case 1: // BX + DI
+                memAddr = reg(Reg16::BX) + reg(Reg16::DI);
+                cycles += 8;
+                break;
+            case 2: // BP + SI
+                memAddr = reg(Reg16::BP) + reg(Reg16::SI);
+                segBase = Reg16::SS;
+                cycles += 8;
+                break;
+            case 3: // BP + DI
+                memAddr = reg(Reg16::BP) + reg(Reg16::DI);
+                segBase = Reg16::SS;
+                cycles += 7;
+                break;
+            case 4:
+                memAddr = reg(Reg16::SI);
+                cycles += 5;
+                break;
+            case 5:
+                memAddr = reg(Reg16::DI);
+                cycles += 5;
+                break;
+            case 6:
+                if(mod == 0) // direct
+                {
+                    memAddr = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+
+                    if(!rw)
+                        reg(Reg16::IP) += 2;
+                    cycles += 6;
+                }
+                else
+                {
+                    // default to stack segment
+                    memAddr = reg(Reg16::BP);
+                    segBase = Reg16::SS;
+                    cycles += 5;
+                }
+                break;
+            case 7:
+                memAddr = reg(Reg16::BX);
+                cycles += 5;
+                break;
+        }
+
+        // add disp
+        if(mod == 1)
+        {
+            uint16_t disp = mem.read(addr + 2);
+
+            // sign extend
+            if(disp & 0x80)
+                disp |= 0xFF00;
+
+            if(!rw)
+                reg(Reg16::IP)++;
+
+            memAddr += disp;
+            cycles += 4; // 5 -> 9, 7 -> 11, 8 -> 12
+        }
+        else if(mod == 2)
+        {
+            uint16_t disp = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+
+            if(!rw)
+                reg(Reg16::IP) += 2;
+
+            memAddr += disp;
+            cycles += 4;
+        }
+
+        // used for LEA
+        if(noSegment)
+            return memAddr;
+
+        // apply segment override
+        if(segmentOverride != Reg16::AX)
+        {
+            segBase = segmentOverride;
+            cycles += 2;
+        }
+
+        return memAddr + (reg(segBase) << 4);
+    };
+
+    auto getDispLen = [this](uint8_t modRM)
+    {
+        auto mod = modRM >> 6;
+        auto rm = modRM & 7;
+
+        if(mod == 3)
+            return 0;
+
+        if(mod == 0)
+            return rm == 6 ? 2 : 0;
+
+        return mod; // mod 1 == 8bit, mod 2 == 16bit  
+    };
+
+    auto readRM8 = [this, addr, &getEffectiveAddress](uint8_t modRM, int &cycles) -> uint8_t
+    {
+        auto mod = modRM >> 6;
+        auto rm = modRM & 7;
+
+        if(mod != 3)
+            return mem.read(getEffectiveAddress(mod, rm, cycles, false));
+        else
+            return reg(static_cast<Reg8>(rm));
+    };
+
+    auto readRM16 = [this, addr, &getEffectiveAddress](uint8_t modRM, int &cycles) -> uint16_t
+    {
+        auto mod = modRM >> 6;
+        auto rm = modRM & 7;
+
+        if(mod != 3)
+        {
+            auto addr = getEffectiveAddress(mod, rm, cycles, false);
+            return mem.read(addr) | mem.read(addr + 1) << 8;
+        }
+        else
+            return reg(static_cast<Reg16>(rm));
+    };
+
+    auto writeRM8 = [this, addr, &getEffectiveAddress](uint8_t modRM, uint8_t v, int &cycles, bool rw = false)
+    {
+        auto mod = modRM >> 6;
+        auto rm = modRM & 7;
+
+        if(mod != 3)
+            mem.write(getEffectiveAddress(mod, rm, cycles, rw), v);
+        else
+            reg(static_cast<Reg8>(rm)) = v;
+    };
+
+    auto writeRM16 = [this, addr, &getEffectiveAddress](uint8_t modRM, uint16_t v, int &cycles, bool rw = false)
+    {
+        auto mod = modRM >> 6;
+        auto rm = modRM & 7;
+
+        if(mod != 3)
+        {
+            auto addr = getEffectiveAddress(mod, rm, cycles, rw);
+            mem.write(addr, v & 0xFF);
+            mem.write(addr + 1, v >> 8);
+        }
+        else
+            reg(static_cast<Reg16>(rm)) = v;
+    };
+
     // 7x
     auto jump8 = [this, addr](int cond)
     {
