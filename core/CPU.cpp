@@ -2079,6 +2079,71 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xD0: // shift r/m8 by 1
+        {
+            auto modRM = mem.read(addr + 1);
+            auto exOp = (modRM >> 3) & 0x7;
+    
+            auto count = 1;
+    
+            int cycles = (modRM >> 6) == 3 ? 2 : 15;
+            auto v = readRM8(modRM, cycles);
+
+            writeRM8(modRM, doShift(exOp, v, count, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0xD1: // shift r/m16 by 1
+        {
+            auto modRM = mem.read(addr + 1);
+            auto exOp = (modRM >> 3) & 0x7;
+    
+            auto count = 1;
+    
+            int cycles = (modRM >> 6) == 3 ? 2 : 15 + 2 * 4;
+            auto v = readRM16(modRM, cycles);
+
+            writeRM16(modRM, doShift(exOp, v, count, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0xD2: // shift r/m8 by cl
+        {
+            auto modRM = mem.read(addr + 1);
+            auto exOp = (modRM >> 3) & 0x7;
+    
+            auto count = reg(Reg8::CL);
+    
+            int cycles = ((modRM >> 6) == 3 ? 8 : 20) + count * 4;
+            auto v = readRM8(modRM, cycles);
+
+            writeRM8(modRM, doShift(exOp, v, count, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0xD3: // shift r/m16 by cl
+        {
+            auto modRM = mem.read(addr + 1);
+            auto exOp = (modRM >> 3) & 0x7;
+    
+            auto count = reg(Reg8::CL);
+    
+            int cycles = ((modRM >> 6) == 3 ? 8 : 20 + 2 * 4) + count * 4;
+            auto v = readRM16(modRM, cycles);
+
+            writeRM16(modRM, doShift(exOp, v, count, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+
         case 0xD4: // AAM
         {
             auto imm = mem.read(addr + 1);
