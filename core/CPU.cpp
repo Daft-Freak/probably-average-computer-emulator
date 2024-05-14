@@ -131,6 +131,184 @@ static T doOr(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
+static T doRotateLeft(T dest, int count, uint16_t &flags)
+{
+    if(!count)
+        return dest;
+
+    int maxBits = sizeof(T) * 8;
+
+    T res = dest << count | (dest >> (maxBits - count));
+
+    bool carry = res & 1;
+
+    flags = (flags & ~Flag_C) | (carry ? Flag_C : 0);
+
+    if(count == 1)
+        flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carry ? Flag_O : 0); // msb of result != carry flag
+
+    return res;
+}
+
+template<class T>
+static T doRotateLeftCarry(T dest, int count, uint16_t &flags)
+{
+    if(!count)
+        return dest;
+
+    int maxBits = sizeof(T) * 8;
+    
+    bool carryIn = flags & Flag_C, carryOut;
+    T res;
+
+    if(count == 1)
+    {
+        carryOut = dest & signBit<T>();
+
+        res = dest << 1 | (carryIn ? 1 : 0);
+
+        flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carryOut ? Flag_O : 0); // msb of result != carry flag
+    }
+    else
+    {
+        carryOut = dest & (1 << (maxBits - count));
+
+        res = dest << count | (dest >> (maxBits - count + 1));
+
+        if(carryIn)
+            res |= 1 << (count - 1);
+    }
+
+    flags = (flags & ~Flag_C) | (carryOut ? Flag_C : 0);
+
+    return res;
+}
+
+template<class T>
+static T doRotateRight(T dest, int count, uint16_t &flags)
+{
+    if(!count)
+        return dest;
+
+    int maxBits = sizeof(T) * 8;
+
+    T res = dest >> count | (dest << (maxBits - count));
+
+    bool carry = res & signBit<T>();
+
+    flags = (flags & ~Flag_C) | (carry ? Flag_C : 0);
+
+    if(count == 1)
+        flags = (flags & ~Flag_O) | ((res & signBit<T>()) != (res << 1 & signBit<T>()) ? Flag_O : 0); // highest two bits mismatch
+
+    return res;
+}
+
+template<class T>
+static T doRotateRightCarry(T dest, int count, uint16_t &flags)
+{
+    if(!count)
+        return dest;
+
+    int maxBits = sizeof(T) * 8;
+    
+    bool carryIn = flags & Flag_C, carryOut;
+    T res;
+
+    if(count == 1)
+    {
+        carryOut = dest & 1;
+
+        res = dest >> 1 | (carryIn ? signBit<T>() : 0);
+
+        flags = (flags & ~Flag_O) | ((res & signBit<T>()) != (res << 1 & signBit<T>()) ? Flag_O : 0); // highest two bits mismatch
+    }
+    else
+    {
+        carryOut = dest & (1 << (count - 1));
+
+        res = dest >> count | (dest << (maxBits - count + 1));
+
+        if(carryIn)
+            res |= signBit<T>() >> (count - 1);
+    }
+
+    flags = (flags & ~Flag_C) | (carryOut ? Flag_C : 0);
+
+    return res;
+}
+
+template<class T>
+static T doShiftLeft(T dest, int count, uint16_t &flags)
+{
+    if(!count)
+        return dest;
+
+    int maxBits = sizeof(T) * 8;
+
+    bool carry = dest & (1 << (maxBits - count));
+
+    T res = dest << count;
+
+    flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S))
+          | (carry ? Flag_C : 0)
+          | (parity(res) ? Flag_P : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0);
+
+    if(count == 1)
+        flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carry ? Flag_O : 0); // msb of result != carry flag
+
+    return res;
+}
+
+template<class T>
+static T doShiftRight(T dest, int count, uint16_t &flags)
+{
+    if(!count)
+        return dest;
+
+    bool carry = dest & (1 << (count - 1));
+
+    T res = dest >> count;
+
+    flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S))
+          | (carry ? Flag_C : 0)
+          | (parity(res) ? Flag_P : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0);
+
+    if(count == 1)
+        flags = (flags & ~Flag_O) | (dest & signBit<T>() ? Flag_O : 0);
+
+    return res;
+}
+
+template<class T>
+static T doShiftRightArith(T dest, int count, uint16_t &flags)
+{
+    if(!count)
+        return dest;
+
+    bool carry = dest & (1 << (count - 1));
+
+    std::make_signed_t<T> sDest = dest;
+
+    T res = sDest >> count;
+
+    flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S))
+          | (carry ? Flag_C : 0)
+          | (parity(res) ? Flag_P : 0)
+          | (res == 0 ? Flag_Z : 0)
+          | (res & signBit<T>() ? Flag_S : 0);
+
+    if(count == 1)
+        flags = flags & ~Flag_O; // always cleared as the highest two bits will be the same
+
+    return res;
+}
+
+template<class T>
 static T doSub(T dest, T src, uint16_t &flags)
 {
     T res = dest - src;
@@ -181,6 +359,32 @@ static T doXor(T dest, T src, uint16_t &flags)
           | (parity(res) ? Flag_P : 0);
 
     return res;
+}
+
+// higher level shift wrapper
+template<class T>
+static T doShift(int exOp, T dest, int count, uint16_t &flags)
+{
+    switch(exOp)
+    {
+        case 0: // ROL
+            return doRotateLeft(dest, count, flags);
+        case 1: // ROR
+            return doRotateRight(dest, count, flags);
+        case 2: // RCL
+            return doRotateLeftCarry(dest, count, flags);
+        case 3: // RCR
+            return doRotateRightCarry(dest, count, flags);
+        case 4: // SHL
+            return doShiftLeft(dest, count, flags);
+        case 5: // SHR
+            return doShiftRight(dest, count, flags);
+        case 7: // SAR
+            return doShiftRightArith(dest, count, flags);
+    }
+
+    assert(!"bad shift");
+    return 0;
 }
 
 CPU::CPU() : mem(*this)
