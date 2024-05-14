@@ -835,6 +835,9 @@ void MemoryBus::updatePIT()
                 // TODO: should delay low by one cycle if odd count
                 pit.outState ^= 1 << i;
                 pit.counter[i] = pit.reload[i] & ~1;
+
+                if(i == 0 && (pit.outState & 1))
+                    flagPICInterrupt(0);
             }
         }
 
