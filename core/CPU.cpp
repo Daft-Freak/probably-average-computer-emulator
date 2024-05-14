@@ -669,6 +669,68 @@ void CPU::executeInstruction()
 
     switch(opcode)
     {
+        case 0x00: // ADD r/m8 r8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16;
+    
+            auto src = reg(static_cast<Reg8>(r));
+            auto dest = readRM8(modRM, cycles);
+
+            writeRM8(modRM, doAdd(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x01: // ADD r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16 + 2 * 4;
+    
+            auto src = reg(static_cast<Reg16>(r));
+            auto dest = readRM16(modRM, cycles);
+
+            writeRM16(modRM, doAdd(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x02: // ADD r8 r/m8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            uint8_t src = readRM8(modRM, cycles);
+
+            auto dstReg = static_cast<Reg8>(r);
+            reg(dstReg) = doAdd(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x03: // ADD r16 r/m16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+            uint16_t src = readRM16(modRM, cycles);
+
+            auto dstReg = static_cast<Reg16>(r);
+            reg(dstReg) = doAdd(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
         case 0x04: // ADD AL imm8
         {
             uint8_t src = mem.read(addr + 1);
@@ -723,6 +785,68 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x08: // OR r/m8 r8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16;
+    
+            auto src = reg(static_cast<Reg8>(r));
+            auto dest = readRM8(modRM, cycles);
+
+            writeRM8(modRM, doOr(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x09: // OR r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16 + 2 * 4;
+    
+            auto src = reg(static_cast<Reg16>(r));
+            auto dest = readRM16(modRM, cycles);
+
+            writeRM16(modRM, doOr(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x0A: // OR r8 r/m8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            auto src = readRM8(modRM, cycles);
+
+            auto dstReg = static_cast<Reg8>(r);
+            reg(dstReg) = doOr(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x0B: // OR r16 r/m16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+            auto src = readRM16(modRM, cycles);
+
+            auto dstReg = static_cast<Reg16>(r);
+            reg(dstReg) = doOr(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
         case 0x0C: // OR AL imm8
         {
             auto imm = mem.read(addr + 1);
@@ -744,6 +868,52 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x11: // ADC r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16 + 2 * 4;
+    
+            auto src = reg(static_cast<Reg16>(r));
+            auto dest = readRM16(modRM, cycles);
+
+            writeRM16(modRM, doAddWithCarry(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x12: // ADC r8 r/m8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            uint8_t src = readRM8(modRM, cycles);
+
+            auto dstReg = static_cast<Reg8>(r);
+            reg(dstReg) = doAddWithCarry(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x13: // ADC r16 r/m16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+            uint16_t src = readRM16(modRM, cycles);
+
+            auto dstReg = static_cast<Reg16>(r);
+            reg(dstReg) = doAddWithCarry(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
         case 0x14: // ADC AL imm8
         {
             uint8_t src = mem.read(addr + 1);
@@ -755,6 +925,111 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x19: // SBB r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16 + 2 * 4;
+    
+            auto src = reg(static_cast<Reg16>(r));
+            auto dest = readRM16(modRM, cycles);
+
+            writeRM16(modRM, doSubWithBorrow(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x1A: // SBB r8 r/m8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            uint8_t src = readRM8(modRM, cycles);
+
+            auto dstReg = static_cast<Reg8>(r);
+
+            reg(dstReg) = doSubWithBorrow(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x1B: // SBB r16 r/m16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+            uint16_t src = readRM16(modRM, cycles);
+
+            auto dstReg = static_cast<Reg16>(r);
+
+            reg(dstReg) = doSubWithBorrow(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x1C: // SBB AL imm8
+        {
+            auto imm = mem.read(addr + 1);
+
+            reg(Reg8::AL) = doSubWithBorrow(reg(Reg8::AL), imm, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(4);
+            break;
+        }
+    
+        case 0x20: // AND r/m8 r8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16;
+    
+            auto src = reg(static_cast<Reg8>(r));
+            auto dest = readRM8(modRM, cycles);
+
+            writeRM8(modRM, doAnd(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x22: // AND r8 r/m8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            auto src = readRM8(modRM, cycles);
+
+            auto dstReg = static_cast<Reg8>(r);
+            reg(dstReg) = doAnd(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x23: // AND r16 r/m16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+            uint16_t src = readRM16(modRM, cycles);
+
+            auto dstReg = static_cast<Reg16>(r);
+            reg(dstReg) = doAnd(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
         case 0x24: // AND AL imm8
         {
             auto imm = mem.read(addr + 1);
@@ -816,6 +1091,54 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x29: // SUB r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16 + 2 * 4;
+    
+            auto src = reg(static_cast<Reg16>(r));
+            auto dest = readRM16(modRM, cycles);
+
+            writeRM16(modRM, doSub(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x2A: // SUB r8 r/m8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            uint8_t src = readRM8(modRM, cycles);
+
+            auto dstReg = static_cast<Reg8>(r);
+
+            reg(dstReg) = doSub(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x2B: // SUB r16 r/m16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+            uint16_t src = readRM16(modRM, cycles);
+
+            auto dstReg = static_cast<Reg16>(r);
+
+            reg(dstReg) = doSub(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
         case 0x2C: // SUB AL imm8
         {
             auto imm = mem.read(addr + 1);
@@ -837,6 +1160,70 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x30: // XOR r/m8 r8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16;
+    
+            auto src = reg(static_cast<Reg8>(r));
+            auto dest = readRM8(modRM, cycles);
+
+            writeRM8(modRM, doXor(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x31: // XOR r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 16 + 2 * 4;
+    
+            auto src = reg(static_cast<Reg16>(r));
+            auto dest = readRM16(modRM, cycles);
+
+            writeRM16(modRM, doXor(dest, src, flags), cycles, true);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x32: // XOR r8 r/m8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            uint8_t src = readRM8(modRM, cycles);
+
+            auto dstReg = static_cast<Reg8>(r);
+
+            reg(dstReg) = doXor(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x33: // XOR r16 r/m16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+            uint16_t src = readRM16(modRM, cycles);
+
+            auto dstReg = static_cast<Reg16>(r);
+
+            reg(dstReg) = doXor(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
         case 0x35: // XOR AX imm16
         {
             uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
@@ -848,6 +1235,70 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0x38: // CMP r/m8 r8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            uint8_t dest = readRM8(modRM, cycles);
+
+            auto srcReg = static_cast<Reg8>(r);
+
+            doSub(dest, reg(srcReg),flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x39: // CMP r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+    
+            auto src = reg(static_cast<Reg16>(r));
+            auto dest = readRM16(modRM, cycles);
+
+            doSub(dest, src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x3A: // CMP r8 r/m8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+            uint8_t src = readRM8(modRM, cycles);
+
+            auto dstReg = static_cast<Reg8>(r);
+
+            doSub(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x3B: // CMP r16 r/m16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+            uint16_t src = readRM16(modRM, cycles);
+
+            auto dstReg = static_cast<Reg16>(r);
+
+            doSub(reg(dstReg), src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
         case 0x3C: // CMP AL imm
         {
             auto imm = mem.read(addr + 1);
@@ -1090,6 +1541,39 @@ void CPU::executeInstruction()
             }
 
             reg(Reg16::IP) += 2;
+            cyclesExecuted(cycles);
+            break;
+        }
+
+        case 0x84: // TEST r/m8 r8
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9;
+    
+            auto src = reg(static_cast<Reg8>(r));
+            auto dest = readRM8(modRM, cycles);
+
+            doAnd(dest, src, flags);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+        case 0x85: // TEST r/m16 r16
+        {
+            auto modRM = mem.read(addr + 1);
+            auto r = (modRM >> 3) & 0x7;
+
+            int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
+    
+            auto src = reg(static_cast<Reg16>(r));
+            auto dest = readRM16(modRM, cycles);
+
+            doAnd(dest, src, flags);
+
+            reg(Reg16::IP)++;
             cyclesExecuted(cycles);
             break;
         }
