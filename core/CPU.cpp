@@ -2362,16 +2362,27 @@ void CPU::executeInstruction()
 
             auto v = reg(Reg8::AL);
 
-            reg(Reg8::AH) = v / imm;
-            auto res = reg(Reg8::AL) = v % imm;
-
-            flags = (flags & ~(Flag_P | Flag_Z | Flag_S))
-                  | (parity(res) ? Flag_P : 0)
-                  | (res == 0 ? Flag_Z : 0)
-                  | (res & 0x80 ? Flag_S : 0);
-
             reg(Reg16::IP)++;
             cyclesExecuted(83);
+    
+            if(imm == 0)
+            {
+                flags = (flags & ~Flag_S) | Flag_P | Flag_Z; // as if remainder was 0
+
+                // fault
+                serviceInterrupt(0);
+            }
+            else
+            {
+                reg(Reg8::AH) = v / imm;
+                auto res = reg(Reg8::AL) = v % imm;
+
+                flags = (flags & ~(Flag_P | Flag_Z | Flag_S))
+                      | (parity(res) ? Flag_P : 0)
+                      | (res == 0 ? Flag_Z : 0)
+                      | (res & 0x80 ? Flag_S : 0);
+            }
+
             break; 
         }
         case 0xD5: // AAD
