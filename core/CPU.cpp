@@ -2712,7 +2712,8 @@ void CPU::executeInstruction()
                     reg(Reg16::AX) = res;
                     reg(Reg16::DX) = res >> 16;
 
-                    if(res >> 16 && res >> 15 != 0x1FFFF)
+                    // check if upper half matches lower half's sign
+                    if(res >> 16 != (res & 0x8000 ? -1 : 0))
                         flags |= Flag_C | Flag_O;
                     else
                         flags &= ~(Flag_C | Flag_O);
@@ -2748,7 +2749,7 @@ void CPU::executeInstruction()
 
                     int res = v == 0 ? 0xFFFF : num / iv;
 
-                    if(res > 0x7FFF && res < -0x7FFF)
+                    if(res > 0x7FFF || res < -0x7FFF)
                     {
                         // fault
                         reg(Reg16::IP)++;
