@@ -1584,6 +1584,7 @@ void CPU::executeInstruction()
         case 0x9D: // POPF
         {
             flags = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
+            flags = (flags & 0xFD5) | 0xF002;
             reg(Reg16::SP) += 2;
 
             cyclesExecuted(8 + 4);
@@ -2283,6 +2284,7 @@ void CPU::executeInstruction()
 
             // pop flags
             flags = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
+            flags = (flags & 0xFD5) | 0xF002;
             reg(Reg16::SP) += 2;
 
             reg(Reg16::CS) = newCS;
