@@ -1141,9 +1141,9 @@ void CPU::executeInstruction()
             auto r = static_cast<Reg16>(opcode & 7);
 
             auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            reg(Reg16::SP) += 2;
 
             reg(r) = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
-            reg(Reg16::SP) += 2;
 
             cyclesExecuted(8 + 4);
             break;
@@ -2977,6 +2977,10 @@ void CPU::executeInstruction()
                 case 6: // PUSH
                 {
                     reg(Reg16::SP) -= 2;
+
+                    if(modRM == 0xF4) // r/m is SP
+                        v -= 2;
+
                     auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
 
                     mem.write(stackAddr, v & 0xFF);
