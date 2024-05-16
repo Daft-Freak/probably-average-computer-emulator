@@ -137,6 +137,7 @@ static T doRotateLeft(T dest, int count, uint16_t &flags)
         return dest;
 
     int maxBits = sizeof(T) * 8;
+    count &= maxBits - 1;
 
     T res = dest << count | (dest >> (maxBits - count));
 
@@ -153,11 +154,12 @@ static T doRotateLeft(T dest, int count, uint16_t &flags)
 template<class T>
 static T doRotateLeftCarry(T dest, int count, uint16_t &flags)
 {
+    int maxBits = sizeof(T) * 8;
+    count %= (maxBits + 1);
+
     if(!count)
         return dest;
 
-    int maxBits = sizeof(T) * 8;
-    
     bool carryIn = flags & Flag_C, carryOut;
     T res;
 
@@ -191,6 +193,7 @@ static T doRotateRight(T dest, int count, uint16_t &flags)
         return dest;
 
     int maxBits = sizeof(T) * 8;
+    count &= maxBits - 1;
 
     T res = dest >> count | (dest << (maxBits - count));
 
@@ -207,11 +210,12 @@ static T doRotateRight(T dest, int count, uint16_t &flags)
 template<class T>
 static T doRotateRightCarry(T dest, int count, uint16_t &flags)
 {
+    int maxBits = sizeof(T) * 8;
+    count %= (maxBits + 1);
+
     if(!count)
         return dest;
 
-    int maxBits = sizeof(T) * 8;
-    
     bool carryIn = flags & Flag_C, carryOut;
     T res;
 
@@ -246,9 +250,9 @@ static T doShiftLeft(T dest, int count, uint16_t &flags)
 
     int maxBits = sizeof(T) * 8;
 
-    bool carry = dest & (1 << (maxBits - count));
+    bool carry = count > maxBits ? 0 : dest & (1 << (maxBits - count));
 
-    T res = dest << count;
+    T res = count >= maxBits ? 0 : dest << count;
 
     flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S))
           | (carry ? Flag_C : 0)
@@ -268,9 +272,11 @@ static T doShiftRight(T dest, int count, uint16_t &flags)
     if(!count)
         return dest;
 
-    bool carry = dest & (1 << (count - 1));
+    int maxBits = sizeof(T) * 8;
 
-    T res = dest >> count;
+    bool carry = count > maxBits ? 0 : dest & (1 << (count - 1));
+
+    T res = count >= maxBits ? 0 : dest >> count;
 
     flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S))
           | (carry ? Flag_C : 0)
@@ -289,6 +295,12 @@ static T doShiftRightArith(T dest, int count, uint16_t &flags)
 {
     if(!count)
         return dest;
+
+    int maxBits = sizeof(T) * 8;
+
+    // anything >= the total number of bits fills the result with the top bit
+    if(count >= maxBits)
+        count = maxBits - 1;
 
     bool carry = dest & (1 << (count - 1));
 
