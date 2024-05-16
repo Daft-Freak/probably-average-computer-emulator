@@ -313,7 +313,7 @@ static T doSub(T dest, T src, uint16_t &flags)
 {
     T res = dest - src;
 
-    bool overflow = (dest ^ src) & (src ^ res) & signBit<T>();
+    bool overflow = (dest ^ src) & (dest ^ res) & signBit<T>();
 
     flags = (flags & ~(Flag_C | Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
           | (src > dest ? Flag_C : 0) 
@@ -333,7 +333,7 @@ static T doSubWithBorrow(T dest, T src, uint16_t &flags)
     T res = dest - src - c;
 
     bool carry = src > dest || (src == dest && c);
-    bool overflow = (dest ^ src) & (src ^ res) & signBit<T>();
+    bool overflow = (dest ^ src) & (dest ^ res) & signBit<T>();
 
     flags = (flags & ~(Flag_C | Flag_P | Flag_A | Flag_Z | Flag_S | Flag_O))
           | (carry ? Flag_C : 0) 
