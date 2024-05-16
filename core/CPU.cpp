@@ -910,38 +910,27 @@ void CPU::executeInstruction()
         case 0x27: // DAA
         {
             int val = reg(Reg8::AL);
-            bool c = flags & Flag_C;
 
-            if((val & 0xF) > 9 || (flags & Flag_A))
+            int cmp2 = (flags & Flag_A) ? 0x9F : 0x99; // I don't know why this is right, but it is?
+
+            if((reg(Reg8::AL) & 0xF) > 9 || (flags & Flag_A))
             {
-                val += 6;
-
+                reg(Reg8::AL) += 6;
                 flags |= Flag_A;
-
-                if(val > 0xFF)
-                {
-                    // carry
-                    flags |= Flag_C;
-                    val &= 0xFF;
-                }
             }
-            else
-                flags &= ~(Flag_A | Flag_C);
 
-            if(reg(Reg8::AL) > 0x99 || c)
+            if(val > cmp2 || (flags & Flag_C))
             {
-                val += 0x60;
+                reg(Reg8::AL) += 0x60;
                 flags |= Flag_C;
             }
-            else
-                flags &= ~Flag_C;
+
+            val = reg(Reg8::AL);
 
             flags = (flags & ~(Flag_P | Flag_Z | Flag_S))
                   | (val == 0 ? Flag_Z : 0)
                   | (val & 0x80 ? Flag_S : 0)
                   | (parity(val) ? Flag_P : 0);
-
-            reg(Reg8::AL) = val;
 
             cyclesExecuted(4);
             break;
