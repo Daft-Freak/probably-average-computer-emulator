@@ -57,6 +57,9 @@ private:
     uint16_t reg(Reg16 r) const {return regs[static_cast<int>(r)];}
     uint16_t &reg(Reg16 r) {return regs[static_cast<int>(r)];}
 
+    uint16_t readMem16(uint16_t offset, uint32_t segment);
+    void writeMem16(uint16_t offset, uint32_t segment, uint16_t data);
+
     void executeInstruction();
 
     void cyclesExecuted(int cycles);

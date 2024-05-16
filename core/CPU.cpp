@@ -419,6 +419,17 @@ void CPU::run(int ms)
     }
 }
 
+uint16_t CPU::readMem16(uint16_t offset, uint32_t segment)
+{
+    return mem.read(offset + segment) | mem.read(((offset + 1) & 0xFFFF) + segment) << 8;
+}
+
+void CPU::writeMem16(uint16_t offset, uint32_t segment, uint16_t data)
+{
+    mem.write(offset + segment, data & 0xFF);
+    mem.write(((offset + 1) & 0xFFFF) + segment, data >> 8);
+}
+
 void CPU::executeInstruction()
 {
     auto addr = (reg(Reg16::CS) << 4) + (reg(Reg16::IP)++);
@@ -450,7 +461,7 @@ void CPU::executeInstruction()
 
     // rw is true if this is a write that was read in the same op (to avoid counting disp twice)
     // TODO: should addr cycles be counted twice?
-    auto getEffectiveAddress = [this, addr, segmentOverride](int mod, int rm, int &cycles, bool rw, bool noSegment = false) -> uint32_t
+    auto getEffectiveAddress = [this, addr, segmentOverride](int mod, int rm, int &cycles, bool rw) -> std::tuple<uint16_t, uint32_t>
     {
         uint16_t memAddr = 0;
         Reg16 segBase = Reg16::DS;
@@ -531,10 +542,6 @@ void CPU::executeInstruction()
             cycles += 4;
         }
 
-        // used for LEA
-        if(noSegment)
-            return memAddr;
-
         // apply segment override
         if(segmentOverride != Reg16::AX)
         {
@@ -542,7 +549,7 @@ void CPU::executeInstruction()
             cycles += 2;
         }
 
-        return memAddr + (reg(segBase) << 4);
+        return {memAddr, reg(segBase) << 4};
     };
 
     auto getDispLen = [this](uint8_t modRM)
@@ -565,7 +572,10 @@ void CPU::executeInstruction()
         auto rm = modRM & 7;
 
         if(mod != 3)
-            return mem.read(getEffectiveAddress(mod, rm, cycles, false));
+        {
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
+            return mem.read(offset + segment);
+        }
         else
             return reg(static_cast<Reg8>(rm));
     };
@@ -577,8 +587,8 @@ void CPU::executeInstruction()
 
         if(mod != 3)
         {
-            auto addr = getEffectiveAddress(mod, rm, cycles, false);
-            return mem.read(addr) | mem.read(addr + 1) << 8;
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
+            return readMem16(offset, segment);
         }
         else
             return reg(static_cast<Reg16>(rm));
@@ -590,7 +600,10 @@ void CPU::executeInstruction()
         auto rm = modRM & 7;
 
         if(mod != 3)
-            mem.write(getEffectiveAddress(mod, rm, cycles, rw), v);
+        {
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw);
+            mem.write(offset + segment, v);
+        }
         else
             reg(static_cast<Reg8>(rm)) = v;
     };
@@ -602,9 +615,8 @@ void CPU::executeInstruction()
 
         if(mod != 3)
         {
-            auto addr = getEffectiveAddress(mod, rm, cycles, rw);
-            mem.write(addr, v & 0xFF);
-            mem.write(addr + 1, v >> 8);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw);
+            writeMem16(offset, segment, v);
         }
         else
             reg(static_cast<Reg16>(rm)) = v;
@@ -770,10 +782,7 @@ void CPU::executeInstruction()
             auto r = static_cast<Reg16>(((opcode >> 3) & 7) + static_cast<int>(Reg16::ES));
 
             reg(Reg16::SP) -= 2;
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
-            mem.write(stackAddr, reg(r) & 0xFF);
-            mem.write(stackAddr + 1, reg(r) >> 8);
+            writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, reg(r));
 
             cyclesExecuted(10 + 4);
             break;
@@ -786,9 +795,7 @@ void CPU::executeInstruction()
         {
             auto r = static_cast<Reg16>(((opcode >> 3) & 7) + static_cast<int>(Reg16::ES));
 
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
-            reg(r) = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+            reg(r) = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
 
             cyclesExecuted(8 + 4);
@@ -1120,10 +1127,7 @@ void CPU::executeInstruction()
             auto r = static_cast<Reg16>(opcode & 7);
 
             reg(Reg16::SP) -= 2;
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
-            mem.write(stackAddr, reg(r) & 0xFF);
-            mem.write(stackAddr + 1, reg(r) >> 8);
+            writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, reg(r));
 
             cyclesExecuted(11 + 4);
             break;
@@ -1140,10 +1144,9 @@ void CPU::executeInstruction()
         {
             auto r = static_cast<Reg16>(opcode & 7);
 
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            auto v = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-
-            reg(r) = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+            reg(r) = v;
 
             cyclesExecuted(8 + 4);
             break;
@@ -1456,7 +1459,7 @@ void CPU::executeInstruction()
 
             int cycles = 2;
             // the only time we don't want the segment added...
-            reg(static_cast<Reg16>(r)) = getEffectiveAddress(modRM >> 6, modRM & 7, cycles, false, true);
+            reg(static_cast<Reg16>(r)) = std::get<0>(getEffectiveAddress(modRM >> 6, modRM & 7, cycles, false));
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1485,12 +1488,11 @@ void CPU::executeInstruction()
 
             assert(((modRM >> 3) & 0x7) == 0);
 
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
             int cycles = ((modRM >> 6) == 3 ? 8 : 17 + 4) + 4;
 
-            writeRM16(modRM, mem.read(stackAddr) | mem.read(stackAddr + 1) << 8, cycles);
+            auto v = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
+            writeRM16(modRM, v, cycles);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1546,18 +1548,12 @@ void CPU::executeInstruction()
 
             // push CS
             reg(Reg16::SP) -= 2;
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-            mem.write(stackAddr, reg(Reg16::CS) & 0xFF);
-            mem.write(stackAddr + 1, reg(Reg16::CS) >> 8);
+            writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, reg(Reg16::CS));
 
             // push IP
             reg(Reg16::SP) -= 2;
-            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
             auto retAddr = reg(Reg16::IP) + 4;
-
-            mem.write(stackAddr, retAddr & 0xFF);
-            mem.write(stackAddr + 1, retAddr >> 8);
+            writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, retAddr);
 
             reg(Reg16::CS) = newCS;
             reg(Reg16::IP) = newIP;
@@ -1568,19 +1564,14 @@ void CPU::executeInstruction()
         case 0x9C: // PUSHF
         {
             reg(Reg16::SP) -= 2;
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
-            mem.write(stackAddr, flags & 0xFF);
-            mem.write(stackAddr + 1, flags >> 8);
+            writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, flags);
 
             cyclesExecuted(10 + 4);
             break;
         }
         case 0x9D: // POPF
         {
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
-            flags = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
+            flags = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
 
             cyclesExecuted(8 + 4);
@@ -1618,9 +1609,8 @@ void CPU::executeInstruction()
         {
             auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
             auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
-            memAddr += reg(segment) << 4;
 
-            reg(Reg16::AX) = mem.read(memAddr) | mem.read(memAddr + 1) << 8;
+            reg(Reg16::AX) = readMem16(memAddr, reg(segment) << 4);
 
             reg(Reg16::IP) += 2;
             cyclesExecuted(10 + 4);
@@ -1642,10 +1632,8 @@ void CPU::executeInstruction()
         {
             auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
             auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
-            memAddr += reg(segment) << 4;
 
-            mem.write(memAddr, reg(Reg8::AL));
-            mem.write(memAddr + 1, reg(Reg8::AH));
+            writeMem16(memAddr, reg(segment) << 4, reg(Reg16::AX));
 
             reg(Reg16::IP) += 2;
             cyclesExecuted(10 + 4);
@@ -1716,11 +1704,8 @@ void CPU::executeInstruction()
                 {
                     // TODO: interrupt
 
-                    auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
-                    auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-
-                    mem.write(destAddr, mem.read(srcAddr));
-                    mem.write(destAddr + 1,  mem.read(srcAddr + 1));
+                    auto v = readMem16(reg(Reg16::SI), reg(segment) << 4);
+                    writeMem16(reg(Reg16::DI), reg(Reg16::ES) << 4, v);
 
                     if(flags & Flag_D)
                     {
@@ -1739,11 +1724,8 @@ void CPU::executeInstruction()
             }
             else
             {
-                auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
-                auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-
-                mem.write(destAddr, mem.read(srcAddr));
-                mem.write(destAddr + 1,  mem.read(srcAddr + 1));
+                auto v = readMem16(reg(Reg16::SI), reg(segment) << 4);
+                writeMem16(reg(Reg16::DI), reg(Reg16::ES) << 4, v);
 
                 if(flags & Flag_D)
                 {
@@ -1827,11 +1809,8 @@ void CPU::executeInstruction()
                 {
                     // TODO: interrupt
 
-                    auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
-                    auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-
-                    auto src = mem.read(srcAddr) | mem.read(srcAddr + 1) << 8;
-                    auto dest = mem.read(destAddr) | mem.read(destAddr + 1) << 8;
+                    auto src = readMem16(reg(Reg16::SI), reg(segment) << 4);
+                    auto dest = readMem16(reg(Reg16::DI), reg(Reg16::ES) << 4);
 
                     doSub(src, dest, flags);
 
@@ -1855,11 +1834,8 @@ void CPU::executeInstruction()
             }
             else
             {
-                auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
-                auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-
-                auto src = mem.read(srcAddr) | mem.read(srcAddr + 1) << 8;
-                auto dest = mem.read(destAddr) | mem.read(destAddr + 1) << 8;
+                auto src = readMem16(reg(Reg16::SI), reg(segment) << 4);
+                auto dest = readMem16(reg(Reg16::DI), reg(Reg16::ES) << 4);
 
                 doSub(src, dest, flags);
 
@@ -1936,9 +1912,7 @@ void CPU::executeInstruction()
                 {
                     // TODO: interrupt
 
-                    auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-                    mem.write(addr, reg(Reg8::AL));
-                    mem.write(addr + 1, reg(Reg8::AH));
+                    writeMem16(reg(Reg16::DI), reg(Reg16::ES) << 4, reg(Reg16::AX));
 
                     if(flags & Flag_D)
                         reg(Reg16::DI) -= 2;
@@ -1951,9 +1925,7 @@ void CPU::executeInstruction()
             }
             else
             {
-                auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-                mem.write(addr, reg(Reg8::AL));
-                mem.write(addr + 1, reg(Reg8::AH));
+                writeMem16(reg(Reg16::DI), reg(Reg16::ES) << 4, reg(Reg16::AX));
 
                 if(flags & Flag_D)
                     reg(Reg16::DI) -= 2;
@@ -2012,8 +1984,7 @@ void CPU::executeInstruction()
                 {
                     // TODO: interrupt
 
-                    auto addr = (reg(segment) << 4) + reg(Reg16::SI);
-                    reg(Reg16::AX) = mem.read(addr) | mem.read(addr + 1) << 8;
+                    reg(Reg16::AX) = readMem16(reg(Reg16::SI), reg(segment) << 4);
 
                     if(flags & Flag_D)
                         reg(Reg16::SI) -= 2;
@@ -2026,8 +1997,7 @@ void CPU::executeInstruction()
             }
             else
             {
-                auto addr = (reg(segment) << 4) + reg(Reg16::SI);
-                reg(Reg16::AX) = mem.read(addr) | mem.read(addr + 1) << 8;
+                reg(Reg16::AX) = readMem16(reg(Reg16::SI), reg(segment) << 4);
 
                 if(flags & Flag_D)
                     reg(Reg16::SI) -= 2;
@@ -2095,9 +2065,7 @@ void CPU::executeInstruction()
                 {
                     // TODO: interrupt
 
-                    auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-
-                    uint16_t rSrc = mem.read(addr) | mem.read(addr + 1) << 8;
+                    auto rSrc = readMem16(reg(Reg16::DI), reg(Reg16::ES) << 4);
 
                     doSub(reg(Reg16::AX), rSrc, flags);
 
@@ -2115,9 +2083,7 @@ void CPU::executeInstruction()
             }
             else
             {
-                auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-
-                uint16_t rSrc = mem.read(addr) | mem.read(addr + 1) << 8;
+                auto rSrc = readMem16(reg(Reg16::DI), reg(Reg16::ES) << 4);
 
                 doSub(reg(Reg16::AX), rSrc, flags);
 
@@ -2168,9 +2134,8 @@ void CPU::executeInstruction()
         case 0xC3: // RET near
         {
             // pop from stack
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            auto newIP = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             reg(Reg16::IP) = newIP;
             cyclesExecuted(16 + 4);
@@ -2188,9 +2153,9 @@ void CPU::executeInstruction()
 
             int cycles = 16 + 2 * 4;
     
-            auto addr = getEffectiveAddress(mod, rm, cycles, false);
-            reg(static_cast<Reg16>(r)) = mem.read(addr) | mem.read(addr + 1) << 8;
-            reg(Reg16::ES) = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
+            reg(static_cast<Reg16>(r)) = readMem16(offset, segment);
+            reg(Reg16::ES) = readMem16(offset + 2, segment);
             
             reg(Reg16::IP) += 1;
             cyclesExecuted(cycles);
@@ -2207,9 +2172,9 @@ void CPU::executeInstruction()
 
             int cycles = 16 + 2 * 4;
     
-            auto addr = getEffectiveAddress(mod, rm, cycles, false);
-            reg(static_cast<Reg16>(r)) = mem.read(addr) | mem.read(addr + 1) << 8;
-            reg(Reg16::DS) = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
+            reg(static_cast<Reg16>(r)) = readMem16(offset, segment);
+            reg(Reg16::DS) = readMem16(offset + 2, segment);
             
             reg(Reg16::IP) += 1;
             cyclesExecuted(cycles);
@@ -2252,14 +2217,12 @@ void CPU::executeInstruction()
         case 0xCA: // RET far, add to SP
         {
             // pop IP
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            auto newIP = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             // pop CS
-            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            auto newCS = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            auto newCS = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             // add imm to SP
             auto imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
@@ -2273,14 +2236,12 @@ void CPU::executeInstruction()
         case 0xCB: // RET far
         {
             // pop IP
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            auto newIP = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             // pop CS
-            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            auto newCS = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            auto newCS = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             reg(Reg16::CS) = newCS;
             reg(Reg16::IP) = newIP;
@@ -2301,19 +2262,16 @@ void CPU::executeInstruction()
             delayInterrupt = true;
 
             // pop IP
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            auto newIP = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            auto newIP = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             // pop CS
-            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            auto newCS = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            auto newCS = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             // pop flags
-            stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
+            flags = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            flags = mem.read(stackAddr) | mem.read(stackAddr + 1) << 8;
 
             reg(Reg16::CS) = newCS;
             reg(Reg16::IP) = newIP;
@@ -2537,12 +2495,8 @@ void CPU::executeInstruction()
 
             // push
             reg(Reg16::SP) -= 2;
-            auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
             auto retAddr = reg(Reg16::IP) + 2;
-
-            mem.write(stackAddr, retAddr & 0xFF);
-            mem.write(stackAddr + 1, retAddr >> 8);
+            writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, retAddr);
 
             reg(Reg16::IP) = reg(Reg16::IP) + 2 + off;
             cyclesExecuted(19 + 4);
@@ -2914,12 +2868,8 @@ void CPU::executeInstruction()
                 {
                     // push
                     reg(Reg16::SP) -= 2;
-                    auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
                     auto retAddr = reg(Reg16::IP) + 1;
-
-                    mem.write(stackAddr, retAddr & 0xFF);
-                    mem.write(stackAddr + 1, retAddr >> 8);
+                    writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, retAddr);
 
                     reg(Reg16::IP) = v;
                     cyclesExecuted(isReg ? 16 + 4 : 21 + 2 * 4 + cycles);
@@ -2931,23 +2881,17 @@ void CPU::executeInstruction()
 
                     // need the addr again...
                     int cycleTmp;
-                    auto memAddr = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true);
-                    auto newCS = mem.read(memAddr + 2) | mem.read(memAddr + 3) << 8;
+                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true);
+                    auto newCS = readMem16(offset + 2, segment);
 
                     // push CS
                     reg(Reg16::SP) -= 2;
-                    auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-                    mem.write(stackAddr, reg(Reg16::CS) & 0xFF);
-                    mem.write(stackAddr + 1, reg(Reg16::CS) >> 8);
+                    writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, reg(Reg16::CS));
 
                     // push IP
                     reg(Reg16::SP) -= 2;
-                    stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
                     auto retAddr = reg(Reg16::IP) + 1;
-
-                    mem.write(stackAddr, retAddr & 0xFF);
-                    mem.write(stackAddr + 1, retAddr >> 8);
+                    writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, retAddr);
 
                     reg(Reg16::CS) = newCS;
                     reg(Reg16::IP) = v;
@@ -2966,8 +2910,8 @@ void CPU::executeInstruction()
 
                     // need the addr again...
                     int cycleTmp;
-                    auto memAddr = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true);
-                    auto newCS = mem.read(memAddr + 2) | mem.read(memAddr + 3) << 8;
+                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true);
+                    auto newCS = readMem16(offset + 2, segment);
 
                     reg(Reg16::CS) = newCS;
                     reg(Reg16::IP) = v;
@@ -2981,10 +2925,7 @@ void CPU::executeInstruction()
                     if(modRM == 0xF4) // r/m is SP
                         v -= 2;
 
-                    auto stackAddr = (reg(Reg16::SS) << 4) + reg(Reg16::SP);
-
-                    mem.write(stackAddr, v & 0xFF);
-                    mem.write(stackAddr + 1, v >> 8);
+                    writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, v);
 
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 11 : (16 + 2 * 4) + cycles);
@@ -3018,13 +2959,9 @@ void CPU::serviceInterrupt(uint8_t vector)
     auto newIP = mem.read(addr) | mem.read(addr + 1) << 8;
     auto newCS = mem.read(addr + 2) | mem.read(addr + 3) << 8;
 
-    auto ss = reg(Reg16::SS) << 4;
-
     // push flags
     reg(Reg16::SP) -= 2;
-    auto stackAddr = ss + reg(Reg16::SP);
-    mem.write(stackAddr, flags & 0xFF);
-    mem.write(stackAddr + 1, flags >> 8);
+    writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, flags);
 
     // clear I/T
     flags &= ~(Flag_T | Flag_I);
@@ -3033,18 +2970,12 @@ void CPU::serviceInterrupt(uint8_t vector)
 
     // push CS
     reg(Reg16::SP) -= 2;
-    stackAddr = ss + reg(Reg16::SP);
-    mem.write(stackAddr, reg(Reg16::CS) & 0xFF);
-    mem.write(stackAddr + 1, reg(Reg16::CS) >> 8);
+    writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, reg(Reg16::CS));
 
     // push IP
     reg(Reg16::SP) -= 2;
-    stackAddr = ss + reg(Reg16::SP);
-
     auto retAddr = reg(Reg16::IP);
-
-    mem.write(stackAddr, retAddr & 0xFF);
-    mem.write(stackAddr + 1, retAddr >> 8);
+    writeMem16(reg(Reg16::SP), reg(Reg16::SS) << 4, retAddr);
 
     reg(Reg16::CS) = newCS;
     reg(Reg16::IP) = newIP;
