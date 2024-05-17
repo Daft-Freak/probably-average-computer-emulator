@@ -673,6 +673,9 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                     // set seek end
                     fdc.status[0] |= 1 << 5;
 
+                    if(!fdc.readCb)
+                        fdc.status[0] |= (1 << 6); // abnormal termination
+
                     if(fdc.digitalOutput & (1 << 3))
                         flagPICInterrupt(6);
                 }
