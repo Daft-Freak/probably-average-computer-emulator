@@ -497,8 +497,8 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
         {
             if(data & 0x80) // mode set
             {
-                auto modeA = (data >> 5) & 3;
-                auto modeB = (data >> 2) & 1;
+                [[maybe_unused]] auto modeA = (data >> 5) & 3;
+                [[maybe_unused]] auto modeB = (data >> 2) & 1;
                 assert(!modeA);
                 assert(!modeB);
 
@@ -590,15 +590,15 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                 else if((fdc.command[0] & 0x1F) == 0x06) // read
                 {
                     // multitrack mfm skip
-                    bool multiTrack = fdc.command[0] & (1 << 7);
-                    bool mfm = fdc.command[0] & (1 << 6);
+                    [[maybe_unused]] bool multiTrack = fdc.command[0] & (1 << 7);
+                    [[maybe_unused]] bool mfm = fdc.command[0] & (1 << 6);
                     // bool skipDeleted = fdc.command[0] & (1 << 5);
 
                     int unit = fdc.command[1] & 3;
                     int head = (fdc.command[1] >> 2) & 1;
 
                     auto cylinder = fdc.command[2];
-                    auto headAgain = fdc.command[3];
+                    [[maybe_unused]] auto headAgain = fdc.command[3];
                     auto record = fdc.command[4];
                     auto number = fdc.command[5];
                     auto endOfTrack = fdc.command[6];
