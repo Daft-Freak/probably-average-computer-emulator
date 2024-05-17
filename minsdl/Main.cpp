@@ -19,6 +19,9 @@ static int curScreenW = 0;
 static uint8_t biosROM[0x2000];
 static uint8_t basicROM[0x8000];
 
+static std::string floppyPath;
+static bool floppyDoubleSided;
+
 static XTScancode scancodeMap[SDL_NUM_SCANCODES]
 {
     XTScancode::Invalid,
@@ -364,6 +367,14 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     curScreenW = w;
 }
 
+static void floppyReadCallback(uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector, uint8_t sectorsPerTrack)
+{
+    int heads = floppyDoubleSided ? 2 : 1;
+    auto lba = ((cylinder * heads + head) * sectorsPerTrack/*sectors per track*/) + sector - 1;
+
+    std::ifstream(floppyPath).seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512);
+}
+
 int main(int argc, char *argv[])
 {
     int screenWidth = 640;
@@ -389,6 +400,8 @@ int main(int argc, char *argv[])
             timeLimit = true;
             timeToRun = std::stoi(argv[++i]) * 1000;
         }
+        else if(arg == "--floppy" && i + 1 < argc)
+            floppyPath = argv[++i];
         else
             break;
     }
@@ -427,6 +440,22 @@ int main(int argc, char *argv[])
     }
     else
         std::cerr << "basic.rom not found in " << basePath << "\n";
+
+    // try to open floppy disk image
+    if(!floppyPath.empty())
+    {
+        floppyPath = basePath + floppyPath;
+        std::ifstream fdFile(floppyPath, std::ios::binary);
+
+        if(fdFile)
+        {
+            fdFile.seekg(0, std::ios::end);
+            auto fdSize = fdFile.tellg();
+
+            floppyDoubleSided = fdSize != 163840;
+            cpu.getMem().setFloppyReadCallback(floppyReadCallback);
+        }
+    }
 
     cpu.getMem().setCGAScanlineCallback(scanlineCallback);
 
