@@ -694,6 +694,26 @@ void CPU::executeInstruction()
         cyclesExecuted(cycles);
     };
 
+    auto alu8AImm = [this, addr](uint8_t(*op)(uint8_t, uint8_t, uint16_t &))
+    {
+        auto imm = mem.read(addr + 1);
+
+        reg(Reg8::AL) = op(reg(Reg8::AL), imm, flags);
+
+        reg(Reg16::IP)++;
+        cyclesExecuted(4);
+    };
+
+    auto alu16AImm = [this, addr](uint16_t(*op)(uint16_t, uint16_t, uint16_t &))
+    {
+        uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+        reg(Reg16::AX) = op(reg(Reg16::AX), imm, flags);
+
+        reg(Reg16::IP) += 2;
+        cyclesExecuted(4);
+    };
+
     // 7x
     auto jump8 = [this, addr](int cond)
     {
@@ -766,25 +786,11 @@ void CPU::executeInstruction()
             alu16(doAdd, true, 3, 9);
             break;
         case 0x04: // ADD AL imm8
-        {
-            uint8_t src = mem.read(addr + 1);
-
-            reg(Reg8::AL) = doAdd(reg(Reg8::AL), src, flags);
-
-            reg(Reg16::IP)++;
-            cyclesExecuted(4);
+            alu8AImm(doAdd);
             break;
-        }
         case 0x05: // ADD AX imm16
-        {
-            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
-
-            reg(Reg16::AX) = doAdd(reg(Reg16::AX), imm, flags);
-
-            reg(Reg16::IP) += 2;
-            cyclesExecuted(4);
+            alu16AImm(doAdd);
             break;
-        }
 
         case 0x06: // PUSH seg
         case 0x0E:
@@ -827,25 +833,11 @@ void CPU::executeInstruction()
             alu16(doOr, true, 3, 9);
             break;
         case 0x0C: // OR AL imm8
-        {
-            auto imm = mem.read(addr + 1);
-
-            reg(Reg8::AL) = doOr(reg(Reg8::AL), imm, flags);
-
-            reg(Reg16::IP)++;
-            cyclesExecuted(4);
+            alu8AImm(doOr);
             break;
-        }
         case 0x0D: // OR AX imm16
-        {
-            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
-
-            reg(Reg16::AX) = doOr(reg(Reg16::AX), imm, flags);
-
-            reg(Reg16::IP) += 2;
-            cyclesExecuted(4);
+            alu16AImm(doOr);
             break;
-        }
 
         case 0x10: // ADC r/m8 r8
             alu8(doAddWithCarry, false, 3, 16);
@@ -860,15 +852,11 @@ void CPU::executeInstruction()
             alu16(doAddWithCarry, true, 3, 9);
             break;
         case 0x14: // ADC AL imm8
-        {
-            uint8_t src = mem.read(addr + 1);
-
-            reg(Reg8::AL) = doAddWithCarry(reg(Reg8::AL), src, flags);
-
-            reg(Reg16::IP)++;
-            cyclesExecuted(4);
+            alu8AImm(doAddWithCarry);
             break;
-        }
+        case 0x15: // ADC AX imm16
+            alu16AImm(doAddWithCarry);
+            break;
 
         case 0x18: // SBB r/m8 r8
             alu8(doSubWithBorrow, false, 3, 16);
@@ -883,15 +871,11 @@ void CPU::executeInstruction()
             alu16(doSubWithBorrow, true, 3, 9);
             break;
         case 0x1C: // SBB AL imm8
-        {
-            auto imm = mem.read(addr + 1);
-
-            reg(Reg8::AL) = doSubWithBorrow(reg(Reg8::AL), imm, flags);
-
-            reg(Reg16::IP)++;
-            cyclesExecuted(4);
+            alu8AImm(doSubWithBorrow);
             break;
-        }
+        case 0x1D: // SBB AX imm16
+            alu16AImm(doSubWithBorrow);
+            break;
     
         case 0x20: // AND r/m8 r8
             alu8(doAnd, false, 3, 16);
@@ -906,25 +890,11 @@ void CPU::executeInstruction()
             alu16(doAnd, true, 3, 9);
             break;
         case 0x24: // AND AL imm8
-        {
-            auto imm = mem.read(addr + 1);
-
-            reg(Reg8::AL) = doAnd(reg(Reg8::AL), imm, flags);
-
-            reg(Reg16::IP)++;
-            cyclesExecuted(4);
+            alu8AImm(doAnd);
             break;
-        }
         case 0x25: // AND AX imm16
-        {
-            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
-
-            reg(Reg16::AX) = doAnd(reg(Reg16::AX), imm, flags);
-
-            reg(Reg16::IP) += 2;
-            cyclesExecuted(4);
+            alu16AImm(doAnd);
             break;
-        }
 
         case 0x27: // DAA
         {
@@ -968,25 +938,11 @@ void CPU::executeInstruction()
             alu16(doSub, true, 3, 9);
             break;
         case 0x2C: // SUB AL imm8
-        {
-            auto imm = mem.read(addr + 1);
-
-            reg(Reg8::AL) = doSub(reg(Reg8::AL), imm, flags);
-
-            reg(Reg16::IP)++;
-            cyclesExecuted(4);
+            alu8AImm(doSub);
             break;
-        }
         case 0x2D: // SUB AX imm16
-        {
-            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
-
-            reg(Reg16::AX) = doSub(reg(Reg16::AX), imm, flags);
-
-            reg(Reg16::IP) += 2;
-            cyclesExecuted(4);
+            alu16AImm(doSub);
             break;
-        }
 
         case 0x30: // XOR r/m8 r8
             alu8(doXor, false, 3, 16);
@@ -1000,17 +956,12 @@ void CPU::executeInstruction()
         case 0x33: // XOR r16 r/m16
             alu16(doXor, true, 3, 9);
             break;
-
-        case 0x35: // XOR AX imm16
-        {
-            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
-
-            reg(Reg16::AX) = doXor(reg(Reg16::AX), imm, flags);
-
-            reg(Reg16::IP) += 2;
-            cyclesExecuted(4);
+        case 0x34: // XOR AL imm8
+            alu8AImm(doXor);
             break;
-        }
+        case 0x35: // XOR AX imm16
+            alu16AImm(doXor);
+            break;
 
         case 0x38: // CMP r/m8 r8
         {
