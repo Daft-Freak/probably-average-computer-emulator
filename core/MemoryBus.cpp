@@ -143,11 +143,11 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
                 if(ppi.output[1] & 0x80)
                 {
                     // switches
-                    return 0 << 0 | // no floppy drives
+                    return 1 << 0 | // have floppy drive
                            0 << 1 | // no co-processor
                            3 << 2 | // 4 memory banks
                            1 << 4 | // 40-col CGA
-                           0 << 6;  // still no floppy drives
+                           0 << 6;  // one floppy drive
                 }
                 else // keyboard
                     return keyboardQueue.peek();
