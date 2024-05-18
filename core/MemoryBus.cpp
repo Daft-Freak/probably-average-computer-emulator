@@ -215,6 +215,9 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
             return 0xFF;
         }
 
+        case 0x3F7: // floppy digital input
+            return 0; // TODO, but this makes 8088_bios boot
+
         default:
             printf("IO R %04X\n", addr);
     }
