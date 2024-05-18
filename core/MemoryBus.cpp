@@ -162,7 +162,7 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
                 if(ppi.output[1] & (1 << 3))
                 {
                     // SW1 5-8
-                    ret = 1 | 0 << 2; // CGA, one floppy
+                    ret = 2 | 0 << 2; // 80-col CGA, one floppy
                 }
                 else
                 {
