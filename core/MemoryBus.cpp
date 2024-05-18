@@ -586,7 +586,7 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                 else if(fdc.command[0] == 0x04) // sense drive status
                 {
                     int unit = fdc.command[1] & 3;
-                    int head = (fdc.command[1] >> 2) & 1;
+                    // int head = (fdc.command[1] >> 2) & 1;
 
                     bool track0 = fdc.presentCylinder[unit] == 0;
 
@@ -697,7 +697,7 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
 
                         fdc.readyChanged &= ~(1 << unit);
 
-                        fdc.status[0] |= 0xC0 | unit;
+                        fdc.status[0] = 0xC0 | unit;
                     }
 
                     fdc.result[0] = fdc.status[0];
