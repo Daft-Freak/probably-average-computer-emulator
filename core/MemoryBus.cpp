@@ -66,6 +66,11 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
 
             dma.flipFlop = !dma.flipFlop;
 
+            // xt boot hack
+            if(channel == 0 && !dma.flipFlop)
+                dma.currentAddress[channel]++;
+            //
+
             return ret;
         }
         case 0x01: // DMA channel 0 word count
@@ -258,10 +263,16 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
             break;
         }
 
+        case 0x0C: // DMA reset flip-flop
+        {
+            dma.flipFlop = false;
+            break;
+        }
+
         case 0x0D: // DMA master clear
         {
             dma.command = 0;
-            dma.status = 0;
+            dma.status = 1; // report TC0 for XT BIOS
             dma.request = 0;
             dma.tempData = 0;
             dma.flipFlop = false;
