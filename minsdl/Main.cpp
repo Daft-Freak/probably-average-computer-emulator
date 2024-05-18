@@ -366,9 +366,10 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     curScreenW = w;
 }
 
-static void floppyReadCallback(uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector, uint8_t sectorsPerTrack)
+static void floppyReadCallback(uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector, uint8_t endOfTrack)
 {
     int heads = floppyDoubleSided ? 2 : 1;
+    int sectorsPerTrack = 8;
     auto lba = ((cylinder * heads + head) * sectorsPerTrack/*sectors per track*/) + sector - 1;
 
     std::ifstream(floppyPath).seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512);
