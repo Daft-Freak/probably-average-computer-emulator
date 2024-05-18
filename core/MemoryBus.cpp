@@ -545,7 +545,7 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                 if(data & (1 << 3))
                     flagPICInterrupt(6);
 
-                fdc.status[0] = 0xC0; // ready changed state
+                fdc.readyChanged = 0xF; // all of them
             }
 
             fdc.digitalOutput = data;
@@ -560,6 +560,8 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
 
                 if(data == 0x03) // specify
                     fdc.commandLen = 3;
+                else if(data == 0x04) // sense drive status
+                    fdc.commandLen = 2;
                 else if((data & 0x1F) == 0x06) // read
                     fdc.commandLen = 9;
                 else if(data == 0x07) // recalibrate
@@ -586,6 +588,16 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                     // auto headUnloadTime = fdc.command[1] & 0xF;
                     // auto headLoadTime = fdc.command[2] >> 1;
                     // bool nonDMA = fdc.command[2] & 1;
+                }
+                else if(fdc.command[0] == 0x04) // sense drive status
+                {
+                    int unit = fdc.command[1] & 3;
+                    int head = (fdc.command[1] >> 2) & 1;
+
+                    bool track0 = fdc.presentCylinder[unit] == 0;
+
+                    fdc.resultLen = 1;
+                    fdc.result[0] = (track0 ? 1 << 4 : 0) | 1 << 5 /*ready*/;
                 }
                 else if((fdc.command[0] & 0x1F) == 0x06) // read
                 {
@@ -668,24 +680,37 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                 {
                     int unit = fdc.command[1] & 3;
 
-                    fdc.presentCylinder[unit] = 0;
+                    fdc.status[0] = unit;
 
-                    // set seek end
-                    fdc.status[0] |= 1 << 5;
-
-                    if(!fdc.readCb)
-                        fdc.status[0] |= (1 << 6); // abnormal termination
+                    if(!fdc.readCb || unit != 0)
+                        fdc.status[0] |= 1 << 6 | 1 << 4; // abnormal termination/equipment check
+                    else
+                    {
+                        fdc.presentCylinder[unit] = 0;
+                        fdc.status[0] |= 1 << 5; // set seek end
+                    }
 
                     if(fdc.digitalOutput & (1 << 3))
                         flagPICInterrupt(6);
                 }
                 else if(fdc.command[0] == 0x08) // sense interrupt status
                 {
+                    if(fdc.readyChanged)
+                    {
+                        int unit = 0;
+                        while(!(fdc.readyChanged & 1 << unit))
+                            unit++;
+
+                        fdc.readyChanged &= ~(1 << unit);
+
+                        fdc.status[0] |= 0xC0 | unit;
+                    }
+
                     fdc.result[0] = fdc.status[0];
                     fdc.result[1] = fdc.presentCylinder[fdc.status[0] & 3];
                     fdc.resultLen = 2;
 
-                    fdc.status[0] &= ~0xC0; // clear error bits
+                    fdc.status[0] = 0; // clear status
                 }
                 else if(fdc.command[0] == 0x0F) // seek
                 {
@@ -696,7 +721,7 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                     fdc.presentCylinder[unit] = cylinder;
 
                     // set seek end
-                    fdc.status[0] |= 1 << 5;
+                    fdc.status[0] = 1 << 5 | unit;
 
                     if(fdc.digitalOutput & (1 << 3))
                         flagPICInterrupt(6);

@@ -149,6 +149,8 @@ private:
         uint8_t commandLen = 0, resultLen = 0;
         uint8_t commandOff, resultOff;
 
+        uint8_t readyChanged;
+
         FloppyReadCallback readCb = nullptr;
     };
 
