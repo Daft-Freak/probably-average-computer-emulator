@@ -423,6 +423,12 @@ int main(int argc, char *argv[])
     {
         biosFile.read(reinterpret_cast<char *>(biosROM), sizeof(biosROM));
 
+        size_t readLen = biosFile.gcount();
+
+        // move shorter ROM to end (so reset vector is in the right place)
+        if(readLen < sizeof(biosROM))
+            memmove(biosROM + sizeof(biosROM) - readLen, biosROM, readLen);
+
         cpu.getMem().setBIOSROM(biosROM);
     }
     else
