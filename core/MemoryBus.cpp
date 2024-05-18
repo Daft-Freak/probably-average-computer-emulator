@@ -562,6 +562,8 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                     fdc.commandLen = 2;
                 else if(data == 0x08) // sense interrupt status
                     fdc.commandLen = 1;
+                else if((data & 0x1F) == 0x0a) // read id
+                    fdc.commandLen = 2;
                 else if(data == 0x0F)
                     fdc.commandLen = 3;
                 else
@@ -705,6 +707,29 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                     fdc.resultLen = 2;
 
                     fdc.status[0] = 0; // clear status
+                }
+                else if((fdc.command[0] & 0x1F) == 0x0a) // read id
+                {
+                    [[maybe_unused]] bool mfm = fdc.command[0] & (1 << 6);
+
+                    int unit = fdc.command[1] & 3;
+                    int head = (fdc.command[1] >> 2) & 1;
+
+                    assert(mfm);
+
+                    fdc.status[0] = unit | head << 2;
+
+                    fdc.resultLen = 7;
+                    fdc.result[0] = fdc.status[0];
+                    fdc.result[1] = fdc.status[1];
+                    fdc.result[2] = fdc.status[2];
+                    fdc.result[3] = fdc.presentCylinder[unit];
+                    fdc.result[4] = head;
+                    fdc.result[5] = 1;
+                    fdc.result[6] = 2; // ?
+
+                    if(fdc.digitalOutput & (1 << 3))
+                        flagPICInterrupt(6);
                 }
                 else if(fdc.command[0] == 0x0F) // seek
                 {
