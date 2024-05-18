@@ -16,8 +16,7 @@ static CPU cpu;
 static uint8_t screenData[640 * 200 * 4];
 static int curScreenW = 0;
 
-static uint8_t biosROM[0x2000];
-static uint8_t basicROM[0x8000];
+static uint8_t biosROM[0x10000];
 
 static std::string floppyPath;
 static bool floppyDoubleSided;
@@ -418,7 +417,7 @@ int main(int argc, char *argv[])
   
     // emu init
 
-    std::ifstream biosFile(basePath + "bios.rom", std::ios::binary);
+    std::ifstream biosFile(basePath + "bios-xt.rom", std::ios::binary);
     if(biosFile)
     {
         biosFile.read(reinterpret_cast<char *>(biosROM), sizeof(biosROM));
@@ -427,19 +426,9 @@ int main(int argc, char *argv[])
     }
     else
     {
-        std::cerr << "bios.rom not found in " << basePath << "\n";
+        std::cerr << "bios-xt.rom not found in " << basePath << "\n";
         return 1;
     }
-
-    std::ifstream basicFile(basePath + "basic.rom", std::ios::binary);
-    if(basicFile)
-    {
-        basicFile.read(reinterpret_cast<char *>(basicROM), sizeof(basicROM));
-
-        cpu.getMem().setBASICROM(basicROM);
-    }
-    else
-        std::cerr << "basic.rom not found in " << basePath << "\n";
 
     // try to open floppy disk image
     if(!floppyPath.empty())

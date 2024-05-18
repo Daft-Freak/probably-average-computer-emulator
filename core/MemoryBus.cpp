@@ -20,11 +20,6 @@ void MemoryBus::setBIOSROM(const uint8_t *rom)
     biosROM = rom;
 }
 
-void MemoryBus::setBASICROM(const uint8_t *rom)
-{
-    basicROM = rom;
-}
-
 uint8_t MemoryBus::read(uint32_t addr) const
 {
     if(addr < 0x10000)
@@ -33,11 +28,8 @@ uint8_t MemoryBus::read(uint32_t addr) const
     if(addr >= 0xB8000 && addr < 0xC0000)
         return cga.ram[addr & 0x3FFF];
 
-    if(addr >= 0xF6000 && addr < 0xFE000 && basicROM)
-        return basicROM[addr - 0xF6000];
-
-    if(addr >= 0xFE000)
-        return biosROM[addr & 0x1FFF];
+    if(addr >= 0xF0000)
+        return biosROM[addr & 0xFFFF];
 
     return 0xFF;
 }
@@ -139,19 +131,7 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
         case 0x60: // PPI port A
         {
             if(ppi.mode & (1 << 4)) // input
-            {
-                if(ppi.output[1] & 0x80)
-                {
-                    // switches
-                    return 1 << 0 | // have floppy drive
-                           0 << 1 | // no co-processor
-                           3 << 2 | // 4 memory banks
-                           1 << 4 | // 40-col CGA
-                           0 << 6;  // one floppy drive
-                }
-                else // keyboard
-                    return keyboardQueue.peek();
-            }
+                return keyboardQueue.peek();
             else
                 return ppi.output[0];
 
@@ -174,14 +154,17 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
 
             if(ppi.mode & (1 << 0)) // input (lower)
             {
-                if(ppi.output[1] & (1 << 2))
+                if(ppi.output[1] & (1 << 3))
                 {
-                    // SW2 1-4
+                    // SW1 5-8
+                    ret = 1 | 0 << 2; // CGA, one floppy
                 }
                 else
                 {
-                    // SW2 5, other bits read as high
-                    ret = 0xE;
+                    // SW1 1-4
+                    ret = 1 << 0  // not test mode
+                        | 0 << 1  // no co-processor
+                        | 0 << 2; // 1 RAM bank
                 }
             }
             else
