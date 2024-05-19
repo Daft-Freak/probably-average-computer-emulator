@@ -2370,6 +2370,25 @@ void CPU::executeInstruction()
             break;
         }
 
+        case 0xD8: // ESC
+        case 0xD9:
+        case 0xDA:
+        case 0xDB:
+        case 0xDC:
+        case 0xDD:
+        case 0xDE:
+        case 0xDF:
+        {
+            auto modRM = mem.read(addr + 1);
+
+    
+            int cycles = ((modRM >> 6) == 3 ? 2 : 8);
+
+            reg(Reg16::IP)++;
+            cyclesExecuted(cycles);
+            break;
+        }
+
         case 0xE0: // LOOPNE/LOOPNZ
         {
             auto off = static_cast<int8_t>(mem.read(addr + 1));
