@@ -20,6 +20,7 @@ static uint8_t biosROM[0x10000];
 
 static std::string floppyPath;
 static bool floppyDoubleSided;
+static int floppySectorsPerTrack;
 
 static XTScancode scancodeMap[SDL_NUM_SCANCODES]
 {
@@ -369,8 +370,7 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
 static void floppyReadCallback(uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector, uint8_t endOfTrack)
 {
     int heads = floppyDoubleSided ? 2 : 1;
-    int sectorsPerTrack = 8;
-    auto lba = ((cylinder * heads + head) * sectorsPerTrack/*sectors per track*/) + sector - 1;
+    auto lba = ((cylinder * heads + head) * floppySectorsPerTrack) + sector - 1;
 
     std::ifstream(floppyPath).seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512);
 }
@@ -449,6 +449,27 @@ int main(int argc, char *argv[])
             auto fdSize = fdFile.tellg();
 
             floppyDoubleSided = fdSize != 163840;
+
+            switch(fdSize / 1024)
+            {
+                case 160:
+                    floppyDoubleSided = false;
+                    floppySectorsPerTrack = 8;
+                    break;
+                case 180:
+                    floppyDoubleSided = false;
+                    floppySectorsPerTrack = 9;
+                    break;
+                default:
+                    std::cerr << "unhandled floppy image size " << fdSize << "(" << fdSize / 1024 << "k)\n";
+                    // set... something
+                    floppyDoubleSided = false;
+                    floppySectorsPerTrack = 8;
+                    break;
+            }
+
+            std::cout << "using " << (floppyDoubleSided ? 2 : 1) << " head(s) " << floppySectorsPerTrack << " sectors/track for floppy image\n";
+
             cpu.getMem().setFloppyReadCallback(floppyReadCallback);
         }
     }
