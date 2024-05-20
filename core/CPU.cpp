@@ -1829,6 +1829,16 @@ void CPU::executeInstruction()
             cyclesExecuted(4);
             break;
         }
+        case 0xA9: // TEST AX imm16
+        {
+            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+
+            doAnd(reg(Reg16::AX), imm, flags);
+
+            reg(Reg16::IP) += 2;
+            cyclesExecuted(4);
+            break;
+        }
 
         case 0xAA: // STOS byte
         {
