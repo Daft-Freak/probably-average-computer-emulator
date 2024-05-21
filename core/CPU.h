@@ -1,13 +1,13 @@
 #pragma once
 #include <cstdint>
 
-#include "MemoryBus.h"
+class MemoryBus;
 
 class CPU final
 {
 public:
 
-    CPU();
+    CPU(MemoryBus &mem);
 
     void reset();
 
@@ -15,7 +15,6 @@ public:
 
     uint32_t getCycleCount() const {return cycleCount;}
 
-    MemoryBus &getMem() {return mem;}
 private:
     enum class Reg8
     {
@@ -80,5 +79,5 @@ private:
     bool delayInterrupt = false;
 
     // RAM
-    MemoryBus mem;
+    MemoryBus &mem;
 };

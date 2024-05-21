@@ -3,9 +3,9 @@
 #include <functional>
 #include <list>
 
+#include "CPU.h"
 #include "FIFO.h"
 
-class CPU;
 class MemoryBus
 {
 public:
@@ -15,8 +15,10 @@ public:
     // TODO: this may end up being an IO interface class or something
     using FloppyReadCallback = void(*)(uint8_t *, uint8_t, uint8_t, uint8_t, uint8_t);
 
-    MemoryBus(CPU &cpu);
+    MemoryBus();
     void reset();
+
+    CPU &getCPU() {return cpu;}
 
     void setBIOSROM(const uint8_t *rom);
     void setBASICROM(const uint8_t *rom);
@@ -50,6 +52,8 @@ private:
     void updateSpeaker(uint32_t target);
 
     void updateCGA();
+
+    CPU cpu;
 
     uint8_t ram[64 * 1024];
 
@@ -174,6 +178,4 @@ private:
     uint32_t lastSpeakerUpdateCycle = 0;
     uint32_t speakerSampleTimer = 0;
     FIFO<int8_t, 1024> speakerQueue; // somewhat unsafe
-
-    CPU &cpu;
 };

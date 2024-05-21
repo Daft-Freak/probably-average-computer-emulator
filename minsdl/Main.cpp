@@ -5,13 +5,13 @@
 
 #include <SDL.h>
 
-#include "CPU.h"
+#include "MemoryBus.h"
 #include "Scancode.h"
 
 static bool quit = false;
 static bool turbo = false;
 
-static CPU cpu;
+static MemoryBus mem;
 
 static uint8_t screenData[640 * 200 * 4];
 static int curScreenW = 0;
@@ -283,10 +283,10 @@ static void audioCallback(void *userdata, Uint8 *stream, int len)
     auto ptr = reinterpret_cast<int16_t *>(stream);
     for(int i = 0; i < len / 2; i++)
     {
-        while(!quit && !cpu.getMem().hasSpeakerSample())
+        while(!quit && !mem.hasSpeakerSample())
             std::this_thread::yield();
 
-        *ptr++ = cpu.getMem().getSpeakerSample() << 4;
+        *ptr++ = mem.getSpeakerSample() << 4;
     }
 }
 
@@ -302,7 +302,7 @@ static void pollEvents()
                 auto code = scancodeMap[event.key.keysym.scancode];
 
                 if(code != XTScancode::Invalid)
-                    cpu.getMem().sendKey(static_cast<uint8_t>(code));
+                    mem.sendKey(static_cast<uint8_t>(code));
                 break;
             }
             case SDL_KEYUP:
@@ -310,7 +310,7 @@ static void pollEvents()
                 auto code = scancodeMap[event.key.keysym.scancode];
 
                 if(code != XTScancode::Invalid)
-                    cpu.getMem().sendKey(0x80 | static_cast<uint8_t>(code)); // break code
+                    mem.sendKey(0x80 | static_cast<uint8_t>(code)); // break code
                 break;
             }
             case SDL_QUIT:
@@ -417,6 +417,7 @@ int main(int argc, char *argv[])
 
   
     // emu init
+    auto &cpu = mem.getCPU();
 
     std::ifstream biosFile(basePath + "bios-xt.rom", std::ios::binary);
     if(biosFile)
@@ -429,7 +430,7 @@ int main(int argc, char *argv[])
         if(readLen < sizeof(biosROM))
             memmove(biosROM + sizeof(biosROM) - readLen, biosROM, readLen);
 
-        cpu.getMem().setBIOSROM(biosROM);
+        mem.setBIOSROM(biosROM);
     }
     else
     {
@@ -470,11 +471,11 @@ int main(int argc, char *argv[])
 
             std::cout << "using " << (floppyDoubleSided ? 2 : 1) << " head(s) " << floppySectorsPerTrack << " sectors/track for floppy image\n";
 
-            cpu.getMem().setFloppyReadCallback(floppyReadCallback);
+            mem.setFloppyReadCallback(floppyReadCallback);
         }
     }
 
-    cpu.getMem().setCGAScanlineCallback(scanlineCallback);
+    mem.setCGAScanlineCallback(scanlineCallback);
 
     cpu.reset();
 
@@ -557,7 +558,7 @@ int main(int argc, char *argv[])
         {
             cpu.run(now - lastTick);
 
-            cpu.getMem().updateForDisplay();
+            mem.updateForDisplay();
         }
 
         lastTick = now;

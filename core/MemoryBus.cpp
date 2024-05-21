@@ -3,10 +3,9 @@
 #include <cstring>
 
 #include "MemoryBus.h"
-#include "CPU.h"
 #include "CGAFont.h"
 
-MemoryBus::MemoryBus(CPU &cpu) : cpu(cpu)
+MemoryBus::MemoryBus() : cpu(*this)
 {
 }
 

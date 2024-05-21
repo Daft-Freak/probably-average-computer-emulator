@@ -399,7 +399,7 @@ static T doShift(int exOp, T dest, int count, uint16_t &flags)
     return 0;
 }
 
-CPU::CPU() : mem(*this)
+CPU::CPU(MemoryBus &mem) : mem(mem)
 {}
 
 void CPU::reset()
