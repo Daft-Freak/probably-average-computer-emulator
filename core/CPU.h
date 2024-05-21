@@ -1,13 +1,13 @@
 #pragma once
 #include <cstdint>
 
-class MemoryBus;
+class System;
 
 class CPU final
 {
 public:
 
-    CPU(MemoryBus &mem);
+    CPU(System &sys);
 
     void reset();
 
@@ -79,5 +79,5 @@ private:
     bool delayInterrupt = false;
 
     // RAM
-    MemoryBus &mem;
+    System &sys;
 };

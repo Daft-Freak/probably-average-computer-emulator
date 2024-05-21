@@ -6,7 +6,7 @@
 #include "CPU.h"
 #include "FIFO.h"
 
-class MemoryBus
+class System
 {
 public:
     using ScanlineCallback = void(*)(const uint8_t *data, int line, int w);
@@ -15,7 +15,7 @@ public:
     // TODO: this may end up being an IO interface class or something
     using FloppyReadCallback = void(*)(uint8_t *, uint8_t, uint8_t, uint8_t, uint8_t);
 
-    MemoryBus();
+    System();
     void reset();
 
     CPU &getCPU() {return cpu;}
@@ -23,8 +23,8 @@ public:
     void setBIOSROM(const uint8_t *rom);
     void setBASICROM(const uint8_t *rom);
 
-    uint8_t read(uint32_t addr) const;
-    void write(uint32_t addr, uint8_t data);
+    uint8_t readMem(uint32_t addr) const;
+    void writeMem(uint32_t addr, uint8_t data);
 
     const uint8_t *mapAddress(uint32_t addr) const;
 

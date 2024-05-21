@@ -4,7 +4,7 @@
 #include <cstring>
 
 #include "CPU.h"
-#include "MemoryBus.h"
+#include "System.h"
 
 enum Flags
 {
@@ -399,7 +399,7 @@ static T doShift(int exOp, T dest, int count, uint16_t &flags)
     return 0;
 }
 
-CPU::CPU(MemoryBus &mem) : mem(mem)
+CPU::CPU(System &sys) : sys(sys)
 {}
 
 void CPU::reset()
@@ -409,7 +409,7 @@ void CPU::reset()
 
     reg(Reg16::IP) = 0;
 
-    mem.reset();
+    sys.reset();
 }
 
 void CPU::run(int ms)
@@ -420,10 +420,10 @@ void CPU::run(int ms)
 
     while(cyclesToRun > 0)
     {
-        mem.updateForInterrupts();
+        sys.updateForInterrupts();
 
-        if(!delayInterrupt && mem.hasInterrupt() && (flags & Flag_I))
-            serviceInterrupt(mem.acknowledgeInterrupt());
+        if(!delayInterrupt && sys.hasInterrupt() && (flags & Flag_I))
+            serviceInterrupt(sys.acknowledgeInterrupt());
 
         delayInterrupt = false;
 
@@ -433,20 +433,20 @@ void CPU::run(int ms)
 
 uint16_t CPU::readMem16(uint16_t offset, uint32_t segment)
 {
-    return mem.read(offset + segment) | mem.read(((offset + 1) & 0xFFFF) + segment) << 8;
+    return sys.readMem(offset + segment) | sys.readMem(((offset + 1) & 0xFFFF) + segment) << 8;
 }
 
 void CPU::writeMem16(uint16_t offset, uint32_t segment, uint16_t data)
 {
-    mem.write(offset + segment, data & 0xFF);
-    mem.write(((offset + 1) & 0xFFFF) + segment, data >> 8);
+    sys.writeMem(offset + segment, data & 0xFF);
+    sys.writeMem(((offset + 1) & 0xFFFF) + segment, data >> 8);
 }
 
 void CPU::executeInstruction()
 {
     auto addr = (reg(Reg16::CS) << 4) + (reg(Reg16::IP)++);
 
-    auto opcode = mem.read(addr);
+    auto opcode = sys.readMem(addr);
     bool rep = false, repZ = true;
     Reg16 segmentOverride = Reg16::AX; // not a segment reg, also == 0
 
@@ -465,7 +465,7 @@ void CPU::executeInstruction()
         else
             break;
 
-        opcode = mem.read(++addr);
+        opcode = sys.readMem(++addr);
         reg(Reg16::IP)++;
     }
 
@@ -508,7 +508,7 @@ void CPU::executeInstruction()
             case 6:
                 if(mod == 0) // direct
                 {
-                    memAddr = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+                    memAddr = sys.readMem(addr + 2) | sys.readMem(addr + 3) << 8;
 
                     if(!rw)
                         reg(Reg16::IP) += 2;
@@ -531,7 +531,7 @@ void CPU::executeInstruction()
         // add disp
         if(mod == 1)
         {
-            uint16_t disp = mem.read(addr + 2);
+            uint16_t disp = sys.readMem(addr + 2);
 
             // sign extend
             if(disp & 0x80)
@@ -545,7 +545,7 @@ void CPU::executeInstruction()
         }
         else if(mod == 2)
         {
-            uint16_t disp = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+            uint16_t disp = sys.readMem(addr + 2) | sys.readMem(addr + 3) << 8;
 
             if(!rw)
                 reg(Reg16::IP) += 2;
@@ -586,7 +586,7 @@ void CPU::executeInstruction()
         if(mod != 3)
         {
             auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
-            return mem.read(offset + segment);
+            return sys.readMem(offset + segment);
         }
         else
             return reg(static_cast<Reg8>(rm));
@@ -614,7 +614,7 @@ void CPU::executeInstruction()
         if(mod != 3)
         {
             auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw);
-            mem.write(offset + segment, v);
+            sys.writeMem(offset + segment, v);
         }
         else
             reg(static_cast<Reg8>(rm)) = v;
@@ -638,7 +638,7 @@ void CPU::executeInstruction()
 
     auto alu8 = [this, addr, &readRM8, &writeRM8](uint8_t(*op)(uint8_t, uint8_t, uint16_t &), bool d, int regCycles, int memCycles)
     {
-        auto modRM = mem.read(addr + 1);
+        auto modRM = sys.readMem(addr + 1);
         auto r = static_cast<Reg8>((modRM >> 3) & 0x7);
 
         int cycles = (modRM >> 6) == 3 ? regCycles : memCycles;
@@ -666,7 +666,7 @@ void CPU::executeInstruction()
 
     auto alu16 = [this, addr, &readRM16, &writeRM16](uint16_t(*op)(uint16_t, uint16_t, uint16_t &), bool d, int regCycles, int memCycles)
     {
-        auto modRM = mem.read(addr + 1);
+        auto modRM = sys.readMem(addr + 1);
         auto r = static_cast<Reg16>((modRM >> 3) & 0x7);
 
         int transfers = d ? 1 : 2;
@@ -696,7 +696,7 @@ void CPU::executeInstruction()
 
     auto alu8AImm = [this, addr](uint8_t(*op)(uint8_t, uint8_t, uint16_t &))
     {
-        auto imm = mem.read(addr + 1);
+        auto imm = sys.readMem(addr + 1);
 
         reg(Reg8::AL) = op(reg(Reg8::AL), imm, flags);
 
@@ -706,7 +706,7 @@ void CPU::executeInstruction()
 
     auto alu16AImm = [this, addr](uint16_t(*op)(uint16_t, uint16_t, uint16_t &))
     {
-        uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+        uint16_t imm = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
 
         reg(Reg16::AX) = op(reg(Reg16::AX), imm, flags);
 
@@ -717,7 +717,7 @@ void CPU::executeInstruction()
     // 7x
     auto jump8 = [this, addr](int cond)
     {
-        auto off = static_cast<int8_t>(mem.read(addr + 1));
+        auto off = static_cast<int8_t>(sys.readMem(addr + 1));
         bool condVal = false;
 
         switch(cond)
@@ -965,7 +965,7 @@ void CPU::executeInstruction()
 
         case 0x38: // CMP r/m8 r8
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9;
@@ -981,7 +981,7 @@ void CPU::executeInstruction()
         }
         case 0x39: // CMP r/m16 r16
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
@@ -997,7 +997,7 @@ void CPU::executeInstruction()
         }
         case 0x3A: // CMP r8 r/m8
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9;
@@ -1013,7 +1013,7 @@ void CPU::executeInstruction()
         }
         case 0x3B: // CMP r16 r/m16
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
@@ -1029,7 +1029,7 @@ void CPU::executeInstruction()
         }
         case 0x3C: // CMP AL imm
         {
-            auto imm = mem.read(addr + 1);
+            auto imm = sys.readMem(addr + 1);
 
             doSub(reg(Reg8::AL), imm, flags);
 
@@ -1039,7 +1039,7 @@ void CPU::executeInstruction()
         }
         case 0x3D: // CMP AX imm
         {
-            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            uint16_t imm = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
 
             doSub(reg(Reg16::AX), imm, flags);
 
@@ -1138,13 +1138,13 @@ void CPU::executeInstruction()
 
         case 0x80: // imm8 op
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 4 : (exOp == 7/*CMP*/ ? 10 : 17); //?
             auto dest = readRM8(modRM, cycles);
             int immOff = 2 + getDispLen(modRM);
-            auto imm = mem.read(addr + immOff);
+            auto imm = sys.readMem(addr + immOff);
 
             switch(exOp)
             {
@@ -1180,14 +1180,14 @@ void CPU::executeInstruction()
         }
         case 0x81: // imm16 op
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 4 : (exOp == 7/*CMP*/ ? 10 : 17) + 4; //?
             auto dest = readRM16(modRM, cycles);
 
             int immOff = 2 + getDispLen(modRM);
-            uint16_t imm = mem.read(addr + immOff) | mem.read(addr + immOff + 1) << 8;
+            uint16_t imm = sys.readMem(addr + immOff) | sys.readMem(addr + immOff + 1) << 8;
 
             switch(exOp)
             {
@@ -1223,14 +1223,14 @@ void CPU::executeInstruction()
 
         case 0x83: // signed imm8 op
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 4 : (exOp == 7/*CMP*/ ? 10 : 17) + 4; //?
             auto dest = readRM16(modRM, cycles);
 
             int immOff = 2 + getDispLen(modRM);
-            uint16_t imm = mem.read(addr + immOff);
+            uint16_t imm = sys.readMem(addr + immOff);
 
             // sign extend
             if(imm & 0x80)
@@ -1271,7 +1271,7 @@ void CPU::executeInstruction()
 
         case 0x84: // TEST r/m8 r8
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9;
@@ -1287,7 +1287,7 @@ void CPU::executeInstruction()
         }
         case 0x85: // TEST r/m16 r16
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
@@ -1304,7 +1304,7 @@ void CPU::executeInstruction()
 
         case 0x86: // XCHG r/m8 r8
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             auto srcReg = static_cast<Reg8>(r);
@@ -1321,7 +1321,7 @@ void CPU::executeInstruction()
         }
         case 0x87: // XCHG r/m16 r16
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             auto srcReg = static_cast<Reg16>(r);
@@ -1338,7 +1338,7 @@ void CPU::executeInstruction()
         }
         case 0x88: // MOV reg8 -> r/m
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 2 : 9;
@@ -1353,7 +1353,7 @@ void CPU::executeInstruction()
         }
         case 0x89: // MOV reg16 -> r/m
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 2 : 9 + 4;
@@ -1368,7 +1368,7 @@ void CPU::executeInstruction()
         }
         case 0x8A: // MOV r/m -> reg8
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 2 : 8;
@@ -1384,7 +1384,7 @@ void CPU::executeInstruction()
         }
         case 0x8B: // MOV r/m -> reg16
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 2 : 8 + 4;
@@ -1400,7 +1400,7 @@ void CPU::executeInstruction()
         }
         case 0x8C: // MOV sreg -> r/m
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 2 : 9 + 4;
@@ -1417,7 +1417,7 @@ void CPU::executeInstruction()
 
         case 0x8D: // LEA
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = 2;
@@ -1431,7 +1431,7 @@ void CPU::executeInstruction()
 
         case 0x8E: // MOV r/m -> sreg
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 2 : 8 + 4;
@@ -1447,7 +1447,7 @@ void CPU::executeInstruction()
 
         case 0x8F: // POP r/m
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
 
             assert(((modRM >> 3) & 0x7) == 0);
 
@@ -1506,8 +1506,8 @@ void CPU::executeInstruction()
     
         case 0x9A: // CALL far
         {
-            auto newIP = mem.read(addr + 1) | mem.read(addr + 2) << 8;
-            auto newCS = mem.read(addr + 3) | mem.read(addr + 4) << 8;
+            auto newIP = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
+            auto newCS = sys.readMem(addr + 3) | sys.readMem(addr + 4) << 8;
 
             // push CS
             reg(Reg16::SP) -= 2;
@@ -1559,11 +1559,11 @@ void CPU::executeInstruction()
 
         case 0xA0: // MOV off16 -> AL
         {
-            auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto memAddr = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
             auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
             memAddr += reg(segment) << 4;
 
-            reg(Reg8::AL) = mem.read(memAddr);
+            reg(Reg8::AL) = sys.readMem(memAddr);
 
             reg(Reg16::IP) += 2;
             cyclesExecuted(10);
@@ -1571,7 +1571,7 @@ void CPU::executeInstruction()
         }
         case 0xA1: // MOV off16 -> AX
         {
-            auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto memAddr = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
             auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
 
             reg(Reg16::AX) = readMem16(memAddr, reg(segment) << 4);
@@ -1582,11 +1582,11 @@ void CPU::executeInstruction()
         }
         case 0xA2: // MOV AL -> off16
         {
-            auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto memAddr = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
             auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
             memAddr += reg(segment) << 4;
 
-            mem.write(memAddr, reg(Reg8::AL));
+            sys.writeMem(memAddr, reg(Reg8::AL));
 
             reg(Reg16::IP) += 2;
             cyclesExecuted(10);
@@ -1594,7 +1594,7 @@ void CPU::executeInstruction()
         }
         case 0xA3: // MOV AX -> off16
         {
-            auto memAddr = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto memAddr = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
             auto segment = segmentOverride == Reg16::AX ? Reg16::DS : segmentOverride;
 
             writeMem16(memAddr, reg(segment) << 4, reg(Reg16::AX));
@@ -1618,7 +1618,7 @@ void CPU::executeInstruction()
                     auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
                     auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
 
-                    mem.write(destAddr, mem.read(srcAddr));
+                    sys.writeMem(destAddr, sys.readMem(srcAddr));
 
                     if(flags & Flag_D)
                     {
@@ -1640,7 +1640,7 @@ void CPU::executeInstruction()
                 auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
                 auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
 
-                mem.write(destAddr, mem.read(srcAddr));
+                sys.writeMem(destAddr, sys.readMem(srcAddr));
 
                 if(flags & Flag_D)
                 {
@@ -1720,7 +1720,7 @@ void CPU::executeInstruction()
                     auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
                     auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
 
-                    doSub(mem.read(srcAddr), mem.read(destAddr), flags);
+                    doSub(sys.readMem(srcAddr), sys.readMem(destAddr), flags);
 
                     if(flags & Flag_D)
                     {
@@ -1745,7 +1745,7 @@ void CPU::executeInstruction()
                 auto srcAddr = (reg(segment) << 4) + reg(Reg16::SI);
                 auto destAddr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
 
-                doSub(mem.read(srcAddr), mem.read(destAddr), flags);
+                doSub(sys.readMem(srcAddr), sys.readMem(destAddr), flags);
 
                 if(flags & Flag_D)
                 {
@@ -1821,7 +1821,7 @@ void CPU::executeInstruction()
 
         case 0xA8: // TEST AL imm8
         {
-            auto imm = mem.read(addr + 1);
+            auto imm = sys.readMem(addr + 1);
 
             doAnd(reg(Reg8::AL), imm, flags);
 
@@ -1831,7 +1831,7 @@ void CPU::executeInstruction()
         }
         case 0xA9: // TEST AX imm16
         {
-            uint16_t imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            uint16_t imm = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
 
             doAnd(reg(Reg16::AX), imm, flags);
 
@@ -1851,7 +1851,7 @@ void CPU::executeInstruction()
                     // TODO: interrupt
 
                     auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-                    mem.write(addr, reg(Reg8::AL));
+                    sys.writeMem(addr, reg(Reg8::AL));
 
                     if(flags & Flag_D)
                         reg(Reg16::DI)--;
@@ -1865,7 +1865,7 @@ void CPU::executeInstruction()
             else
             {
                 auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
-                mem.write(addr, reg(Reg8::AL));
+                sys.writeMem(addr, reg(Reg8::AL));
 
                 if(flags & Flag_D)
                     reg(Reg16::DI)--;
@@ -1922,7 +1922,7 @@ void CPU::executeInstruction()
                     // TODO: interrupt
 
                     auto addr = (reg(segment) << 4) + reg(Reg16::SI);
-                    reg(Reg8::AL) = mem.read(addr);
+                    reg(Reg8::AL) = sys.readMem(addr);
 
                     if(flags & Flag_D)
                         reg(Reg16::SI)--;
@@ -1936,7 +1936,7 @@ void CPU::executeInstruction()
             else
             {
                 auto addr = (reg(segment) << 4) + reg(Reg16::SI);
-                reg(Reg8::AL) = mem.read(addr);
+                reg(Reg8::AL) = sys.readMem(addr);
 
                 if(flags & Flag_D)
                     reg(Reg16::SI)--;
@@ -1994,7 +1994,7 @@ void CPU::executeInstruction()
 
                     auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
 
-                    auto rSrc = mem.read(addr);
+                    auto rSrc = sys.readMem(addr);
 
                     doSub(reg(Reg8::AL), rSrc, flags);
 
@@ -2014,7 +2014,7 @@ void CPU::executeInstruction()
             {
                 auto addr = (reg(Reg16::ES) << 4) + reg(Reg16::DI);
 
-                auto rSrc = mem.read(addr);
+                auto rSrc = sys.readMem(addr);
 
                 doSub(reg(Reg8::AL), rSrc, flags);
 
@@ -2083,7 +2083,7 @@ void CPU::executeInstruction()
         case 0xB7:
         {
             auto r = static_cast<Reg8>(opcode & 7);
-            reg(r) = mem.read(addr + 1);
+            reg(r) = sys.readMem(addr + 1);
             reg(Reg16::IP)++;
             cyclesExecuted(4);
             break;
@@ -2099,7 +2099,7 @@ void CPU::executeInstruction()
         case 0xBF:
         {
             auto r = static_cast<Reg16>(opcode & 7);
-            reg(r) = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            reg(r) = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
             reg(Reg16::IP) += 2;
             cyclesExecuted(4);
             break;
@@ -2118,7 +2118,7 @@ void CPU::executeInstruction()
 
         case 0xC4: // LES
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto mod = modRM >> 6;
             auto r = (modRM >> 3) & 0x7;
             auto rm = modRM & 7;
@@ -2137,7 +2137,7 @@ void CPU::executeInstruction()
         }
         case 0xC5: // LDS
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto mod = modRM >> 6;
             auto r = (modRM >> 3) & 0x7;
             auto rm = modRM & 7;
@@ -2157,11 +2157,11 @@ void CPU::executeInstruction()
 
         case 0xC6: // MOV imm8 -> r/m
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             assert(((modRM >> 3) & 0x7) == 0);
 
             int immOff = 2 + getDispLen(modRM);
-            auto imm = mem.read(addr + immOff);
+            auto imm = sys.readMem(addr + immOff);
 
             int cycles = (modRM >> 6) == 3 ? 4 : 10;
 
@@ -2173,11 +2173,11 @@ void CPU::executeInstruction()
         }
         case 0xC7: // MOV imm16 -> r/m
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             assert(((modRM >> 3) & 0x7) == 0);
 
             int immOff = 2 + getDispLen(modRM);
-            auto imm = mem.read(addr + immOff) | mem.read(addr + immOff + 1) << 8;
+            auto imm = sys.readMem(addr + immOff) | sys.readMem(addr + immOff + 1) << 8;
 
             int cycles = (modRM >> 6) == 3 ? 4 : 10 + 4;
 
@@ -2199,7 +2199,7 @@ void CPU::executeInstruction()
             reg(Reg16::SP) += 2;
 
             // add imm to SP
-            auto imm = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto imm = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
             reg(Reg16::SP) += imm;
 
             reg(Reg16::CS) = newCS;
@@ -2225,7 +2225,7 @@ void CPU::executeInstruction()
 
         case 0xCD: // INT
         {
-            auto imm = mem.read(addr + 1);
+            auto imm = sys.readMem(addr + 1);
             reg(Reg16::IP)++;
             serviceInterrupt(imm);
             break;
@@ -2256,7 +2256,7 @@ void CPU::executeInstruction()
 
         case 0xD0: // shift r/m8 by 1
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
     
             auto count = 1;
@@ -2272,7 +2272,7 @@ void CPU::executeInstruction()
         }
         case 0xD1: // shift r/m16 by 1
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
     
             auto count = 1;
@@ -2288,7 +2288,7 @@ void CPU::executeInstruction()
         }
         case 0xD2: // shift r/m8 by cl
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
     
             auto count = reg(Reg8::CL);
@@ -2304,7 +2304,7 @@ void CPU::executeInstruction()
         }
         case 0xD3: // shift r/m16 by cl
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
     
             auto count = reg(Reg8::CL);
@@ -2321,7 +2321,7 @@ void CPU::executeInstruction()
 
         case 0xD4: // AAM
         {
-            auto imm = mem.read(addr + 1);
+            auto imm = sys.readMem(addr + 1);
 
             auto v = reg(Reg8::AL);
 
@@ -2350,7 +2350,7 @@ void CPU::executeInstruction()
         }
         case 0xD5: // AAD
         {
-            auto imm = mem.read(addr + 1);
+            auto imm = sys.readMem(addr + 1);
 
             uint8_t res = reg(Reg8::AL) + reg(Reg8::AH) * imm;
 
@@ -2375,7 +2375,7 @@ void CPU::executeInstruction()
             else
                 addr += reg(Reg16::DS) << 4;
 
-            reg(Reg8::AL) = mem.read(addr);
+            reg(Reg8::AL) = sys.readMem(addr);
             cyclesExecuted(11);
             break;
         }
@@ -2389,7 +2389,7 @@ void CPU::executeInstruction()
         case 0xDE:
         case 0xDF:
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
 
     
             int cycles = ((modRM >> 6) == 3 ? 2 : 8);
@@ -2401,7 +2401,7 @@ void CPU::executeInstruction()
 
         case 0xE0: // LOOPNE/LOOPNZ
         {
-            auto off = static_cast<int8_t>(mem.read(addr + 1));
+            auto off = static_cast<int8_t>(sys.readMem(addr + 1));
 
             uint16_t count = --reg(Reg16::CX);
 
@@ -2420,7 +2420,7 @@ void CPU::executeInstruction()
         }
         case 0xE1: // LOOPE/LOOPZ
         {
-            auto off = static_cast<int8_t>(mem.read(addr + 1));
+            auto off = static_cast<int8_t>(sys.readMem(addr + 1));
 
             uint16_t count = --reg(Reg16::CX);
 
@@ -2439,7 +2439,7 @@ void CPU::executeInstruction()
         }
         case 0xE2: // LOOP
         {
-            auto off = static_cast<int8_t>(mem.read(addr + 1));
+            auto off = static_cast<int8_t>(sys.readMem(addr + 1));
 
             uint16_t count = --reg(Reg16::CX);
 
@@ -2458,7 +2458,7 @@ void CPU::executeInstruction()
         }
         case 0xE3: // JCXZ
         {
-            auto off = static_cast<int8_t>(mem.read(addr + 1));
+            auto off = static_cast<int8_t>(sys.readMem(addr + 1));
             if(reg(Reg16::CX) == 0)
             {
                 reg(Reg16::IP) = reg(Reg16::IP) + 1 + off;
@@ -2474,8 +2474,8 @@ void CPU::executeInstruction()
 
         case 0xE4: // IN AL from imm8
         {
-            auto port = mem.read(addr + 1);
-            reg(Reg8::AL) = mem.readIOPort(port);
+            auto port = sys.readMem(addr + 1);
+            reg(Reg8::AL) = sys.readIOPort(port);
 
             reg(Reg16::IP)++;
             cyclesExecuted(10);
@@ -2484,10 +2484,10 @@ void CPU::executeInstruction()
 
         case 0xE6: // OUT AL to imm8
         {
-            auto port = mem.read(addr + 1);
+            auto port = sys.readMem(addr + 1);
             auto data = reg(Reg8::AL);
 
-            mem.writeIOPort(port, data);
+            sys.writeIOPort(port, data);
 
             reg(Reg16::IP)++;
             cyclesExecuted(10);
@@ -2496,7 +2496,7 @@ void CPU::executeInstruction()
 
         case 0xE8: // CALL
         {
-            auto off = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto off = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
 
             // push
             reg(Reg16::SP) -= 2;
@@ -2510,7 +2510,7 @@ void CPU::executeInstruction()
 
         case 0xE9: // JMP near
         {
-            auto off = mem.read(addr + 1) | mem.read(addr + 2) << 8;
+            auto off = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
 
             reg(Reg16::IP) = reg(Reg16::IP) + 2 + off;
             cyclesExecuted(15);
@@ -2518,8 +2518,8 @@ void CPU::executeInstruction()
         }
         case 0xEA: // JMP far
         {
-            auto newIP = mem.read(addr + 1) | mem.read(addr + 2) << 8;
-            auto newCS = mem.read(addr + 3) | mem.read(addr + 4) << 8;
+            auto newIP = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
+            auto newCS = sys.readMem(addr + 3) | sys.readMem(addr + 4) << 8;
             reg(Reg16::IP) = newIP;
             reg(Reg16::CS) = newCS;
 
@@ -2528,7 +2528,7 @@ void CPU::executeInstruction()
         }
         case 0xEB: // JMP short
         {
-            auto off = static_cast<int8_t>(mem.read(addr + 1));
+            auto off = static_cast<int8_t>(sys.readMem(addr + 1));
 
             reg(Reg16::IP) = reg(Reg16::IP) + 1 + off;
             cyclesExecuted(15);
@@ -2539,7 +2539,7 @@ void CPU::executeInstruction()
         {
             auto port = reg(Reg16::DX);
 
-            reg(Reg8::AL) = mem.readIOPort(port);
+            reg(Reg8::AL) = sys.readIOPort(port);
 
             cyclesExecuted(8);
             break;
@@ -2550,7 +2550,7 @@ void CPU::executeInstruction()
             auto port = reg(Reg16::DX);
             auto data = reg(Reg8::AL);
 
-            mem.writeIOPort(port, data);
+            sys.writeIOPort(port, data);
 
             cyclesExecuted(8);
             break;
@@ -2565,7 +2565,7 @@ void CPU::executeInstruction()
 
         case 0xF6: // group1 byte
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
 
             bool isReg = (modRM >> 6) == 3;
@@ -2577,7 +2577,7 @@ void CPU::executeInstruction()
             {
                 case 0: // TEST imm
                 {
-                    auto imm = mem.read(addr + 2 + getDispLen(modRM));
+                    auto imm = sys.readMem(addr + 2 + getDispLen(modRM));
 
                     doAnd(v, imm, flags);
 
@@ -2645,7 +2645,7 @@ void CPU::executeInstruction()
         }
         case 0xF7: // group1 word
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
 
             bool isReg = (modRM >> 6) == 3;
@@ -2658,7 +2658,7 @@ void CPU::executeInstruction()
                 case 0: // TEST imm
                 {
                     int immOff = 2 + getDispLen(modRM);
-                    uint16_t imm = mem.read(addr + immOff) | mem.read(addr + immOff + 1) << 8;
+                    uint16_t imm = sys.readMem(addr + immOff) | sys.readMem(addr + immOff + 1) << 8;
 
                     doAnd(v, imm, flags);
 
@@ -2804,7 +2804,7 @@ void CPU::executeInstruction()
 
         case 0xFE: // group2 byte
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
 
             bool isReg = (modRM >> 6) == 3;
@@ -2842,7 +2842,7 @@ void CPU::executeInstruction()
         }
         case 0xFF: // group2 word
         {
-            auto modRM = mem.read(addr + 1);
+            auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
 
             bool isReg = (modRM >> 6) == 3;
@@ -2962,8 +2962,8 @@ void CPU::serviceInterrupt(uint8_t vector)
 {
     auto addr = vector * 4;
 
-    auto newIP = mem.read(addr) | mem.read(addr + 1) << 8;
-    auto newCS = mem.read(addr + 2) | mem.read(addr + 3) << 8;
+    auto newIP = sys.readMem(addr) | sys.readMem(addr + 1) << 8;
+    auto newCS = sys.readMem(addr + 2) | sys.readMem(addr + 3) << 8;
 
     // push flags
     reg(Reg16::SP) -= 2;

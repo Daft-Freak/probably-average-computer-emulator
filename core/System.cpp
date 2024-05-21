@@ -2,24 +2,24 @@
 #include <cstdio>
 #include <cstring>
 
-#include "MemoryBus.h"
+#include "System.h"
 #include "CGAFont.h"
 
-MemoryBus::MemoryBus() : cpu(*this)
+System::System() : cpu(*this)
 {
 }
 
-void MemoryBus::reset()
+void System::reset()
 {
 
 }
 
-void MemoryBus::setBIOSROM(const uint8_t *rom)
+void System::setBIOSROM(const uint8_t *rom)
 {
     biosROM = rom;
 }
 
-uint8_t MemoryBus::read(uint32_t addr) const
+uint8_t System::readMem(uint32_t addr) const
 {
     if(addr < 0x10000)
         return ram[addr];
@@ -33,7 +33,7 @@ uint8_t MemoryBus::read(uint32_t addr) const
     return 0xFF;
 }
 
-void MemoryBus::write(uint32_t addr, uint8_t data)
+void System::writeMem(uint32_t addr, uint8_t data)
 {
     if(addr < 0x10000)
         ram[addr] = data;
@@ -41,12 +41,12 @@ void MemoryBus::write(uint32_t addr, uint8_t data)
         cga.ram[addr & 0x3FFF] = data;
 }
 
-const uint8_t *MemoryBus::mapAddress(uint32_t addr) const
+const uint8_t *System::mapAddress(uint32_t addr) const
 {
     return nullptr;
 }
 
-uint8_t MemoryBus::readIOPort(uint16_t addr)
+uint8_t System::readIOPort(uint16_t addr)
 {
     switch(addr)
     {
@@ -223,7 +223,7 @@ uint8_t MemoryBus::readIOPort(uint16_t addr)
     return 0xFF;
 }
 
-void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
+void System::writeIOPort(uint16_t addr, uint8_t data)
 {
     switch(addr)
     {
@@ -635,7 +635,7 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
                         // should probably fail the read otherwise...
 
                         for(int i = 0; i < sectorSize; i++)
-                            write(destAddr + i, buf[i]);
+                            writeMem(destAddr + i, buf[i]);
 
                         dmaSize -= sectorSize;
                         destAddr += sectorSize;
@@ -760,7 +760,7 @@ void MemoryBus::writeIOPort(uint16_t addr, uint8_t data)
     }
 }
 
-void MemoryBus::updateForInterrupts()
+void System::updateForInterrupts()
 {
     // TODO: usual target for optimisation...
 
@@ -784,7 +784,7 @@ void MemoryBus::updateForInterrupts()
         updatePIT();
 }
 
-void MemoryBus::updateForDisplay()
+void System::updateForDisplay()
 {
     updateCGA();
 
@@ -793,7 +793,7 @@ void MemoryBus::updateForDisplay()
     updateSpeaker(cpu.getCycleCount());
 }
 
-uint8_t MemoryBus::acknowledgeInterrupt()
+uint8_t System::acknowledgeInterrupt()
 {
     auto serviceable = pic.request & ~pic.mask;
 
@@ -811,38 +811,38 @@ uint8_t MemoryBus::acknowledgeInterrupt()
     return serviceIndex | (pic.initCommand[1] & 0xF8);
 }
 
-void MemoryBus::setCGAScanlineCallback(ScanlineCallback cb)
+void System::setCGAScanlineCallback(ScanlineCallback cb)
 {
     cga.scanCb = cb;
 }
 
-void MemoryBus::setFloppyReadCallback(FloppyReadCallback cb)
+void System::setFloppyReadCallback(FloppyReadCallback cb)
 {
     fdc.readCb = cb;
 }
 
-void MemoryBus::sendKey(uint8_t scancode)
+void System::sendKey(uint8_t scancode)
 {
     keyboardQueue.push(scancode);
     flagPICInterrupt(1);
 }
 
-bool MemoryBus::hasSpeakerSample() const
+bool System::hasSpeakerSample() const
 {
     return !speakerQueue.empty();
 }
 
-int8_t MemoryBus::getSpeakerSample()
+int8_t System::getSpeakerSample()
 {
     return speakerQueue.pop();
 }
 
-void MemoryBus::flagPICInterrupt(int index)
+void System::flagPICInterrupt(int index)
 {
     pic.request |= 1 << index;
 }
 
-void MemoryBus::updatePIT()
+void System::updatePIT()
 {
     auto elapsed = cpu.getCycleCount() - pit.lastUpdateCycle;
 
@@ -894,7 +894,7 @@ void MemoryBus::updatePIT()
     }
 }
 
-void MemoryBus::updateSpeaker(uint32_t target)
+void System::updateSpeaker(uint32_t target)
 {
     static const int fracBits = 8;
     static const int sampleRate = 22050;
@@ -927,7 +927,7 @@ void MemoryBus::updateSpeaker(uint32_t target)
     }
 }
 
-void MemoryBus::updateCGA()
+void System::updateCGA()
 {
     auto elapsed = cpu.getCycleCount() - cga.lastUpdateCycle;
 
