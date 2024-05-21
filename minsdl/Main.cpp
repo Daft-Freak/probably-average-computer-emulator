@@ -487,7 +487,7 @@ int main(int argc, char *argv[])
 
     auto window = SDL_CreateWindow("DaftBoySDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                    screenWidth * screenScale, screenHeight * screenScale,
-                                   SDL_WINDOW_RESIZABLE);
+                                   SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
     auto renderer = SDL_CreateRenderer(window, -1, turbo ? 0 : SDL_RENDERER_PRESENTVSYNC);
     SDL_RenderSetLogicalSize(renderer, screenWidth, screenHeight);
