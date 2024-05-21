@@ -477,7 +477,7 @@ int main(int argc, char *argv[])
 
     sys.setCGAScanlineCallback(scanlineCallback);
 
-    cpu.reset();
+    sys.reset();
 
     // SDL init
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)

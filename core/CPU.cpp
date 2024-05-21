@@ -408,8 +408,6 @@ void CPU::reset()
     reg(Reg16::DS) = reg(Reg16::ES) = reg(Reg16::SS) = 0;
 
     reg(Reg16::IP) = 0;
-
-    sys.reset();
 }
 
 void CPU::run(int ms)

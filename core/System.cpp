@@ -11,7 +11,7 @@ System::System() : cpu(*this)
 
 void System::reset()
 {
-
+    cpu.reset();
 }
 
 void System::setBIOSROM(const uint8_t *rom)
