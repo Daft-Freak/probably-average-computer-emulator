@@ -55,6 +55,9 @@ public:
     uint16_t reg(Reg16 r) const {return regs[static_cast<int>(r)];}
     uint16_t &reg(Reg16 r) {return regs[static_cast<int>(r)];}
 
+    uint16_t getFlags() const {return flags;}
+    void setFlags(uint16_t flags) {this->flags = flags;}
+
     void executeInstruction();
 
 private:
