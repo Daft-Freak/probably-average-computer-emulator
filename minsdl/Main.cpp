@@ -426,11 +426,12 @@ int main(int argc, char *argv[])
 
         size_t readLen = biosFile.gcount();
 
+        uint32_t biosBase = 0xF0000;
         // move shorter ROM to end (so reset vector is in the right place)
         if(readLen < sizeof(biosROM))
-            memmove(biosROM + sizeof(biosROM) - readLen, biosROM, readLen);
+            biosBase += sizeof(biosROM) - readLen;
 
-        sys.setBIOSROM(biosROM);
+        sys.addMemory(biosBase, 64 * 1024, biosROM);
     }
     else
     {

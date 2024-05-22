@@ -7,6 +7,9 @@
 
 System::System() : cpu(*this)
 {
+    addMemory(0, sizeof(ram), ram);
+    addMemory(0xB8000, sizeof(cga.ram), cga.ram);
+    addMemory(0xBC000, sizeof(cga.ram), cga.ram); // mirror
 }
 
 void System::reset()
@@ -14,31 +17,34 @@ void System::reset()
     cpu.reset();
 }
 
-void System::setBIOSROM(const uint8_t *rom)
+void System::addMemory(uint32_t base, uint32_t size, uint8_t *ptr)
 {
-    biosROM = rom;
+    assert(size % blockSize == 0);
+    assert(base % blockSize == 0);
+
+    auto block = base / blockSize;
+    int numBlocks = size / blockSize;
+
+    for(int i = 0; i < numBlocks; i++)
+        memMap[block + i] = ptr - base;
 }
 
 uint8_t System::readMem(uint32_t addr) const
 {
-    if(addr < 0x10000)
-        return ram[addr];
+    auto ptr = memMap[addr / blockSize];
 
-    if(addr >= 0xB8000 && addr < 0xC0000)
-        return cga.ram[addr & 0x3FFF];
-
-    if(addr >= 0xF0000)
-        return biosROM[addr & 0xFFFF];
+    if(ptr)
+        return ptr[addr];
 
     return 0xFF;
 }
 
 void System::writeMem(uint32_t addr, uint8_t data)
 {
-    if(addr < 0x10000)
-        ram[addr] = data;
-    else if(addr >= 0xB8000 && addr < 0xC0000)
-        cga.ram[addr & 0x3FFF] = data;
+    auto ptr = memMap[addr / blockSize];
+
+    if(ptr)
+        ptr[addr] = data;
 }
 
 const uint8_t *System::mapAddress(uint32_t addr) const
