@@ -30,6 +30,8 @@ void System::addMemory(uint32_t base, uint32_t size, uint8_t *ptr)
 
 uint8_t System::readMem(uint32_t addr) const
 {
+    addr &= (maxAddress - 1);
+
     auto ptr = memMap[addr / blockSize];
 
     if(ptr)
@@ -40,6 +42,8 @@ uint8_t System::readMem(uint32_t addr) const
 
 void System::writeMem(uint32_t addr, uint8_t data)
 {
+    addr &= (maxAddress - 1);
+
     auto ptr = memMap[addr / blockSize];
 
     if(ptr)
