@@ -671,7 +671,8 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                     // transfers data through DMA...
                     // super-hack
                     auto dmaSize = dma.currentWordCount[2] + 1;
-                    auto destAddr = dma.currentAddress[2]; // + high byte from port 0x81!
+                    auto destAddr = dma.currentAddress[2];
+                    auto destHigh = dma.highAddr[2] << 16;
                     while(dmaSize)
                     {
                         uint8_t buf[512];
@@ -681,7 +682,7 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                         // should probably fail the read otherwise...
 
                         for(int i = 0; i < sectorSize; i++)
-                            writeMem(destAddr + i, buf[i]);
+                            writeMem(destHigh + destAddr + i, buf[i]);
 
                         dmaSize -= sectorSize;
                         destAddr += sectorSize;
