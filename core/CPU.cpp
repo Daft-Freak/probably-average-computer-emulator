@@ -429,17 +429,6 @@ void CPU::run(int ms)
     }
 }
 
-uint16_t CPU::readMem16(uint16_t offset, uint32_t segment)
-{
-    return sys.readMem(offset + segment) | sys.readMem(((offset + 1) & 0xFFFF) + segment) << 8;
-}
-
-void CPU::writeMem16(uint16_t offset, uint32_t segment, uint16_t data)
-{
-    sys.writeMem(offset + segment, data & 0xFF);
-    sys.writeMem(((offset + 1) & 0xFFFF) + segment, data >> 8);
-}
-
 void CPU::executeInstruction()
 {
     auto addr = (reg(Reg16::CS) << 4) + (reg(Reg16::IP)++);
@@ -2948,6 +2937,17 @@ void CPU::executeInstruction()
             exit(1);
             break;
     }
+}
+
+uint16_t CPU::readMem16(uint16_t offset, uint32_t segment)
+{
+    return sys.readMem(offset + segment) | sys.readMem(((offset + 1) & 0xFFFF) + segment) << 8;
+}
+
+void CPU::writeMem16(uint16_t offset, uint32_t segment, uint16_t data)
+{
+    sys.writeMem(offset + segment, data & 0xFF);
+    sys.writeMem(((offset + 1) & 0xFFFF) + segment, data >> 8);
 }
 
 void CPU::cyclesExecuted(int cycles)

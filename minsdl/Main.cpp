@@ -13,7 +13,7 @@ static bool turbo = false;
 
 static System sys;
 
-static uint8_t ram[64 * 1024];
+static uint8_t ram[640 * 1024];
 
 static uint8_t screenData[640 * 200 * 4];
 static int curScreenW = 0;
