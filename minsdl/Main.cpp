@@ -13,6 +13,8 @@ static bool turbo = false;
 
 static System sys;
 
+static uint8_t ram[64 * 1024];
+
 static uint8_t screenData[640 * 200 * 4];
 static int curScreenW = 0;
 
@@ -418,6 +420,7 @@ int main(int argc, char *argv[])
   
     // emu init
     auto &cpu = sys.getCPU();
+    sys.addMemory(0, sizeof(ram), ram);
 
     std::ifstream biosFile(basePath + "bios-xt.rom", std::ios::binary);
     if(biosFile)

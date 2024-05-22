@@ -7,7 +7,6 @@
 
 System::System() : cpu(*this)
 {
-    addMemory(0, sizeof(ram), ram);
     addMemory(0xB8000, sizeof(cga.ram), cga.ram);
     addMemory(0xBC000, sizeof(cga.ram), cga.ram); // mirror
 }

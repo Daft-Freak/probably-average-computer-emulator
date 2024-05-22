@@ -55,8 +55,6 @@ private:
 
     CPU cpu;
 
-    uint8_t ram[64 * 1024];
-
     static const int maxAddress = 1 << 20;
     static const int blockSize = 16 * 1024;
 
