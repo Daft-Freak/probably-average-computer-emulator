@@ -265,11 +265,42 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
         }
 
         case 0x08: // DMA command
-        {
             dma.command = data;
             break;
+        case 0x09: // DMA request
+        {
+            int channel = data & 3;
+            if(data & (1 << 2))
+                dma.request |= 1 << channel;
+            else
+                dma.request &= ~(1 << channel);
+            break;
         }
+        case 0x0A: // DMA mask
+        {
+            int channel = data & 3;
+            if(data & (1 << 2))
+                dma.mask |= 1 << channel;
+            else
+                dma.mask &= ~(1 << channel);
+            break;
+        }
+        case 0x0B: // DMA mode
+        {
+            int channel = data & 3;
+            int dir = (data >> 2) & 3;
+            bool autoInit = data & (1 << 4);
+            bool dec = data & (1 << 5);
+            int mode = data >> 6;
 
+            static const char *dirStr[]{"verify", "write", "read", "ILLEGAL"};
+            static const char *modeStr[]{"demand", "single", "block", "cascade"};
+
+            printf("DMA ch%i %s%s %s %s\n", channel, autoInit ? "auto-init ": "", modeStr[mode], dirStr[dir], dec ? "decrement" : "increment");
+
+            dma.mode[channel] = data;
+            break;
+        }
         case 0x0C: // DMA reset flip-flop
         {
             dma.flipFlop = false;
@@ -509,7 +540,17 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                 printf("PPI control %02X\n", data);
             break;
         }
-        
+
+        case 0x81: // DMA channel 2 high addr
+            dma.highAddr[2] = data;
+            break;
+        case 0x82: // DMA channel 3 high addr
+            dma.highAddr[3] = data;
+            break;
+        case 0x83: // DMA channel 1 high addr
+            dma.highAddr[1] = data;
+            break;
+
         case 0x3D4: // CGA reg select
         {
             cga.regSelect = data;
