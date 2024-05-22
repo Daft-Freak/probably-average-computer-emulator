@@ -80,6 +80,8 @@ private:
         uint8_t mask = 0xF;
 
         bool flipFlop = false;
+
+        uint8_t highAddr[4];
     };
 
     struct PIC
