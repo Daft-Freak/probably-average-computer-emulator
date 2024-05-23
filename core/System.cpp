@@ -28,6 +28,11 @@ void System::addMemory(uint32_t base, uint32_t size, uint8_t *ptr)
         memMap[block + i] = ptr - base;
 }
 
+void System::addIODevice(uint16_t min, uint16_t max, IODevice *dev)
+{
+    ioDevices.emplace_back(IORange{min, max, dev});
+}
+
 uint8_t System::readMem(uint32_t addr) const
 {
     addr &= (maxAddress - 1);
@@ -229,6 +234,13 @@ uint8_t System::readIOPort(uint16_t addr)
         default:
             printf("IO R %04X\n", addr);
     }
+
+    for(auto & dev : ioDevices)
+    {
+        if(addr >= dev.min && addr <= dev.max)
+            return dev.dev->read(addr);
+    }
+
     return 0xFF;
 }
 
@@ -808,6 +820,12 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
 
         default:
             printf("IO W %04X = %02X\n", addr, data);
+    }
+
+    for(auto & dev : ioDevices)
+    {
+        if(addr >= dev.min && addr <= dev.max)
+            return dev.dev->write(addr, data);
     }
 }
 

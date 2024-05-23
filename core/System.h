@@ -6,6 +6,13 @@
 #include "CPU.h"
 #include "FIFO.h"
 
+class IODevice
+{
+public:
+    virtual uint8_t read(uint16_t addr) = 0;
+    virtual void write(uint16_t addr, uint8_t data) = 0;
+};
+
 class System
 {
 public:
@@ -22,6 +29,8 @@ public:
 
     void addMemory(uint32_t base, uint32_t size, uint8_t *ptr);
     // TODO: a const version somehow?
+
+    void addIODevice(uint16_t min, uint16_t max, IODevice *dev);
 
     uint8_t readMem(uint32_t addr) const;
     void writeMem(uint32_t addr, uint8_t data);
@@ -49,6 +58,12 @@ public:
     int8_t getSpeakerSample();
 
 private:
+    struct IORange
+    {
+        uint16_t min, max;
+        IODevice *dev;
+    };
+
     void updatePIT();
     void updateSpeaker(uint32_t target);
 
@@ -172,6 +187,8 @@ private:
     CGA cga;
 
     FDC fdc;
+
+    std::vector<IORange> ioDevices;
 
     FIFO<uint8_t, 8> keyboardQueue;
     uint32_t keyboardClockLowCycle = 0;
