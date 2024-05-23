@@ -18,10 +18,6 @@ class System
 public:
     using ScanlineCallback = void(*)(const uint8_t *data, int line, int w);
 
-    // reads a 512 byte sector
-    // TODO: this may end up being an IO interface class or something
-    using FloppyReadCallback = void(*)(uint8_t *, uint8_t, uint8_t, uint8_t, uint8_t);
-
     System();
     void reset();
 
@@ -49,8 +45,6 @@ public:
     uint8_t acknowledgeInterrupt();
 
     void setCGAScanlineCallback(ScanlineCallback cb);
-
-    void setFloppyReadCallback(FloppyReadCallback cb);
 
     void sendKey(uint8_t scancode);
 
@@ -158,24 +152,6 @@ private:
         ScanlineCallback scanCb;
     };
 
-    // also a card
-    struct FDC
-    {
-        uint8_t digitalOutput = 0;
-
-        uint8_t status[4] = {0, 0, 0, 0};
-        uint8_t presentCylinder[4];
-
-        uint8_t command[9];
-        uint8_t result[7];
-        uint8_t commandLen = 0, resultLen = 0;
-        uint8_t commandOff, resultOff;
-
-        uint8_t readyChanged;
-
-        FloppyReadCallback readCb = nullptr;
-    };
-
     DMA dma;
 
     PIC pic;
@@ -185,8 +161,6 @@ private:
     PPI ppi;
 
     CGA cga;
-
-    FDC fdc;
 
     std::vector<IORange> ioDevices;
 
@@ -198,4 +172,8 @@ private:
     uint32_t lastSpeakerUpdateCycle = 0;
     uint32_t speakerSampleTimer = 0;
     FIFO<int8_t, 1024> speakerQueue; // somewhat unsafe
+
+    // because this is a giant pile of hacks, it needs to poke around in the DMA controller
+    // FIXME: real DMA, remove this
+    friend class FloppyController;
 };

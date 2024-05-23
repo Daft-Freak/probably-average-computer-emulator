@@ -5,6 +5,7 @@
 
 #include <SDL.h>
 
+#include "FloppyController.h"
 #include "System.h"
 #include "Scancode.h"
 
@@ -12,6 +13,8 @@ static bool quit = false;
 static bool turbo = false;
 
 static System sys;
+
+static FloppyController fdc(sys);
 
 static uint8_t ram[640 * 1024];
 
@@ -475,7 +478,7 @@ int main(int argc, char *argv[])
 
             std::cout << "using " << (floppyDoubleSided ? 2 : 1) << " head(s) " << floppySectorsPerTrack << " sectors/track for floppy image\n";
 
-            sys.setFloppyReadCallback(floppyReadCallback);
+            fdc.setReadCallback(floppyReadCallback);
         }
     }
 
