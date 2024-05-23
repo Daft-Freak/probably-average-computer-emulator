@@ -811,6 +811,11 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
     }
 }
 
+void System::flagPICInterrupt(int index)
+{
+    pic.request |= 1 << index;
+}
+
 void System::updateForInterrupts()
 {
     // TODO: usual target for optimisation...
@@ -886,11 +891,6 @@ bool System::hasSpeakerSample() const
 int8_t System::getSpeakerSample()
 {
     return speakerQueue.pop();
-}
-
-void System::flagPICInterrupt(int index)
-{
-    pic.request |= 1 << index;
 }
 
 void System::updatePIT()

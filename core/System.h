@@ -31,6 +31,8 @@ public:
     uint8_t readIOPort(uint16_t addr);
     void writeIOPort(uint16_t addr, uint8_t data);
 
+    void flagPICInterrupt(int index);
+
     void updateForInterrupts();
     void updateForDisplay();
 
@@ -47,7 +49,6 @@ public:
     int8_t getSpeakerSample();
 
 private:
-    void flagPICInterrupt(int index);
     void updatePIT();
     void updateSpeaker(uint32_t target);
 
