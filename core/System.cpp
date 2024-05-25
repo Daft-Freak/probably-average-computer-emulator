@@ -3,12 +3,9 @@
 #include <cstring>
 
 #include "System.h"
-#include "CGAFont.h"
 
 System::System() : cpu(*this)
 {
-    addMemory(0xB8000, sizeof(cga.ram), cga.ram);
-    addMemory(0xBC000, sizeof(cga.ram), cga.ram); // mirror
 }
 
 void System::reset()
@@ -196,12 +193,6 @@ uint8_t System::readIOPort(uint16_t addr)
                 ret |= ppi.output[2] & 0xF0;
 
             return ret;
-        }
-
-        case 0x3DA: // CGA status
-        {
-            updateCGA();
-            return cga.status;
         }
 
         default:
@@ -540,31 +531,6 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
             dma.highAddr[1] = data;
             break;
 
-        case 0x3D4: // CGA reg select
-        {
-            cga.regSelect = data;
-            break;
-        }
-        case 0x3D5: // CGA reg
-        {
-            updateCGA();
-            cga.regs[cga.regSelect] = data;
-            break;
-        }
-
-        case 0x3D8: // CGA mode
-        {
-            updateCGA();
-            cga.mode = data;
-            break;
-        }
-        case 0x3D9: // CGA colour select
-        {
-            updateCGA();
-            cga.colSelect = data;
-            break;
-        }
-
         default:
             printf("IO W %04X = %02X\n", addr, data);
     }
@@ -607,8 +573,6 @@ void System::updateForInterrupts()
 
 void System::updateForDisplay()
 {
-    updateCGA();
-
     // PIT may update speaker, so we need to run that first
     updatePIT();
     updateSpeaker(cpu.getCycleCount());
@@ -630,11 +594,6 @@ uint8_t System::acknowledgeInterrupt()
     pic.request &= ~(1 << serviceIndex);
 
     return serviceIndex | (pic.initCommand[1] & 0xF8);
-}
-
-void System::setCGAScanlineCallback(ScanlineCallback cb)
-{
-    cga.scanCb = cb;
 }
 
 void System::sendKey(uint8_t scancode)
@@ -735,141 +694,5 @@ void System::updateSpeaker(uint32_t target)
         while(speakerQueue.full()); // wait
 
         speakerQueue.push(value ? 127 : -128);
-    }
-}
-
-void System::updateCGA()
-{
-    auto elapsed = cpu.getCycleCount() - cga.lastUpdateCycle;
-
-    elapsed *= 3; // system clock
-
-    // 80-col mode uses full system clock, other modes use half
-    if(!(cga.mode & (1 << 0)))
-        elapsed /= 2;
-    
-    // FIXME: this loses a cycle sometimes in 40-col mode
-    cga.lastUpdateCycle = cpu.getCycleCount();
-
-    int lineClocks = (cga.regs[0/*h total*/] + 1) * 8;
-    int hDisplayed = cga.regs[1/* h disp*/] * 8;
-    int hBlankStart = cga.regs[2/*h sync*/] * 8;
-
-    int charHeight = cga.regs[9/*max char scan*/] + 1;
-    int totalLines = (cga.regs[4/* v total*/] + 1) * charHeight + cga.regs[5 /*v adjust*/];
-    int vDisplayed = cga.regs[6/*v displayed*/] * charHeight;
-    int vBlankStart = cga.regs[7/*v sync*/] * charHeight;
-
-    uint16_t cursorAddr = cga.regs[14] << 8 | cga.regs[15];
-
-    while(elapsed--)
-    {
-        cga.scanlineCycle++;
-
-        if(cga.scanlineCycle >= lineClocks)
-        {
-            // display line
-            if(cga.scanline < vDisplayed && cga.scanCb)
-                cga.scanCb(cga.scanlineBuf, cga.scanline, hDisplayed);
-
-            cga.scanlineCycle = 0;
-            cga.scanline++;
-
-            if((cga.scanline % charHeight) == 0)
-                cga.curAddr += cga.regs[1/* h disp*/] * 2;
-
-            cga.status &= ~(1 << 0); // clear accessible
-
-            // check new scanline
-            if(cga.scanline >= totalLines)
-            {
-                cga.scanline = 0;
-                cga.frame++;
-                cga.curAddr = cga.regs[12] << 8 | cga.regs[13];
-                cga.status &= ~(1 << 0 | 1 << 3); // clear accessible / vblank
-            }
-            else if(cga.scanline >= vBlankStart)
-                cga.status |= 1 << 0 | 1 << 3; // accessible / vblank
-        }
-        else if(cga.scanlineCycle >= hBlankStart)
-            cga.status |= 1 << 0; // accessible
-
-        if(cga.scanlineCycle < hDisplayed && cga.scanline < vDisplayed)
-        {
-            // in visible area
-
-            if(!(cga.mode & (1 << 3))) // check enabled
-                cga.scanlineBuf[cga.scanlineCycle / 2] = 0; // black
-            else if(cga.mode & (1 << 1))
-            {
-                // graphics mode
-                if(cga.mode & (1 << 4))
-                {
-                    // hi-res
-                }
-                else
-                {
-                    int palIndex = (cga.colSelect >> 5) & 1;
-                    bool bright = (cga.colSelect & (1 << 4));
-                    auto bg = cga.colSelect & 0xF;
-
-                    auto charAddr = cga.curAddr + (cga.scanlineCycle / 4);
-                    if(cga.scanline & 1)
-                        charAddr += 0x2000;
-
-                    auto data = cga.ram[charAddr];
-                    auto col = (data << ((cga.scanlineCycle & 3) * 2) >> 6) & 3;
-
-                    if(col == 0)
-                        col = bg;
-                    else
-                    {
-                        // palette mapping is just shifting up 1 bit, palette select is the low bit
-                        // TODO: mixed palette if b/w bit set
-                        col = (col << 1) | palIndex | (bright ? 8 : 0);
-                    }
-
-                    if(cga.scanlineCycle & 1)
-                        cga.scanlineBuf[cga.scanlineCycle / 2] |= col << 4;
-                    else
-                        cga.scanlineBuf[cga.scanlineCycle / 2] = col;
-                }
-            }
-            else
-            {
-                // text mode
-                // assuming 8x8 chars...
-                auto charAddr = cga.curAddr + (cga.scanlineCycle / 8) * 2;
-                auto ch = cga.ram[charAddr];
-                auto attr = cga.ram[charAddr + 1];
-
-                int charLine = cga.scanline & 7;
-
-                // check if in cursor
-                // for more accuracy, should toggle when reaching those lines (resulting in wrap around sometimes)
-                bool cursor = charAddr == cursorAddr * 2 && charLine >= (cga.regs[10/*cursor start*/] & 0x1F) && charLine <= (cga.regs[11/*cursor end*/] & 0x1F);
-
-                int col;
-
-                // also check for blinking (handled outside 6845, 8/8 frames)
-                if(cursor && (cga.frame & 8))
-                    col = attr & 0xF;
-                else
-                {
-                    // not cursor or cursor off
-                    auto fontData = cgaFont[ch * 8 + charLine];
-                    col = (fontData & 1 << (cga.scanlineCycle & 7)) ? attr & 0xF : (attr >> 4) & 7;
-
-                    // blink character
-                    if((attr & 0x80) && !(cga.frame & 16))
-                        col = (attr >> 4) & 7;
-                }
-
-                if(cga.scanlineCycle & 1)
-                    cga.scanlineBuf[cga.scanlineCycle / 2] |= col << 4;
-                else
-                    cga.scanlineBuf[cga.scanlineCycle / 2] = col;
-            }
-        }
     }
 }

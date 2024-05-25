@@ -16,8 +16,6 @@ public:
 class System
 {
 public:
-    using ScanlineCallback = void(*)(const uint8_t *data, int line, int w);
-
     System();
     void reset();
 
@@ -44,8 +42,6 @@ public:
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
     uint8_t acknowledgeInterrupt();
 
-    void setCGAScanlineCallback(ScanlineCallback cb);
-
     void sendKey(uint8_t scancode);
 
     bool hasSpeakerSample() const;
@@ -60,8 +56,6 @@ private:
 
     void updatePIT();
     void updateSpeaker(uint32_t target);
-
-    void updateCGA();
 
     CPU cpu;
 
@@ -129,28 +123,6 @@ private:
         uint8_t output[3];
     };
 
-    // an entire separate card...
-    struct CGA
-    {
-        // 6845 registers
-        uint8_t regSelect;
-        uint8_t regs[18];
-
-        uint8_t mode = 0;
-        uint8_t colSelect;
-        uint8_t status = 0;
-
-        uint32_t lastUpdateCycle = 0;
-        uint16_t scanline = 0;
-        uint16_t scanlineCycle = 0;
-        uint16_t curAddr = 0;
-        uint16_t frame = 0;
-        uint8_t scanlineBuf[320];
-
-        uint8_t ram[16 * 1024]; // at B8000
-
-        ScanlineCallback scanCb;
-    };
 
     DMA dma;
 
@@ -159,8 +131,6 @@ private:
     PIT pit;
 
     PPI ppi;
-
-    CGA cga;
 
     std::vector<IORange> ioDevices;
 

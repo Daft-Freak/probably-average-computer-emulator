@@ -1,6 +1,7 @@
 add_library(PACECore INTERFACE)
 
 target_sources(PACECore INTERFACE
+    CGACard.cpp
     CPU.cpp
     FloppyController.cpp
     System.cpp

@@ -5,6 +5,7 @@
 
 #include <SDL.h>
 
+#include "CGACard.h"
 #include "FloppyController.h"
 #include "System.h"
 #include "Scancode.h"
@@ -14,6 +15,7 @@ static bool turbo = false;
 
 static System sys;
 
+static CGACard cga(sys);
 static FloppyController fdc(sys);
 
 static uint8_t ram[640 * 1024];
@@ -482,7 +484,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    sys.setCGAScanlineCallback(scanlineCallback);
+    cga.setScanlineCallback(scanlineCallback);
 
     sys.reset();
 
@@ -565,6 +567,7 @@ int main(int argc, char *argv[])
         {
             cpu.run(now - lastTick);
 
+            cga.update();
             sys.updateForDisplay();
         }
 
