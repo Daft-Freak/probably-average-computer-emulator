@@ -20,12 +20,8 @@ else()
   add_compile_options("-Wall" "-Wextra" "-Wdouble-promotion" "-Wno-unused-parameter")
 endif()
 
-option(BUILD_SDL "Build minimal SDL UI" ON)
-
-# auto-disable things that don't make sense
-if(IS_PICO)
-  set(BUILD_SDL OFF)
-endif()
+include(CMakeDependentOption)
+cmake_dependent_option(BUILD_SDL "Build minimal SDL UI" ON "NOT IS_PICO" OFF)
 
 add_subdirectory(core)
 
