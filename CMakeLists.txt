@@ -7,7 +7,7 @@ if(PICO_SDK_PATH OR PICO_SDK_FETCH_FROM_GIT)
   include(pico_sdk_import.cmake)
 endif()
 
-project(gameblit)
+project(ProbablyAverageComputorEmulator)
 
 if(PICO_SDK_PATH) # set by import file
   set(IS_PICO true)
