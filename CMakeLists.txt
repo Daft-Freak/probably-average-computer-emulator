@@ -11,7 +11,6 @@ else()
   add_compile_options("-Wall" "-Wextra" "-Wdouble-promotion" "-Wno-unused-parameter")
 endif()
 
-option(BUILD_32BLIT "Build 32blit UI" ON)
 option(BUILD_SDL "Build minimal SDL UI" ON)
 
 add_subdirectory(core)
