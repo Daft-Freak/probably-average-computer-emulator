@@ -6,7 +6,7 @@ set(BIOS_PATH ${CMAKE_CURRENT_LIST_DIR}/../)
 add_custom_command(
     OUTPUT bios.o
     WORKING_DIRECTORY ${BIOS_PATH}
-    COMMAND ${CMAKE_OBJCOPY} -I binary -O elf32-littlearm -B armv6s-m ${BIOS_FILE} ${CMAKE_CURRENT_BINARY_DIR}/bios.o
+    COMMAND ${CMAKE_OBJCOPY} -I binary -O elf32-littlearm -B armv6s-m --rename-section .data=.rodata,alloc,load,readonly,data,contents ${BIOS_FILE} ${CMAKE_CURRENT_BINARY_DIR}/bios.o
     DEPENDS ${BIOS_PATH}${BIOS_FILE}
 )
 
