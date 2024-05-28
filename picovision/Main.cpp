@@ -22,8 +22,6 @@ static uint8_t scanLineOutBuf[640];
 
 static void scanlineCallback(const uint8_t *data, int line, int w)
 {
-    // TODO: sync screen w
-
     auto ptr = scanLineOutBuf;
 
     for(int x = 0; x < w; x += 2)
