@@ -16,7 +16,7 @@ static System sys;
 
 static CGACard cga(sys);
 
-static uint8_t ram[160 * 1024];
+static uint8_t ram[192 * 1024];
 
 static uint8_t scanLineOutBuf[640];
 
