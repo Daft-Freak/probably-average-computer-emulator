@@ -59,150 +59,156 @@ const uint8_t *System::mapAddress(uint32_t addr) const
 
 uint8_t System::readIOPort(uint16_t addr)
 {
-    switch(addr)
+    if(addr < 0x100)
     {
-        case 0x00: // DMA channel 0 addr
-        case 0x02: // DMA channel 1 addr
-        case 0x04: // DMA channel 2 addr
-        case 0x06: // DMA channel 3 addr
+        switch(addr)
         {
-            int channel = addr / 2;
-
-            uint8_t ret;
-            if(dma.flipFlop)
-                ret = dma.currentAddress[channel] >> 8;
-            else
-                ret = dma.currentAddress[channel] & 0xFF;
-
-            dma.flipFlop = !dma.flipFlop;
-
-            // xt boot hack
-            if(channel == 0 && !dma.flipFlop)
-                dma.currentAddress[channel]++;
-            //
-
-            return ret;
-        }
-        case 0x01: // DMA channel 0 word count
-        case 0x03: // DMA channel 1 word count
-        case 0x05: // DMA channel 2 word count
-        case 0x07: // DMA channel 3 word count
-        {
-            int channel = addr / 2;
-
-            uint8_t ret;
-            if(dma.flipFlop)
-                ret = dma.currentWordCount[channel] >> 8;
-            else
-                ret = dma.currentWordCount[channel] & 0xFF;
-
-            dma.flipFlop = !dma.flipFlop;
-
-            return ret;
-        }
-
-        case 0x08: // DMA status
-            return dma.status;
-
-        case 0x20: // PIC request/service (OCW3)
-            return pic.statusRead & 1 ? pic.service : pic.request;
-        case 0x21: // PIC mask (OCW1)
-            return pic.mask;
-    
-        case 0x40: // PIT counter 0
-        case 0x41: // PIT counter 1
-        case 0x42: // PIT counter 2
-        {
-            updatePIT();
-
-            int channel = addr & 3;
-
-            if(pit.control[channel])
+            case 0x00: // DMA channel 0 addr
+            case 0x02: // DMA channel 1 addr
+            case 0x04: // DMA channel 2 addr
+            case 0x06: // DMA channel 3 addr
             {
-                int access = (pit.control[channel] >> 4) & 3;
-
-                auto value = pit.latched & (1 << channel) ? pit.latch[channel] : pit.counter[channel];
+                int channel = addr / 2;
 
                 uint8_t ret;
+                if(dma.flipFlop)
+                    ret = dma.currentAddress[channel] >> 8;
+                else
+                    ret = dma.currentAddress[channel] & 0xFF;
 
-                if(access == 1 || (access == 3 && !(pit.highByte & (1 << channel))))
-                    ret = value & 0xFF;
-                else // access == 2 || (access == 3 && high byte)
-                    ret = value >> 8;
+                dma.flipFlop = !dma.flipFlop;
 
-                // clear latch status if fully read
-                if(access != 3 || (pit.highByte & (1 << channel)))
-                    pit.latched &= ~(1 << channel);
-
-                // flip hi/lo
-                if(access == 3)
-                    pit.highByte ^= (1 << channel);
+                // xt boot hack
+                if(channel == 0 && !dma.flipFlop)
+                    dma.currentAddress[channel]++;
+                //
 
                 return ret;
             }
-            break;
-        }
-
-        case 0x60: // PPI port A
-        {
-            if(ppi.mode & (1 << 4)) // input
-                return keyboardQueue.peek();
-            else
-                return ppi.output[0];
-
-            break;
-        }
-        case 0x61: // PPI port B
-        {
-            if(ppi.mode & (1 << 1)) // input
+            case 0x01: // DMA channel 0 word count
+            case 0x03: // DMA channel 1 word count
+            case 0x05: // DMA channel 2 word count
+            case 0x07: // DMA channel 3 word count
             {
-                printf("PPI B input\n");
+                int channel = addr / 2;
+
+                uint8_t ret;
+                if(dma.flipFlop)
+                    ret = dma.currentWordCount[channel] >> 8;
+                else
+                    ret = dma.currentWordCount[channel] & 0xFF;
+
+                dma.flipFlop = !dma.flipFlop;
+
+                return ret;
             }
-            else
-                return ppi.output[1];
 
-            break;
-        }
-        case 0x62: // PPI port C
-        {
-            uint8_t ret = 0;
+            case 0x08: // DMA status
+                return dma.status;
 
-            if(ppi.mode & (1 << 0)) // input (lower)
+            case 0x20: // PIC request/service (OCW3)
+                return pic.statusRead & 1 ? pic.service : pic.request;
+            case 0x21: // PIC mask (OCW1)
+                return pic.mask;
+        
+            case 0x40: // PIT counter 0
+            case 0x41: // PIT counter 1
+            case 0x42: // PIT counter 2
             {
-                if(ppi.output[1] & (1 << 3))
+                updatePIT();
+
+                int channel = addr & 3;
+
+                if(pit.control[channel])
                 {
-                    // SW1 5-8
-                    ret = 2 | 0 << 2; // 80-col CGA, one floppy
+                    int access = (pit.control[channel] >> 4) & 3;
+
+                    auto value = pit.latched & (1 << channel) ? pit.latch[channel] : pit.counter[channel];
+
+                    uint8_t ret;
+
+                    if(access == 1 || (access == 3 && !(pit.highByte & (1 << channel))))
+                        ret = value & 0xFF;
+                    else // access == 2 || (access == 3 && high byte)
+                        ret = value >> 8;
+
+                    // clear latch status if fully read
+                    if(access != 3 || (pit.highByte & (1 << channel)))
+                        pit.latched &= ~(1 << channel);
+
+                    // flip hi/lo
+                    if(access == 3)
+                        pit.highByte ^= (1 << channel);
+
+                    return ret;
+                }
+                break;
+            }
+
+            case 0x60: // PPI port A
+            {
+                if(ppi.mode & (1 << 4)) // input
+                    return keyboardQueue.peek();
+                else
+                    return ppi.output[0];
+
+                break;
+            }
+            case 0x61: // PPI port B
+            {
+                if(ppi.mode & (1 << 1)) // input
+                {
+                    printf("PPI B input\n");
                 }
                 else
-                {
-                    // SW1 1-4
-                    ret = 1 << 0  // not test mode
-                        | 0 << 1  // no co-processor
-                        | 0 << 2; // 1 RAM bank
-                }
-            }
-            else
-                ret = ppi.output[2] & 0xF;
+                    return ppi.output[1];
 
-            if(ppi.mode & (1 << 3)) // input (upper)
+                break;
+            }
+            case 0x62: // PPI port C
             {
-                // cassette data, timer chan 2 and RAM errors
+                uint8_t ret = 0;
+
+                if(ppi.mode & (1 << 0)) // input (lower)
+                {
+                    if(ppi.output[1] & (1 << 3))
+                    {
+                        // SW1 5-8
+                        ret = 2 | 0 << 2; // 80-col CGA, one floppy
+                    }
+                    else
+                    {
+                        // SW1 1-4
+                        ret = 1 << 0  // not test mode
+                            | 0 << 1  // no co-processor
+                            | 0 << 2; // 1 RAM bank
+                    }
+                }
+                else
+                    ret = ppi.output[2] & 0xF;
+
+                if(ppi.mode & (1 << 3)) // input (upper)
+                {
+                    // cassette data, timer chan 2 and RAM errors
+                }
+                else
+                    ret |= ppi.output[2] & 0xF0;
+
+                return ret;
             }
-            else
-                ret |= ppi.output[2] & 0xF0;
 
-            return ret;
+            default:
+                printf("IO R %04X\n", addr);
         }
-
-        default:
-            printf("IO R %04X\n", addr);
     }
-
-    for(auto & dev : ioDevices)
+    else
     {
-        if(addr >= dev.min && addr <= dev.max)
-            return dev.dev->read(addr);
+        for(auto & dev : ioDevices)
+        {
+            if(addr >= dev.min && addr <= dev.max)
+                return dev.dev->read(addr);
+        }
+        printf("IO R %04X\n", addr);
     }
 
     return 0xFF;
@@ -210,335 +216,341 @@ uint8_t System::readIOPort(uint16_t addr)
 
 void System::writeIOPort(uint16_t addr, uint8_t data)
 {
-    switch(addr)
+    if(addr < 0x100)
     {
-        case 0x00: // DMA channel 0 addr
-        case 0x02: // DMA channel 1 addr
-        case 0x04: // DMA channel 2 addr
-        case 0x06: // DMA channel 3 addr
+        switch(addr)
         {
-            int channel = addr / 2;
-
-            if(dma.flipFlop)
-                dma.currentAddress[channel] = dma.baseAddress[channel] = (dma.baseAddress[channel] & 0xFF) | data << 8;
-            else
-                dma.baseAddress[channel] = (dma.baseAddress[channel] & 0xFF00) | data;
-
-            dma.flipFlop = !dma.flipFlop;
-            break;
-        }
-
-        case 0x01: // DMA channel 0 word count
-        case 0x03: // DMA channel 1 word count
-        case 0x05: // DMA channel 2 word count
-        case 0x07: // DMA channel 3 word count
-        {
-            int channel = addr / 2;
-
-            if(dma.flipFlop)
-                dma.currentWordCount[channel] = dma.baseWordCount[channel] = (dma.baseWordCount[channel] & 0xFF) | data << 8;
-            else
-                dma.baseWordCount[channel] = (dma.baseWordCount[channel] & 0xFF00) | data;
-
-            dma.flipFlop = !dma.flipFlop;
-            break;
-        }
-
-        case 0x08: // DMA command
-            dma.command = data;
-            break;
-        case 0x09: // DMA request
-        {
-            int channel = data & 3;
-            if(data & (1 << 2))
-                dma.request |= 1 << channel;
-            else
-                dma.request &= ~(1 << channel);
-            break;
-        }
-        case 0x0A: // DMA mask
-        {
-            int channel = data & 3;
-            if(data & (1 << 2))
-                dma.mask |= 1 << channel;
-            else
-                dma.mask &= ~(1 << channel);
-            break;
-        }
-        case 0x0B: // DMA mode
-        {
-            int channel = data & 3;
-            int dir = (data >> 2) & 3;
-            bool autoInit = data & (1 << 4);
-            bool dec = data & (1 << 5);
-            int mode = data >> 6;
-
-            static const char *dirStr[]{"verify", "write", "read", "ILLEGAL"};
-            static const char *modeStr[]{"demand", "single", "block", "cascade"};
-
-            printf("DMA ch%i %s%s %s %s\n", channel, autoInit ? "auto-init ": "", modeStr[mode], dirStr[dir], dec ? "decrement" : "increment");
-
-            dma.mode[channel] = data;
-            break;
-        }
-        case 0x0C: // DMA reset flip-flop
-        {
-            dma.flipFlop = false;
-            break;
-        }
-
-        case 0x0D: // DMA master clear
-        {
-            dma.command = 0;
-            dma.status = 1; // report TC0 for XT BIOS
-            dma.request = 0;
-            dma.tempData = 0;
-            dma.flipFlop = false;
-            dma.mask = 0xF;
-            break;
-        }
-
-        case 0x20: // PIC ICW1, OCW 2/3
-        {
-            if(data & (1 << 4)) // ICW1
+            case 0x00: // DMA channel 0 addr
+            case 0x02: // DMA channel 1 addr
+            case 0x04: // DMA channel 2 addr
+            case 0x06: // DMA channel 3 addr
             {
-                assert(data & (1 << 0)); // ICW4 needed
-                assert(data & (1 << 1)); // single
-                assert(!(data & (1 << 3))); // not level triggered
+                int channel = addr / 2;
 
-                pic.initCommand[0] = data;
-                pic.nextInit = 1;
-
-                pic.mask = 0;
-                pic.statusRead = 2; // read IRR
-            }
-            else if(data & (1 << 3)) // OCW3
-            {
-                assert(!(data & (1 << 7)));
-
-                if(data & 0x64)
-                    printf("PIC OCW3 %02X\n", data);
-
-                if(data & 2)
-                    pic.statusRead = (pic.statusRead & 0xFC) | (data & 3);
-            }
-            else // OCW2
-            {
-                auto command = data >> 5;
-
-                switch(command)
-                {
-                    case 1: // non-specific EOI
-                    {
-                        for(int i = 0; i < 8; i++)
-                        {
-                            if(pic.service & (1 << i))
-                            {
-                                pic.service &= ~(1 << i);
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                    default:
-                        printf("PIC OCW2 %02X\n", data);
-                }
-            }
-
-            break;
-        }
-
-        case 0x21: // PIC
-        {
-            if(pic.nextInit == 1) // ICW2
-            {
-                pic.initCommand[1] = data;
-
-                if(!(pic.initCommand[0] & (1 << 1)))
-                    pic.nextInit = 2; // ICW3 needed
+                if(dma.flipFlop)
+                    dma.currentAddress[channel] = dma.baseAddress[channel] = (dma.baseAddress[channel] & 0xFF) | data << 8;
                 else
-                    pic.nextInit = 3; // ICW4 (assuming needed)
+                    dma.baseAddress[channel] = (dma.baseAddress[channel] & 0xFF00) | data;
+
+                dma.flipFlop = !dma.flipFlop;
+                break;
             }
-            else if(pic.nextInit == 3) // ICW4
-            {
-                assert(data & (1 << 0)); // 8086/88 mode
-                assert(!(data & (1 << 1))); // not auto EOI
-                assert(!(data & (1 << 2))); // slave
-                assert(data & (1 << 3)); // buffered mode
-                assert(!(data & (1 << 4))); // not special fully nested mode
 
-                pic.initCommand[3] = data;
-                pic.nextInit = 0;
+            case 0x01: // DMA channel 0 word count
+            case 0x03: // DMA channel 1 word count
+            case 0x05: // DMA channel 2 word count
+            case 0x07: // DMA channel 3 word count
+            {
+                int channel = addr / 2;
+
+                if(dma.flipFlop)
+                    dma.currentWordCount[channel] = dma.baseWordCount[channel] = (dma.baseWordCount[channel] & 0xFF) | data << 8;
+                else
+                    dma.baseWordCount[channel] = (dma.baseWordCount[channel] & 0xFF00) | data;
+
+                dma.flipFlop = !dma.flipFlop;
+                break;
             }
-            else // mask
+
+            case 0x08: // DMA command
+                dma.command = data;
+                break;
+            case 0x09: // DMA request
             {
-                pic.mask = data;
+                int channel = data & 3;
+                if(data & (1 << 2))
+                    dma.request |= 1 << channel;
+                else
+                    dma.request &= ~(1 << channel);
+                break;
             }
-            break;
-        }
-
-        case 0x40: // PIT counter 0
-        case 0x41: // PIT counter 1
-        case 0x42: // PIT counter 2
-        {
-            updatePIT();
-
-            int channel = addr & 3;
-
-            if(pit.control[channel])
+            case 0x0A: // DMA mask
             {
-                int access = (pit.control[channel] >> 4) & 3;
+                int channel = data & 3;
+                if(data & (1 << 2))
+                    dma.mask |= 1 << channel;
+                else
+                    dma.mask &= ~(1 << channel);
+                break;
+            }
+            case 0x0B: // DMA mode
+            {
+                int channel = data & 3;
+                int dir = (data >> 2) & 3;
+                bool autoInit = data & (1 << 4);
+                bool dec = data & (1 << 5);
+                int mode = data >> 6;
 
-                if(access == 1 || (access == 3 && !(pit.highByte & (1 << channel))))
-                    pit.reload[channel] = (pit.reload[channel] & 0xFF00) | data;
-                else // access == 2 || (access == 3 && high byte)
-                    pit.reload[channel] = (pit.reload[channel] & 0xFF) | data << 8;
+                static const char *dirStr[]{"verify", "write", "read", "ILLEGAL"};
+                static const char *modeStr[]{"demand", "single", "block", "cascade"};
 
-                // not active, wrote value
-                if(!(pit.active & (1 << channel)) && (access != 3 || (pit.highByte & (1 << channel))))
+                printf("DMA ch%i %s%s %s %s\n", channel, autoInit ? "auto-init ": "", modeStr[mode], dirStr[dir], dec ? "decrement" : "increment");
+
+                dma.mode[channel] = data;
+                break;
+            }
+            case 0x0C: // DMA reset flip-flop
+            {
+                dma.flipFlop = false;
+                break;
+            }
+
+            case 0x0D: // DMA master clear
+            {
+                dma.command = 0;
+                dma.status = 1; // report TC0 for XT BIOS
+                dma.request = 0;
+                dma.tempData = 0;
+                dma.flipFlop = false;
+                dma.mask = 0xF;
+                break;
+            }
+
+            case 0x20: // PIC ICW1, OCW 2/3
+            {
+                if(data & (1 << 4)) // ICW1
                 {
-                    int mode = (pit.control[channel] >> 1) & 7;
-                    // modes 1 and 5 start on gate input instead
-                    if(mode != 1 && mode != 5)
+                    assert(data & (1 << 0)); // ICW4 needed
+                    assert(data & (1 << 1)); // single
+                    assert(!(data & (1 << 3))); // not level triggered
+
+                    pic.initCommand[0] = data;
+                    pic.nextInit = 1;
+
+                    pic.mask = 0;
+                    pic.statusRead = 2; // read IRR
+                }
+                else if(data & (1 << 3)) // OCW3
+                {
+                    assert(!(data & (1 << 7)));
+
+                    if(data & 0x64)
+                        printf("PIC OCW3 %02X\n", data);
+
+                    if(data & 2)
+                        pic.statusRead = (pic.statusRead & 0xFC) | (data & 3);
+                }
+                else // OCW2
+                {
+                    auto command = data >> 5;
+
+                    switch(command)
                     {
-                        if(channel == 2)
-                            updateSpeaker(cpu.getCycleCount());
-
-                        pit.active |= (1 << channel);
-                        pit.counter[channel] = pit.reload[channel];
-
-                        // round down odd count for mode 3
-                        if(mode == 3 && (pit.reload[channel] & 1))
-                            pit.counter[channel]--;
-
-                        if(mode == 0) // mode 0 goes low immediately
-                            pit.outState &= ~(1 << channel);
-                        else // mode 2/3/4 start high
-                            pit.outState |= (1 << channel);
+                        case 1: // non-specific EOI
+                        {
+                            for(int i = 0; i < 8; i++)
+                            {
+                                if(pic.service & (1 << i))
+                                {
+                                    pic.service &= ~(1 << i);
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        default:
+                            printf("PIC OCW2 %02X\n", data);
                     }
                 }
 
-                // flip hi/lo
-                if(access == 3)
-                    pit.highByte ^= (1 << channel);
+                break;
             }
-            break;
-        }
-        
-        case 0x43: // PIT control
-        {
-            updatePIT();
 
-            int channel = data >> 6;
-            int access = (data >> 4) & 3;
-            int mode = (data >> 1) & 7;
-
-            if(channel == 3) // readback
+            case 0x21: // PIC
             {
-                printf("PIT readback!\n");
-                return;
+                if(pic.nextInit == 1) // ICW2
+                {
+                    pic.initCommand[1] = data;
+
+                    if(!(pic.initCommand[0] & (1 << 1)))
+                        pic.nextInit = 2; // ICW3 needed
+                    else
+                        pic.nextInit = 3; // ICW4 (assuming needed)
+                }
+                else if(pic.nextInit == 3) // ICW4
+                {
+                    assert(data & (1 << 0)); // 8086/88 mode
+                    assert(!(data & (1 << 1))); // not auto EOI
+                    assert(!(data & (1 << 2))); // slave
+                    assert(data & (1 << 3)); // buffered mode
+                    assert(!(data & (1 << 4))); // not special fully nested mode
+
+                    pic.initCommand[3] = data;
+                    pic.nextInit = 0;
+                }
+                else // mask
+                {
+                    pic.mask = data;
+                }
+                break;
             }
 
-            if(access == 0) // latch
-            {
-                pit.latch[channel] = pit.counter[channel];
-                pit.latched |= (1 << channel);
-            }
-            else // set mode
-            {
-                pit.control[channel] = data;
-                
-                // reset
-                pit.counter[channel] = pit.reload[channel] = 0;
-                pit.active &= ~(1 << channel);
-                pit.latched &= ~(1 << channel);
-                pit.highByte &= ~(1 << channel);
-
-                printf("PIT ch%i access %i mode %i\n", channel, access, mode);
-            }
-
-            break;
-        }
-
-        case 0x60: // PPI port A
-        case 0x61: // PPI port B
-        case 0x62: // PPI port C
-        {
-            int port = addr & 3;
-
-            auto changed = ppi.output[port] ^ data;
-
-            // timer gate or speaker output
-            if(port == 1 && (changed & 3))
+            case 0x40: // PIT counter 0
+            case 0x41: // PIT counter 1
+            case 0x42: // PIT counter 2
             {
                 updatePIT();
-                updateSpeaker(cpu.getCycleCount());
-            }
 
-            if(port == 1 && (changed & (1 << 7)))
-            {
-                // keyboard data/irq clear
-                if(data & (1 << 7))
-                    keyboardQueue.pop();
-                else if(!keyboardQueue.empty())
-                    flagPICInterrupt(1);
-            }
+                int channel = addr & 3;
 
-            if(port == 1 && (changed & (1 << 6)))
-            {
-                // check for B6 going high (end of soft reset/self-test pulse)
-                if(data & (1 << 6))
+                if(pit.control[channel])
                 {
-                    // needs to be a long pulse (BIOS is going for 20ms)
-                    if(cpu.getCycleCount() - keyboardClockLowCycle > 100000)
+                    int access = (pit.control[channel] >> 4) & 3;
+
+                    if(access == 1 || (access == 3 && !(pit.highByte & (1 << channel))))
+                        pit.reload[channel] = (pit.reload[channel] & 0xFF00) | data;
+                    else // access == 2 || (access == 3 && high byte)
+                        pit.reload[channel] = (pit.reload[channel] & 0xFF) | data << 8;
+
+                    // not active, wrote value
+                    if(!(pit.active & (1 << channel)) && (access != 3 || (pit.highByte & (1 << channel))))
                     {
-                        // send reply a little later
-                        keyboardTestReplyCycle = cpu.getCycleCount();
-                        keyboardTestDelay = 1000;
+                        int mode = (pit.control[channel] >> 1) & 7;
+                        // modes 1 and 5 start on gate input instead
+                        if(mode != 1 && mode != 5)
+                        {
+                            if(channel == 2)
+                                updateSpeaker(cpu.getCycleCount());
+
+                            pit.active |= (1 << channel);
+                            pit.counter[channel] = pit.reload[channel];
+
+                            // round down odd count for mode 3
+                            if(mode == 3 && (pit.reload[channel] & 1))
+                                pit.counter[channel]--;
+
+                            if(mode == 0) // mode 0 goes low immediately
+                                pit.outState &= ~(1 << channel);
+                            else // mode 2/3/4 start high
+                                pit.outState |= (1 << channel);
+                        }
                     }
+
+                    // flip hi/lo
+                    if(access == 3)
+                        pit.highByte ^= (1 << channel);
                 }
-                else
-                    keyboardClockLowCycle = cpu.getCycleCount();
+                break;
             }
-
-            ppi.output[port] = data;
-
-            break;
-        }
-        case 0x63: // PPI control
-        {
-            if(data & 0x80) // mode set
+            
+            case 0x43: // PIT control
             {
-                [[maybe_unused]] auto modeA = (data >> 5) & 3;
-                [[maybe_unused]] auto modeB = (data >> 2) & 1;
-                assert(!modeA);
-                assert(!modeB);
+                updatePIT();
 
-                ppi.mode = data;
+                int channel = data >> 6;
+                int access = (data >> 4) & 3;
+                int mode = (data >> 1) & 7;
+
+                if(channel == 3) // readback
+                {
+                    printf("PIT readback!\n");
+                    return;
+                }
+
+                if(access == 0) // latch
+                {
+                    pit.latch[channel] = pit.counter[channel];
+                    pit.latched |= (1 << channel);
+                }
+                else // set mode
+                {
+                    pit.control[channel] = data;
+                    
+                    // reset
+                    pit.counter[channel] = pit.reload[channel] = 0;
+                    pit.active &= ~(1 << channel);
+                    pit.latched &= ~(1 << channel);
+                    pit.highByte &= ~(1 << channel);
+
+                    printf("PIT ch%i access %i mode %i\n", channel, access, mode);
+                }
+
+                break;
             }
-            else // bit set/clear
-                printf("PPI control %02X\n", data);
-            break;
+
+            case 0x60: // PPI port A
+            case 0x61: // PPI port B
+            case 0x62: // PPI port C
+            {
+                int port = addr & 3;
+
+                auto changed = ppi.output[port] ^ data;
+
+                // timer gate or speaker output
+                if(port == 1 && (changed & 3))
+                {
+                    updatePIT();
+                    updateSpeaker(cpu.getCycleCount());
+                }
+
+                if(port == 1 && (changed & (1 << 7)))
+                {
+                    // keyboard data/irq clear
+                    if(data & (1 << 7))
+                        keyboardQueue.pop();
+                    else if(!keyboardQueue.empty())
+                        flagPICInterrupt(1);
+                }
+
+                if(port == 1 && (changed & (1 << 6)))
+                {
+                    // check for B6 going high (end of soft reset/self-test pulse)
+                    if(data & (1 << 6))
+                    {
+                        // needs to be a long pulse (BIOS is going for 20ms)
+                        if(cpu.getCycleCount() - keyboardClockLowCycle > 100000)
+                        {
+                            // send reply a little later
+                            keyboardTestReplyCycle = cpu.getCycleCount();
+                            keyboardTestDelay = 1000;
+                        }
+                    }
+                    else
+                        keyboardClockLowCycle = cpu.getCycleCount();
+                }
+
+                ppi.output[port] = data;
+
+                break;
+            }
+            case 0x63: // PPI control
+            {
+                if(data & 0x80) // mode set
+                {
+                    [[maybe_unused]] auto modeA = (data >> 5) & 3;
+                    [[maybe_unused]] auto modeB = (data >> 2) & 1;
+                    assert(!modeA);
+                    assert(!modeB);
+
+                    ppi.mode = data;
+                }
+                else // bit set/clear
+                    printf("PPI control %02X\n", data);
+                break;
+            }
+
+            case 0x81: // DMA channel 2 high addr
+                dma.highAddr[2] = data;
+                break;
+            case 0x82: // DMA channel 3 high addr
+                dma.highAddr[3] = data;
+                break;
+            case 0x83: // DMA channel 1 high addr
+                dma.highAddr[1] = data;
+                break;
+
+            default:
+                printf("IO W %04X = %02X\n", addr, data);
         }
-
-        case 0x81: // DMA channel 2 high addr
-            dma.highAddr[2] = data;
-            break;
-        case 0x82: // DMA channel 3 high addr
-            dma.highAddr[3] = data;
-            break;
-        case 0x83: // DMA channel 1 high addr
-            dma.highAddr[1] = data;
-            break;
-
-        default:
-            printf("IO W %04X = %02X\n", addr, data);
     }
-
-    for(auto & dev : ioDevices)
+    else
     {
-        if(addr >= dev.min && addr <= dev.max)
-            return dev.dev->write(addr, data);
+        for(auto & dev : ioDevices)
+        {
+            if(addr >= dev.min && addr <= dev.max)
+                return dev.dev->write(addr, data);
+        }
+        printf("IO W %04X = %02X\n", addr, data);
     }
 }
 
