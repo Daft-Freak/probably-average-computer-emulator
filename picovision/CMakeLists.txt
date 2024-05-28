@@ -13,3 +13,5 @@ add_custom_command(
 add_executable(PACEPicoVision bios.o Display.cpp Main.cpp)
 
 target_link_libraries(PACEPicoVision PACECore hardware_i2c pico_stdlib aps6404 swd_load)
+
+pico_add_extra_outputs(PACEPicoVision)
