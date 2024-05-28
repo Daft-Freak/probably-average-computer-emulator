@@ -1,5 +1,7 @@
 #include "hardware/irq.h"
 #include "hardware/timer.h"
+#include "hardware/vreg.h"
+#include "pico/stdlib.h"
 #include "pico/time.h"
 
 #include "Display.h"
@@ -58,6 +60,10 @@ static void alarmCallback(uint alarmNum) {
 
 int main()
 {
+    vreg_set_voltage(VREG_VOLTAGE_1_20);
+    sleep_ms(10);
+    set_sys_clock_khz(250000, false);
+    
     init_display();
 
     // emulator init
