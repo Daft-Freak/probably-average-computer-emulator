@@ -22,11 +22,16 @@ endif()
 
 include(CMakeDependentOption)
 cmake_dependent_option(BUILD_SDL "Build minimal SDL UI" ON "NOT IS_PICO" OFF)
+cmake_dependent_option(BUILD_PICOVISION "Build PicoVision UI" ON "IS_PICO" OFF)
 
 add_subdirectory(core)
 
 if(BUILD_SDL)
   add_subdirectory(minsdl)
+endif()
+
+if(BUILD_PICOVISION)
+  add_subdirectory(picovision)
 endif()
 
 # setup release packages
