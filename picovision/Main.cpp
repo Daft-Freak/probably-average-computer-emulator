@@ -16,38 +16,10 @@ static CGACard cga(sys);
 
 static uint8_t ram[160 * 1024];
 
-static uint16_t scanLineOutBuf[640];
-
-static constexpr uint16_t pack555(uint8_t r, uint8_t g, uint8_t b)
-{
-    return b | g << 5 | r << 10;
-}
+static uint8_t scanLineOutBuf[640];
 
 static void scanlineCallback(const uint8_t *data, int line, int w)
 {
-    // RGB * 0xAA + I * 0x55
-    // (except brown)
-    static const uint16_t palette[]
-    {
-        pack555(0x00, 0x00, 0x00), // black
-        pack555(0x00, 0x00, 0x15), // blue
-        pack555(0x00, 0x15, 0x00), // green
-        pack555(0x00, 0x15, 0x15), // cyan
-        pack555(0x15, 0x00, 0x00), // red
-        pack555(0x15, 0x00, 0x15), // magenta
-        pack555(0x15, 0x0A, 0x00), // brown
-        pack555(0x15, 0x15, 0x15), // light grey
-
-        pack555(0x0A, 0x0A, 0x0A), // dark grey
-        pack555(0x0A, 0x0A, 0x1F), // light blue
-        pack555(0x0A, 0x1F, 0x0A), // light green
-        pack555(0x0A, 0x1F, 0x1F), // light cyan
-        pack555(0x1F, 0x0A, 0x0A), // light red
-        pack555(0x1F, 0x0A, 0x1F), // light magenta
-        pack555(0x1F, 0x1F, 0x0A), // yellow
-        pack555(0x1F, 0x1F, 0x1F), // white
-    };
-
     // TODO: sync screen w
 
     auto ptr = scanLineOutBuf;
@@ -55,11 +27,10 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     for(int x = 0; x < w; x += 2)
     {
         int index = *data & 0xF;
+        *ptr++ = index << 2;
 
-        *ptr++ = palette[index];
         index = *data++ >> 4;
-
-        *ptr++ = palette[index];
+        *ptr++ = index << 2;
     }
 
     if(line == 0)

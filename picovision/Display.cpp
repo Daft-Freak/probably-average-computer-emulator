@@ -11,6 +11,26 @@
 
 #include "Display.h"
 
+static const uint8_t cga_palette[16][3]
+{
+    {0x00, 0x00, 0x00}, // black
+    {0x00, 0x00, 0xAA}, // blue
+    {0x00, 0xAA, 0x00}, // green
+    {0x00, 0xAA, 0xAA}, // cyan
+    {0xAA, 0x00, 0x00}, // red
+    {0xAA, 0x00, 0xAA}, // magenta
+    {0xAA, 0x55, 0x00}, // brown
+    {0xAA, 0xAA, 0xAA}, // light grey
+
+    {0x55, 0x55, 0x55}, // dark grey
+    {0x55, 0x55, 0xFF}, // light blue
+    {0x55, 0xFF, 0x55}, // light green
+    {0x55, 0xFF, 0xFF}, // light cyan
+    {0xFF, 0x55, 0x55}, // light red
+    {0xFF, 0x55, 0xFF}, // light magenta
+    {0xFF, 0xFF, 0x55}, // yellow
+    {0xFF, 0xFF, 0xFF}, // white
+};
 
 // pins
 static constexpr uint CS     = 17;
@@ -50,7 +70,7 @@ static void write_frame_setup(uint16_t width, uint16_t height, int pixel_stride,
     constexpr int buf_size = 32;
     uint32_t buf[buf_size];
 
-    int dv_format = 1; // 555
+    int dv_format = 2; // 5 bit palette
 
     uint32_t full_width = width * h_repeat;
     buf[0] = 0x4F434950; // "PICO"
@@ -82,6 +102,9 @@ static void write_frame_setup(uint16_t width, uint16_t height, int pixel_stride,
         ram.wait_for_finish_blocking();
         frame_table_addr += 4 * step;
     }
+
+    // write palette
+    ram.write(frame_table_addr, (uint32_t *)cga_palette, sizeof(cga_palette));
 }
 
 void init_display() {
@@ -119,9 +142,9 @@ void init_display() {
     i2c_write_blocking(i2c1, I2C_ADDR, buf, 2, false);
 }
 
-void write_display(int x, int y, int count, uint16_t *data)
+void write_display(int x, int y, int count, uint8_t *data)
 {
-    ram.write(base_address + (x + y * 640) * 2, (uint32_t *)data, count * 2);
+    ram.write(base_address + (x + y * 640) * 1, (uint32_t *)data, count);
 }
 
 void update_display() {
@@ -132,7 +155,7 @@ void update_display() {
     if(need_mode_change) {
         // hardcoded 640x240
         uint8_t h_repeat = 1, v_repeat = 2;
-        write_frame_setup(640, 240, 2, h_repeat, v_repeat);
+        write_frame_setup(640, 240, 1, h_repeat, v_repeat);
         need_mode_change--;
     }
 
