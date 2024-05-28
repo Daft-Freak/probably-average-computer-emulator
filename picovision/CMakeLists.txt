@@ -1,5 +1,15 @@
 include(picovision_import.cmake)
 
-add_executable(PACEPicoVision Display.cpp Main.cpp)
+# embed BIOS
+set(BIOS_FILE bios-xt.rom)
+set(BIOS_PATH ${CMAKE_CURRENT_LIST_DIR}/../)
+add_custom_command(
+    OUTPUT bios.o
+    WORKING_DIRECTORY ${BIOS_PATH}
+    COMMAND ${CMAKE_OBJCOPY} -I binary -O elf32-littlearm -B armv6s-m ${BIOS_FILE} ${CMAKE_CURRENT_BINARY_DIR}/bios.o
+    DEPENDS ${BIOS_PATH}${BIOS_FILE}
+)
 
-target_link_libraries(PACEPicoVision hardware_i2c pico_stdlib aps6404 swd_load)
+add_executable(PACEPicoVision bios.o Display.cpp Main.cpp)
+
+target_link_libraries(PACEPicoVision PACECore hardware_i2c pico_stdlib aps6404 swd_load)
