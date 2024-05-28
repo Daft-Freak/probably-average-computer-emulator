@@ -57,6 +57,8 @@ static uint8_t need_mode_change = 2;
 
 static volatile bool do_render = true;
 
+static uint16_t cur_width = 640, cur_height = 240;
+
 static void vsync_callback(uint gpio, uint32_t events){
     if(!do_render) {
         ram_bank ^= 1;
@@ -94,7 +96,8 @@ static void write_frame_setup(uint16_t width, uint16_t height, int pixel_stride,
     for(int y = 0; y < height; y += buf_size) {
         int step = std::min(buf_size, height - y);
         for(int i = 0; i < step; i++) {
-            uint32_t line_addr = base_address + (y + i) * width * pixel_stride;
+            // always use full width as stride to simplify access later
+            uint32_t line_addr = base_address + (y + i) * full_width * pixel_stride;
             buf[i] = dv_format << 27 | h_repeat << 24 | line_addr;
         }
 
@@ -142,8 +145,15 @@ void init_display() {
     i2c_write_blocking(i2c1, I2C_ADDR, buf, 2, false);
 }
 
-void write_display(int x, int y, int count, uint8_t *data)
-{
+void set_display_size(int w, int h) {
+    if(w != cur_width || h != cur_height) {
+        cur_width = w;
+        cur_height = h;
+        need_mode_change = 2;
+    }
+}
+
+void write_display(int x, int y, int count, uint8_t *data) {
     ram.write(base_address + (x + y * 640) * 1, (uint32_t *)data, count);
 }
 
@@ -153,9 +163,8 @@ void update_display() {
 
     // handle mode change
     if(need_mode_change) {
-        // hardcoded 640x240
-        uint8_t h_repeat = 1, v_repeat = 2;
-        write_frame_setup(640, 240, 1, h_repeat, v_repeat);
+        uint8_t h_repeat = 640 / cur_width, v_repeat = 480 / cur_height;
+        write_frame_setup(cur_width, cur_height, 1, h_repeat, v_repeat);
         need_mode_change--;
     }
 

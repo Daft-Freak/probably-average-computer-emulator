@@ -37,6 +37,8 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     {
         // sync
         while(!display_render_needed());
+
+        set_display_size(w, 240); /*really 200*/
     }
 
     write_display(0, line, w, scanLineOutBuf);
