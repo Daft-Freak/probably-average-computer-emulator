@@ -29,7 +29,6 @@ void CGACard::update()
 
     int lineClocks = (regs[0/*h total*/] + 1) * 8;
     int hDisplayed = regs[1/* h disp*/] * 8;
-    int hBlankStart = regs[2/*h sync*/] * 8;
 
     int charHeight = regs[9/*max char scan*/] + 1;
     int totalLines = (regs[4/* v total*/] + 1) * charHeight + regs[5 /*v adjust*/];
@@ -54,21 +53,17 @@ void CGACard::update()
             if((scanline % charHeight) == 0)
                 curAddr += regs[1/* h disp*/] * 2;
 
-            status &= ~(1 << 0); // clear accessible
-
             // check new scanline
             if(scanline >= totalLines)
             {
                 scanline = 0;
                 frame++;
                 curAddr = regs[12] << 8 | regs[13];
-                status &= ~(1 << 0 | 1 << 3); // clear accessible / vblank
+                status &= ~(1 << 3); // clear vblank
             }
             else if(scanline >= vBlankStart)
-                status |= 1 << 0 | 1 << 3; // accessible / vblank
+                status |=  1 << 3; // vblank
         }
-        else if(scanlineCycle >= hBlankStart)
-            status |= 1 << 0; // accessible
 
         if(scanlineCycle < hDisplayed && scanline < vDisplayed)
         {
@@ -157,7 +152,16 @@ uint8_t CGACard::read(uint16_t addr)
         case 0x3DA: // status
         {
             update();
-            return status;
+
+            int hDisplayed = regs[1/* h disp*/] * 8;
+
+            int charHeight = regs[9/*max char scan*/] + 1;
+            int vDisplayed = regs[6/*v displayed*/] * charHeight;
+
+            // the low "accessible" bit is the inverse of DE
+            bool de = scanlineCycle < hDisplayed && scanline < vDisplayed;
+
+            return status | (de ? 0 : 1);
         }
     }
     return 0xFF;
