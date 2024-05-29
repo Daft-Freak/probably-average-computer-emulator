@@ -331,44 +331,41 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
 {
     // RGB * 0xAA + I * 0x55
     // (except brown)
-    static const uint8_t palette[16][3]
+    static const uint8_t palette[16][4]
     {
+        // B, G, R, X
         {0x00, 0x00, 0x00}, // black
-        {0x00, 0x00, 0xAA}, // blue
+        {0xAA, 0x00, 0x00}, // blue
         {0x00, 0xAA, 0x00}, // green
-        {0x00, 0xAA, 0xAA}, // cyan
-        {0xAA, 0x00, 0x00}, // red
+        {0xAA, 0xAA, 0x00}, // cyan
+        {0x00, 0x00, 0xAA}, // red
         {0xAA, 0x00, 0xAA}, // magenta
-        {0xAA, 0x55, 0x00}, // brown
+        {0x00, 0x55, 0xAA}, // brown
         {0xAA, 0xAA, 0xAA}, // light grey
 
         {0x55, 0x55, 0x55}, // dark grey
-        {0x55, 0x55, 0xFF}, // light blue
+        {0xFF, 0x55, 0x55}, // light blue
         {0x55, 0xFF, 0x55}, // light green
-        {0x55, 0xFF, 0xFF}, // light cyan
-        {0xFF, 0x55, 0x55}, // light red
+        {0xFF, 0xFF, 0x55}, // light cyan
+        {0x55, 0x55, 0xFF}, // light red
         {0xFF, 0x55, 0xFF}, // light magenta
-        {0xFF, 0xFF, 0x55}, // yellow
+        {0x55, 0xFF, 0xFF}, // yellow
         {0xFF, 0xFF, 0xFF}, // white
     };
 
     auto ptr = screenData + line * 640 * 4;
 
+    auto ptr32 = reinterpret_cast<uint32_t *>(ptr);
+    auto pal32 = reinterpret_cast<const uint32_t *>(palette);
+
     for(int x = 0; x < w; x += 2)
     {
-        int index = *data & 0xF;
+        auto in = *data++;
+        int index = in & 0xF;
+        *ptr32++ = pal32[index];
 
-        *ptr++ = palette[index][2];
-        *ptr++ = palette[index][1];
-        *ptr++ = palette[index][0];
-        ptr++;
-
-        index = *data++ >> 4;
-        
-        *ptr++ = palette[index][2];
-        *ptr++ = palette[index][1];
-        *ptr++ = palette[index][0];
-        ptr++;
+        index = in >> 4;
+        *ptr32++ = pal32[index];
     }
 
     curScreenW = w;
