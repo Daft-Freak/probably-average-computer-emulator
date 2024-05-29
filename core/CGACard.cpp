@@ -185,8 +185,16 @@ void CGACard::draw(int start, int end)
         // for more accuracy, should toggle when reaching those lines (resulting in wrap around sometimes)
         // also check for blinking (handled outside 6845, 8/8 frames)
         bool cursorLine = (frame & 8) && charLine >= (regs[10/*cursor start*/] & 0x1F) && charLine <= (regs[11/*cursor end*/] & 0x1F);
+        uint8_t *cursorPtr = nullptr;
 
-        uint16_t cursorAddr = regs[14] << 8 | regs[15];
+        if(cursorLine)
+        {
+            uint16_t cursorAddr = regs[14] << 8 | regs[15];
+
+            // +2 because we check after incrementing
+            // set to null if not cursor line
+            cursorPtr = ram + cursorAddr * 2 + 2;
+        }
 
         int cycle = start;
 
@@ -200,18 +208,19 @@ void CGACard::draw(int start, int end)
             return (fontData & 1 << cx) ? attr & 0xF : (attr >> 4) & 7;
         
         };
-
-        // round to char size
+    
         auto out = scanlineBuf + cycle / 2;
+        auto in = ram + curAddr + (cycle / 8) * 2;
+    
+        // round to char size
         if(cycle & 7)
         {
-            auto charAddr = curAddr + (cycle / 8) * 2;
-            auto ch = ram[charAddr];
-            auto attr = ram[charAddr + 1];
+            auto ch = *in++;
+            auto attr = *in++;
             auto fontData = cgaFont[ch * 8 + charLine];
 
             // check if char in cursor
-            bool cursor = cursorLine && charAddr == cursorAddr * 2;
+            bool cursor = in == cursorPtr;
 
             for(;cycle & 7; cycle++)
             {
@@ -227,13 +236,12 @@ void CGACard::draw(int start, int end)
         // full chars
         for(; cycle < end - 7; cycle += 8)
         {
-            auto charAddr = curAddr + (cycle / 8) * 2;
-            auto ch = ram[charAddr];
-            auto attr = ram[charAddr + 1];
+            auto ch = *in++;
+            auto attr = *in++;
             auto fontData = cgaFont[ch * 8 + charLine];
 
             // check if char in cursor
-            if(cursorLine && charAddr == cursorAddr * 2)
+            if(in == cursorPtr)
             {
                 out[0] = out[1] = out[2] = out[3] = (attr & 0xF) | attr << 4;
                 out += 4;
@@ -253,13 +261,12 @@ void CGACard::draw(int start, int end)
         // remainder
         if(cycle < end)
         {
-            auto charAddr = curAddr + (cycle / 8) * 2;
-            auto ch = ram[charAddr];
-            auto attr = ram[charAddr + 1];
+            auto ch = *in++;
+            auto attr = *in;
             auto fontData = cgaFont[ch * 8 + charLine];
 
             // check if char in cursor
-            bool cursor = cursorLine && charAddr == cursorAddr * 2;
+            bool cursor = in == cursorPtr;
 
             for(; cycle < end; cycle++)
             {
