@@ -131,28 +131,29 @@ void CGACard::write(uint16_t addr, uint8_t data)
 
 void CGACard::draw(int start, int end)
 {
-    uint16_t cursorAddr = regs[14] << 8 | regs[15];
-
-    for(int cycle = start; cycle < end; cycle++)
+    if(!(mode & (1 << 3))) // check enabled
     {
-        if(!(mode & (1 << 3))) // check enabled
+        for(int cycle = start; cycle < end; cycle++)
             scanlineBuf[cycle / 2] = 0; // black
-        else if(mode & (1 << 1))
+    }
+    else if(mode & (1 << 1))
+    {
+        // graphics mode
+        if(mode & (1 << 4))
         {
-            // graphics mode
-            if(mode & (1 << 4))
-            {
-                // hi-res
-            }
-            else
-            {
-                int palIndex = (colSelect >> 5) & 1;
-                bool bright = (colSelect & (1 << 4));
-                auto bg = colSelect & 0xF;
+            // hi-res
+        }
+        else
+        {
+            int palIndex = (colSelect >> 5) & 1;
+            bool bright = (colSelect & (1 << 4));
+            auto bg = colSelect & 0xF;
 
-                auto charAddr = curAddr + (cycle / 4);
-                if(scanline & 1)
-                    charAddr += 0x2000;
+            auto addr = curAddr + (scanline & 1) ? 0x2000 : 0;
+
+            for(int cycle = start; cycle < end; cycle++)
+            {
+                auto charAddr = addr + (cycle / 4);
 
                 auto data = ram[charAddr];
                 auto col = (data << ((cycle & 3) * 2) >> 6) & 3;
@@ -172,24 +173,32 @@ void CGACard::draw(int start, int end)
                     scanlineBuf[cycle / 2] = col;
             }
         }
-        else
+    }
+    else
+    {
+        // text mode
+        // assuming 8x8 chars...
+
+        int charLine = scanline & 7;
+
+        // check if line in cursor
+        // for more accuracy, should toggle when reaching those lines (resulting in wrap around sometimes)
+        // also check for blinking (handled outside 6845, 8/8 frames)
+        bool cursorLine = (frame & 8) && charLine >= (regs[10/*cursor start*/] & 0x1F) && charLine <= (regs[11/*cursor end*/] & 0x1F);
+
+        uint16_t cursorAddr = regs[14] << 8 | regs[15];
+
+        for(int cycle = start; cycle < end; cycle++)
         {
-            // text mode
-            // assuming 8x8 chars...
             auto charAddr = curAddr + (cycle / 8) * 2;
             auto ch = ram[charAddr];
             auto attr = ram[charAddr + 1];
 
-            int charLine = scanline & 7;
-
-            // check if in cursor
-            // for more accuracy, should toggle when reaching those lines (resulting in wrap around sometimes)
-            bool cursor = charAddr == cursorAddr * 2 && charLine >= (regs[10/*cursor start*/] & 0x1F) && charLine <= (regs[11/*cursor end*/] & 0x1F);
+            // check if char in cursor
+            bool cursor = cursorLine && charAddr == cursorAddr * 2;
 
             int col;
-
-            // also check for blinking (handled outside 6845, 8/8 frames)
-            if(cursor && (frame & 8))
+            if(cursor)
                 col = attr & 0xF;
             else
             {
