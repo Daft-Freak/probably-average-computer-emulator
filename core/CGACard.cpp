@@ -188,33 +188,88 @@ void CGACard::draw(int start, int end)
 
         uint16_t cursorAddr = regs[14] << 8 | regs[15];
 
-        for(int cycle = start; cycle < end; cycle++)
+        int cycle = start;
+
+        auto getCol = [&cycle, this](uint8_t attr, uint8_t fontData, int cx)
+        {
+            // not cursor or cursor off
+            // blink character
+            if((attr & 0x80) && !(frame & 16))
+                return (attr >> 4) & 7;
+
+            return (fontData & 1 << cx) ? attr & 0xF : (attr >> 4) & 7;
+        
+        };
+
+        // round to char size
+        auto out = scanlineBuf + cycle / 2;
+        if(cycle & 7)
         {
             auto charAddr = curAddr + (cycle / 8) * 2;
             auto ch = ram[charAddr];
             auto attr = ram[charAddr + 1];
+            auto fontData = cgaFont[ch * 8 + charLine];
 
             // check if char in cursor
             bool cursor = cursorLine && charAddr == cursorAddr * 2;
 
-            int col;
-            if(cursor)
-                col = attr & 0xF;
+            for(;cycle & 7; cycle++)
+            {
+                int col = cursor ? (attr & 0xF) : getCol(attr, fontData, cycle & 7);
+
+                if(cycle & 1)
+                    *out++ |= col << 4;
+                else
+                    *out = col;
+            }
+        }
+
+        // full chars
+        for(; cycle < end - 7; cycle += 8)
+        {
+            auto charAddr = curAddr + (cycle / 8) * 2;
+            auto ch = ram[charAddr];
+            auto attr = ram[charAddr + 1];
+            auto fontData = cgaFont[ch * 8 + charLine];
+
+            // check if char in cursor
+            if(cursorLine && charAddr == cursorAddr * 2)
+            {
+                out[0] = out[1] = out[2] = out[3] = (attr & 0xF) | attr << 4;
+                out += 4;
+            }
             else
             {
-                // not cursor or cursor off
-                auto fontData = cgaFont[ch * 8 + charLine];
-                col = (fontData & 1 << (cycle & 7)) ? attr & 0xF : (attr >> 4) & 7;
+                for(int cx = 0; cx < 8; cx += 2)
+                {
+                    int col0 = getCol(attr, fontData, cx);
+                    int col1 = getCol(attr, fontData, cx + 1);
 
-                // blink character
-                if((attr & 0x80) && !(frame & 16))
-                    col = (attr >> 4) & 7;
+                    *out++ = col0 | col1 << 4;
+                }
             }
+        }
 
-            if(cycle & 1)
-                scanlineBuf[cycle / 2] |= col << 4;
-            else
-                scanlineBuf[cycle / 2] = col;
+        // remainder
+        if(cycle < end)
+        {
+            auto charAddr = curAddr + (cycle / 8) * 2;
+            auto ch = ram[charAddr];
+            auto attr = ram[charAddr + 1];
+            auto fontData = cgaFont[ch * 8 + charLine];
+
+            // check if char in cursor
+            bool cursor = cursorLine && charAddr == cursorAddr * 2;
+
+            for(; cycle < end; cycle++)
+            {
+                int col = cursor ? (attr & 0xF) : getCol(attr, fontData, cycle & 7);
+
+                if(cycle & 1)
+                    *out++ |= col << 4;
+                else
+                    *out = col;
+            }
         }
     }
 }
