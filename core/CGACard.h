@@ -16,6 +16,8 @@ public:
     void write(uint16_t addr, uint8_t data) override;
 
 private:
+    void draw(int start, int end);
+
     System &sys;
 
     // 6845 registers

@@ -35,11 +35,20 @@ void CGACard::update()
     int vDisplayed = regs[6/*v displayed*/] * charHeight;
     int vBlankStart = regs[7/*v sync*/] * charHeight;
 
-    uint16_t cursorAddr = regs[14] << 8 | regs[15];
-
-    while(elapsed--)
+    while(elapsed)
     {
-        scanlineCycle++;
+        auto startCycle = scanlineCycle;
+        auto step = std::max(UINT32_C(1), std::min(elapsed, static_cast<uint32_t>(lineClocks) - scanlineCycle));
+
+        scanlineCycle += step;
+        elapsed -= step;
+
+        if(startCycle < hDisplayed && scanline < vDisplayed)
+        {
+            // in visible area, draw
+            auto endCycle = scanlineCycle < hDisplayed ? scanlineCycle : hDisplayed;
+            draw(startCycle, endCycle);
+        }
 
         if(scanlineCycle >= lineClocks)
         {
@@ -63,84 +72,6 @@ void CGACard::update()
             }
             else if(scanline >= vBlankStart)
                 status |=  1 << 3; // vblank
-        }
-
-        if(scanlineCycle < hDisplayed && scanline < vDisplayed)
-        {
-            // in visible area
-
-            if(!(mode & (1 << 3))) // check enabled
-                scanlineBuf[scanlineCycle / 2] = 0; // black
-            else if(mode & (1 << 1))
-            {
-                // graphics mode
-                if(mode & (1 << 4))
-                {
-                    // hi-res
-                }
-                else
-                {
-                    int palIndex = (colSelect >> 5) & 1;
-                    bool bright = (colSelect & (1 << 4));
-                    auto bg = colSelect & 0xF;
-
-                    auto charAddr = curAddr + (scanlineCycle / 4);
-                    if(scanline & 1)
-                        charAddr += 0x2000;
-
-                    auto data = ram[charAddr];
-                    auto col = (data << ((scanlineCycle & 3) * 2) >> 6) & 3;
-
-                    if(col == 0)
-                        col = bg;
-                    else
-                    {
-                        // palette mapping is just shifting up 1 bit, palette select is the low bit
-                        // TODO: mixed palette if b/w bit set
-                        col = (col << 1) | palIndex | (bright ? 8 : 0);
-                    }
-
-                    if(scanlineCycle & 1)
-                        scanlineBuf[scanlineCycle / 2] |= col << 4;
-                    else
-                        scanlineBuf[scanlineCycle / 2] = col;
-                }
-            }
-            else
-            {
-                // text mode
-                // assuming 8x8 chars...
-                auto charAddr = curAddr + (scanlineCycle / 8) * 2;
-                auto ch = ram[charAddr];
-                auto attr = ram[charAddr + 1];
-
-                int charLine = scanline & 7;
-
-                // check if in cursor
-                // for more accuracy, should toggle when reaching those lines (resulting in wrap around sometimes)
-                bool cursor = charAddr == cursorAddr * 2 && charLine >= (regs[10/*cursor start*/] & 0x1F) && charLine <= (regs[11/*cursor end*/] & 0x1F);
-
-                int col;
-
-                // also check for blinking (handled outside 6845, 8/8 frames)
-                if(cursor && (frame & 8))
-                    col = attr & 0xF;
-                else
-                {
-                    // not cursor or cursor off
-                    auto fontData = cgaFont[ch * 8 + charLine];
-                    col = (fontData & 1 << (scanlineCycle & 7)) ? attr & 0xF : (attr >> 4) & 7;
-
-                    // blink character
-                    if((attr & 0x80) && !(frame & 16))
-                        col = (attr >> 4) & 7;
-                }
-
-                if(scanlineCycle & 1)
-                    scanlineBuf[scanlineCycle / 2] |= col << 4;
-                else
-                    scanlineBuf[scanlineCycle / 2] = col;
-            }
         }
     }
 }
@@ -194,6 +125,87 @@ void CGACard::write(uint16_t addr, uint8_t data)
             update();
             colSelect = data;
             break;
+        }
+    }
+}
+
+void CGACard::draw(int start, int end)
+{
+    uint16_t cursorAddr = regs[14] << 8 | regs[15];
+
+    for(int cycle = start; cycle < end; cycle++)
+    {
+        if(!(mode & (1 << 3))) // check enabled
+            scanlineBuf[cycle / 2] = 0; // black
+        else if(mode & (1 << 1))
+        {
+            // graphics mode
+            if(mode & (1 << 4))
+            {
+                // hi-res
+            }
+            else
+            {
+                int palIndex = (colSelect >> 5) & 1;
+                bool bright = (colSelect & (1 << 4));
+                auto bg = colSelect & 0xF;
+
+                auto charAddr = curAddr + (cycle / 4);
+                if(scanline & 1)
+                    charAddr += 0x2000;
+
+                auto data = ram[charAddr];
+                auto col = (data << ((cycle & 3) * 2) >> 6) & 3;
+
+                if(col == 0)
+                    col = bg;
+                else
+                {
+                    // palette mapping is just shifting up 1 bit, palette select is the low bit
+                    // TODO: mixed palette if b/w bit set
+                    col = (col << 1) | palIndex | (bright ? 8 : 0);
+                }
+
+                if(cycle & 1)
+                    scanlineBuf[cycle / 2] |= col << 4;
+                else
+                    scanlineBuf[cycle / 2] = col;
+            }
+        }
+        else
+        {
+            // text mode
+            // assuming 8x8 chars...
+            auto charAddr = curAddr + (cycle / 8) * 2;
+            auto ch = ram[charAddr];
+            auto attr = ram[charAddr + 1];
+
+            int charLine = scanline & 7;
+
+            // check if in cursor
+            // for more accuracy, should toggle when reaching those lines (resulting in wrap around sometimes)
+            bool cursor = charAddr == cursorAddr * 2 && charLine >= (regs[10/*cursor start*/] & 0x1F) && charLine <= (regs[11/*cursor end*/] & 0x1F);
+
+            int col;
+
+            // also check for blinking (handled outside 6845, 8/8 frames)
+            if(cursor && (frame & 8))
+                col = attr & 0xF;
+            else
+            {
+                // not cursor or cursor off
+                auto fontData = cgaFont[ch * 8 + charLine];
+                col = (fontData & 1 << (cycle & 7)) ? attr & 0xF : (attr >> 4) & 7;
+
+                // blink character
+                if((attr & 0x80) && !(frame & 16))
+                    col = (attr >> 4) & 7;
+            }
+
+            if(cycle & 1)
+                scanlineBuf[cycle / 2] |= col << 4;
+            else
+                scanlineBuf[cycle / 2] = col;
         }
     }
 }
