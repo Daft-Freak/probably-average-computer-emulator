@@ -423,6 +423,8 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                                 pit.outState &= ~(1 << channel);
                             else // mode 2/3/4 start high
                                 pit.outState |= (1 << channel);
+
+                            calculateNextPITUpdate();
                         }
                     }
 
@@ -463,6 +465,8 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                     pit.highByte &= ~(1 << channel);
 
                     printf("PIT ch%i access %i mode %i\n", channel, access, mode);
+
+                    calculateNextPITUpdate();
                 }
 
                 break;
@@ -632,27 +636,12 @@ void System::updatePIT()
 
     while(elapsed)
     {
-        // find first channel to trigger
-        int step = elapsed;
+        int step = std::min(elapsed, (pit.nextUpdateCycle - pit.lastUpdateCycle) / 4);
+
         for(int i = 0; i < 3; i++)
         {
-            if(!(pit.active & (1 << i)))
-                continue;
-
-            int mode = (pit.control[i] >> 1) & 7;
-        
-            if(mode == 2 && pit.counter[i] == 1)
+            if(pit.reloadNextCycle & (1 << i))
                 pit.counter[i] = pit.reload[i]; // reload after reaching 1 on the last cycle
-
-            int remaining = pit.counter[i];
-
-            if(mode == 2)
-                remaining--; // count to 1
-            else if(mode == 3)
-                remaining /= 2; // double-decrement
-
-            if(remaining > 0 && remaining < step)
-                step = remaining;
         }
 
         for(int i = 0; i < 3; i++)
@@ -666,7 +655,7 @@ void System::updatePIT()
 
             if(mode == 3) // mode 3 decrements twice
                 pit.counter[i] -= step * 2;
-            else
+            else if(!(pit.reloadNextCycle & (1 << i)))
                 pit.counter[i] -= step;
 
             if(mode == 0 && pit.counter[i] == 0 && !(pit.outState & (1 << i)))
@@ -678,6 +667,8 @@ void System::updatePIT()
                 if(i == 0)
                     flagPICInterrupt(0);
             }
+            else if(mode == 2 && pit.counter[i] == 1)
+                pit.reloadNextCycle |= 1 << i;
             else if(mode == 3 && pit.counter[i] == 0)
             {
                 if(i == 2)
@@ -695,7 +686,38 @@ void System::updatePIT()
 
         pit.lastUpdateCycle += step * 4;
         elapsed -= step;
+
+        // recalculate next
+        if(pit.lastUpdateCycle == pit.nextUpdateCycle || pit.reloadNextCycle)
+            calculateNextPITUpdate();
+
+        pit.reloadNextCycle = 0;
     }
+}
+
+void System::calculateNextPITUpdate()
+{
+    // find first channel to trigger
+    int step = 0xFFFF;
+    for(int i = 0; i < 3; i++)
+    {
+        if(!(pit.active & (1 << i)))
+            continue;
+
+        int mode = (pit.control[i] >> 1) & 7;
+
+        int remaining = pit.counter[i];
+
+        if(mode == 2)
+            remaining--; // count to 1
+        else if(mode == 3)
+            remaining /= 2; // double-decrement
+
+        if(remaining > 0 && remaining < step)
+            step = remaining;
+    }
+
+    pit.nextUpdateCycle = pit.lastUpdateCycle + step * 4;
 }
 
 void System::updateSpeaker(uint32_t target)

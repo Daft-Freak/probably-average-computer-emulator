@@ -55,6 +55,7 @@ private:
     };
 
     void updatePIT();
+    void calculateNextPITUpdate();
     void updateSpeaker(uint32_t target);
 
     CPU cpu;
@@ -113,8 +114,10 @@ private:
         uint8_t highByte = 0; // lo/hi access mode
 
         uint8_t outState = 0;
+        uint8_t reloadNextCycle = 0;
 
         uint32_t lastUpdateCycle = 0;
+        uint32_t nextUpdateCycle = 0;
     };
 
     struct PPI
