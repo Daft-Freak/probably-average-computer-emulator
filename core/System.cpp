@@ -649,7 +649,9 @@ void System::updatePIT()
             if(!(pit.active & (1 << i)))
                 continue;
 
-            // TODO: ch2 gate
+            // ch2 gate
+            if(i == 2 && !(ppi.output[1] & 1))
+                continue;
 
             int mode = (pit.control[i] >> 1) & 7;
 
