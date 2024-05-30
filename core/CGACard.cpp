@@ -198,47 +198,50 @@ void CGACard::draw(int start, int end)
 
         int cycle = start;
 
-        auto getCol = [&cycle, this](uint8_t attr, uint8_t fontData, int cx)
-        {
-            // not cursor or cursor off
-            // blink character
-            if((attr & 0x80) && !(frame & 16))
-                return (attr >> 4) & 7;
-
-            return (fontData & 1 << cx) ? attr & 0xF : (attr >> 4) & 7;
-        
-        };
-    
         auto out = scanlineBuf + cycle / 2;
         auto in = ram + curAddr + (cycle / 8) * 2;
+
+        auto doSingle = [this, &out](bool cursor, uint8_t attr, uint8_t fontData, int cx)
+        {
+            int col;
+            
+            if(cursor) 
+                col = attr & 0xF;
+            // not cursor or cursor off
+            // blink character
+            else if((attr & 0x80) && !(frame & 16))
+                col = (attr >> 4) & 7;
+            else
+                col = (fontData & 1 << cx) ? attr & 0xF : (attr >> 4) & 7;
+
+            if(cx & 1)
+                *out++ |= col << 4;
+            else
+                *out = col;
+        };
+
+        auto lineFont = cgaFont + charLine;
     
         // round to char size
         if(cycle & 7)
         {
             auto ch = *in++;
             auto attr = *in++;
-            auto fontData = cgaFont[ch * 8 + charLine];
+            auto fontData = lineFont[ch * 8];
 
             // check if char in cursor
             bool cursor = in == cursorPtr;
 
-            for(;cycle & 7; cycle++)
-            {
-                int col = cursor ? (attr & 0xF) : getCol(attr, fontData, cycle & 7);
-
-                if(cycle & 1)
-                    *out++ |= col << 4;
-                else
-                    *out = col;
-            }
+            for(; cycle & 7; cycle++)
+                doSingle(cursor, attr, fontData, cycle & 7);
         }
 
         // full chars
-        for(; cycle < end - 7; cycle += 8)
+        auto charCount = (end - cycle) / 8;
+        while(charCount--)
         {
             auto ch = *in++;
             auto attr = *in++;
-            auto fontData = cgaFont[ch * 8 + charLine];
 
             // check if char in cursor
             if(in == cursorPtr)
@@ -246,12 +249,20 @@ void CGACard::draw(int start, int end)
                 out[0] = out[1] = out[2] = out[3] = (attr & 0xF) | attr << 4;
                 out += 4;
             }
+            // blink character
+            else if((attr & 0x80) && !(frame & 16))
+            {
+                out[0] = out[1] = out[2] = out[3] = ((attr >> 4) & 7) | (attr & 0x70);
+                out += 4;
+            }
             else
             {
-                for(int cx = 0; cx < 8; cx += 2)
+                auto fontData = lineFont[ch * 8];
+
+                for(int i = 0; i < 4; i++, fontData >>= 2)
                 {
-                    int col0 = getCol(attr, fontData, cx);
-                    int col1 = getCol(attr, fontData, cx + 1);
+                    int col0 = (fontData & 1) ? attr & 0xF : (attr >> 4) & 7;
+                    int col1 = (fontData & 2) ? attr & 0xF : (attr >> 4) & 7;
 
                     *out++ = col0 | col1 << 4;
                 }
@@ -259,24 +270,17 @@ void CGACard::draw(int start, int end)
         }
 
         // remainder
-        if(cycle < end)
+        if(end & 7)
         {
             auto ch = *in++;
             auto attr = *in;
-            auto fontData = cgaFont[ch * 8 + charLine];
+            auto fontData = lineFont[ch * 8];
 
             // check if char in cursor
             bool cursor = in == cursorPtr;
 
-            for(; cycle < end; cycle++)
-            {
-                int col = cursor ? (attr & 0xF) : getCol(attr, fontData, cycle & 7);
-
-                if(cycle & 1)
-                    *out++ |= col << 4;
-                else
-                    *out = col;
-            }
+            for(int i = 0; i < (end & 7); i++)
+                doSingle(cursor, attr, fontData, cycle & 7);
         }
     }
 }
