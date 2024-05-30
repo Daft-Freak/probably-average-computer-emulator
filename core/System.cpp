@@ -630,8 +630,31 @@ void System::updatePIT()
 
     elapsed /= 4; // PIT clock is four times slower than CPU clock
 
-    while(elapsed--)
+    while(elapsed)
     {
+        // find first channel to trigger
+        int step = elapsed;
+        for(int i = 0; i < 3; i++)
+        {
+            if(!(pit.active & (1 << i)))
+                continue;
+
+            int mode = (pit.control[i] >> 1) & 7;
+        
+            if(mode == 2 && pit.counter[i] == 1)
+                pit.counter[i] = pit.reload[i]; // reload after reaching 1 on the last cycle
+
+            int remaining = pit.counter[i];
+
+            if(mode == 2)
+                remaining--; // count to 1
+            else if(mode == 3)
+                remaining /= 2; // double-decrement
+
+            if(remaining > 0 && remaining < step)
+                step = remaining;
+        }
+
         for(int i = 0; i < 3; i++)
         {
             if(!(pit.active & (1 << i)))
@@ -641,12 +664,10 @@ void System::updatePIT()
 
             int mode = (pit.control[i] >> 1) & 7;
 
-            if(mode == 2 && pit.counter[i] == 1)
-                pit.counter[i] = pit.reload[i]; // reload after reaching 1 on the last cycle
-            else if(mode == 3) // mode 3 decrements twice
-                pit.counter[i] -= 2;
+            if(mode == 3) // mode 3 decrements twice
+                pit.counter[i] -= step * 2;
             else
-                pit.counter[i]--;
+                pit.counter[i] -= step;
 
             if(mode == 0 && pit.counter[i] == 0 && !(pit.outState & (1 << i)))
             {
@@ -660,7 +681,7 @@ void System::updatePIT()
             else if(mode == 3 && pit.counter[i] == 0)
             {
                 if(i == 2)
-                    updateSpeaker(pit.lastUpdateCycle);
+                    updateSpeaker(pit.lastUpdateCycle + (step - 1) * 4);
 
                 // toggle out and reload
                 // TODO: should delay low by one cycle if odd count
@@ -672,7 +693,8 @@ void System::updatePIT()
             }
         }
 
-        pit.lastUpdateCycle += 4;
+        pit.lastUpdateCycle += step * 4;
+        elapsed -= step;
     }
 }
 
