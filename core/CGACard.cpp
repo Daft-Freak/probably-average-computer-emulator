@@ -243,22 +243,23 @@ void CGACard::draw(int start, int end)
             auto ch = *in++;
             auto attr = *in++;
 
-            // check if char in cursor
+            auto fontData = lineFont[ch * 8];
+
+            // check if char in cursor (fg fill)
             if(in == cursorPtr)
             {
                 out[0] = out[1] = out[2] = out[3] = (attr & 0xF) | attr << 4;
                 out += 4;
             }
-            // blink character
-            else if((attr & 0x80) && !(frame & 16))
+            // blink character (bg fill)
+            // also check if char is blank and do the same
+            else if(!fontData || ((attr & 0x80) && !(frame & 16)))
             {
                 out[0] = out[1] = out[2] = out[3] = ((attr >> 4) & 7) | (attr & 0x70);
                 out += 4;
             }
             else
             {
-                auto fontData = lineFont[ch * 8];
-
                 for(int i = 0; i < 4; i++, fontData >>= 2)
                 {
                     int col0 = (fontData & 1) ? attr & 0xF : (attr >> 4) & 7;
