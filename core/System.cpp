@@ -565,8 +565,6 @@ void System::flagPICInterrupt(int index)
 
 void System::updateForInterrupts()
 {
-    // TODO: usual target for optimisation...
-
     // response from keyboard self-test
     if(keyboardTestDelay)
     {
@@ -584,7 +582,11 @@ void System::updateForInterrupts()
 
     // timer
     if(!(pic.mask & 1))
-        updatePIT();
+    {
+        auto passed = cpu.getCycleCount() - pit.lastUpdateCycle;
+        if(passed >= pit.nextUpdateCycle - pit.lastUpdateCycle)
+            updatePIT();
+    }
 }
 
 void System::updateForDisplay()
