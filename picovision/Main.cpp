@@ -63,6 +63,8 @@ int main()
     vreg_set_voltage(VREG_VOLTAGE_1_20);
     sleep_ms(10);
     set_sys_clock_khz(250000, false);
+
+    stdio_init_all();
     
     init_display();
 
