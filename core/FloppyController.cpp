@@ -156,6 +156,8 @@ void FloppyController::write(uint16_t addr, uint8_t data)
 
                         if(readCb)
                             readCb(buf, cylinder, head, record, endOfTrack);
+                        else
+                            break;
                         // should probably fail the read otherwise...
 
                         for(int i = 0; i < sectorSize; i++)
@@ -185,6 +187,9 @@ void FloppyController::write(uint16_t addr, uint8_t data)
                     // resets every time anyway...
 
                     status[0] = unit | head << 2;
+
+                    if(!readCb)
+                        status[0] |= 1 << 6;
 
                     resultLen = 7;
                     result[0] = status[0];
@@ -263,10 +268,17 @@ void FloppyController::write(uint16_t addr, uint8_t data)
                     // int head = (command[1] >> 2) & 1;
                     auto cylinder = command[2];
 
-                    presentCylinder[unit] = cylinder;
+                    status[0] = unit;
 
-                    // set seek end
-                    status[0] = 1 << 5 | unit;
+                    if(!readCb || unit != 0)
+                        status[0] |= 1 << 6 | 1 << 4; // abnormal termination/equipment check
+                    else
+                    {
+                        presentCylinder[unit] = cylinder;
+
+                        // set seek end
+                        status[0] |= 1 << 5;
+                    }
 
                     if(digitalOutput & (1 << 3))
                         sys.flagPICInterrupt(6);
