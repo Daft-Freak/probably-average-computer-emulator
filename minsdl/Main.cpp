@@ -12,8 +12,17 @@
 
 class FileFloppyIO final : public FloppyDiskIO
 {
+public:
     bool isPresent(int unit) override;
     bool read(int unit, uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector) override;
+
+    void openDisk(int unit, std::string path);
+
+private:
+    std::ifstream file;
+
+    bool doubleSided;
+    int sectorsPerTrack;
 };
 
 static bool quit = false;
@@ -31,9 +40,6 @@ static int curScreenW = 0;
 
 static uint8_t biosROM[0x10000];
 
-static std::string floppyPath;
-static bool floppyDoubleSided;
-static int floppySectorsPerTrack;
 static FileFloppyIO floppyIO;
 
 static XTScancode scancodeMap[SDL_NUM_SCANCODES]
@@ -380,7 +386,7 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
 
 bool FileFloppyIO::isPresent(int unit)
 {
-    return unit == 0;
+    return unit == 0 && file;
 }
 
 bool FileFloppyIO::read(int unit, uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector)
@@ -388,10 +394,44 @@ bool FileFloppyIO::read(int unit, uint8_t *buf, uint8_t cylinder, uint8_t head, 
     if(unit != 0)
         return false;
 
-    int heads = floppyDoubleSided ? 2 : 1;
-    auto lba = ((cylinder * heads + head) * floppySectorsPerTrack) + sector - 1;
+    int heads = doubleSided ? 2 : 1;
+    auto lba = ((cylinder * heads + head) * sectorsPerTrack) + sector - 1;
 
-    return std::ifstream(floppyPath).seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512).gcount() == 512;
+    return file.seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512).gcount() == 512;
+}
+
+void FileFloppyIO::openDisk(int unit, std::string path)
+{
+    if(unit)
+        return;
+
+    file.open(path);
+    if(file)
+    {
+        file.seekg(0, std::ios::end);
+        auto fdSize = file.tellg();
+
+        // try to work out geometry
+        switch(fdSize / 1024)
+        {
+            case 160:
+                doubleSided = false;
+                sectorsPerTrack = 8;
+                break;
+            case 180:
+                doubleSided = false;
+                sectorsPerTrack = 9;
+                break;
+            default:
+                std::cerr << "unhandled floppy image size " << fdSize << "(" << fdSize / 1024 << "k)\n";
+                // set... something
+                doubleSided = false;
+                sectorsPerTrack = 8;
+                break;
+        }
+
+        std::cout << "using " << (doubleSided ? 2 : 1) << " head(s) " << sectorsPerTrack << " sectors/track for floppy image\n";
+    }
 }
 
 int main(int argc, char *argv[])
@@ -403,6 +443,8 @@ int main(int argc, char *argv[])
 
     uint32_t timeToRun = 0;
     bool timeLimit = false;
+
+    std::string floppyPath;
 
     int i = 1;
 
@@ -461,40 +503,9 @@ int main(int argc, char *argv[])
 
     // try to open floppy disk image
     if(!floppyPath.empty())
-    {
-        floppyPath = basePath + floppyPath;
-        std::ifstream fdFile(floppyPath, std::ios::binary);
-
-        if(fdFile)
-        {
-            fdFile.seekg(0, std::ios::end);
-            auto fdSize = fdFile.tellg();
-
-            floppyDoubleSided = fdSize != 163840;
-
-            switch(fdSize / 1024)
-            {
-                case 160:
-                    floppyDoubleSided = false;
-                    floppySectorsPerTrack = 8;
-                    break;
-                case 180:
-                    floppyDoubleSided = false;
-                    floppySectorsPerTrack = 9;
-                    break;
-                default:
-                    std::cerr << "unhandled floppy image size " << fdSize << "(" << fdSize / 1024 << "k)\n";
-                    // set... something
-                    floppyDoubleSided = false;
-                    floppySectorsPerTrack = 8;
-                    break;
-            }
-
-            std::cout << "using " << (floppyDoubleSided ? 2 : 1) << " head(s) " << floppySectorsPerTrack << " sectors/track for floppy image\n";
-
-            fdc.setIOInterface(&floppyIO);
-        }
-    }
+        floppyIO.openDisk(0, basePath + floppyPath);
+    
+    fdc.setIOInterface(&floppyIO);
 
     cga.setScanlineCallback(scanlineCallback);
 
