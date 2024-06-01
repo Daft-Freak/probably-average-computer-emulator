@@ -4,10 +4,13 @@
 #include "pico/stdlib.h"
 #include "pico/time.h"
 
+#include "tusb.h"
+
 #include "Display.h"
 
 #include "CGACard.h"
 #include "FloppyController.h"
+#include "Scancode.h"
 #include "System.h"
 
 extern char _binary_bios_xt_rom_start[];
@@ -21,6 +24,192 @@ static FloppyController fdc(sys);
 static uint8_t ram[192 * 1024];
 
 static uint8_t scanLineOutBuf[640];
+
+static uint8_t lastKeys[6]{0, 0, 0, 0, 0};
+static uint8_t lastKeyMod = 0;
+
+static const XTScancode scancodeMap[]{
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+
+    XTScancode::A,
+    XTScancode::B,
+    XTScancode::C,
+    XTScancode::D,
+    XTScancode::E,
+    XTScancode::F,
+    XTScancode::G,
+    XTScancode::H,
+    XTScancode::I,
+    XTScancode::J,
+    XTScancode::K,
+    XTScancode::L,
+    XTScancode::M,
+    XTScancode::N,
+    XTScancode::O,
+    XTScancode::P,
+    XTScancode::Q,
+    XTScancode::R,
+    XTScancode::S,
+    XTScancode::T,
+    XTScancode::U,
+    XTScancode::V,
+    XTScancode::W,
+    XTScancode::X,
+    XTScancode::Y,
+    XTScancode::Z,
+    
+    XTScancode::_1,
+    XTScancode::_2,
+    XTScancode::_3,
+    XTScancode::_4,
+    XTScancode::_5,
+    XTScancode::_6,
+    XTScancode::_7,
+    XTScancode::_8,
+    XTScancode::_9,
+    XTScancode::_0,
+
+    XTScancode::Return,
+    XTScancode::Escape,
+    XTScancode::Backspace,
+    XTScancode::Tab,
+    XTScancode::Space,
+
+    XTScancode::Minus,
+    XTScancode::Equals,
+    XTScancode::LeftBracket,
+    XTScancode::RightBracket,
+    XTScancode::Backslash,
+    XTScancode::Backslash, // same key
+    XTScancode::Semicolon,
+    XTScancode::Apostrophe,
+    XTScancode::Grave,
+    XTScancode::Comma,
+    XTScancode::Period,
+    XTScancode::Slash,
+
+    XTScancode::CapsLock,
+
+    XTScancode::F1,
+    XTScancode::F2,
+    XTScancode::F3,
+    XTScancode::F4,
+    XTScancode::F5,
+    XTScancode::F6,
+    XTScancode::F7,
+    XTScancode::F8,
+    XTScancode::F9,
+    XTScancode::F10,
+    XTScancode::F11,
+    XTScancode::F12,
+
+    XTScancode::Invalid, // PrintScreen
+    XTScancode::ScrollLock,
+    XTScancode::Invalid, // Pause
+    XTScancode::Invalid, // Insert
+    
+    XTScancode::Invalid, // Home
+    XTScancode::Invalid, // PageUp
+    XTScancode::Invalid, // Delete
+    XTScancode::Invalid, // End
+    XTScancode::Invalid, // PageDown
+    XTScancode::Invalid, // Right
+    XTScancode::Invalid, // Left
+    XTScancode::Invalid, // Down
+    XTScancode::Invalid, // Up
+
+    XTScancode::NumLock,
+
+    XTScancode::Invalid, // KPDivide
+    XTScancode::KPMultiply,
+    XTScancode::KPMinus,
+    XTScancode::KPPlus,
+    XTScancode::Invalid, // KPEnter
+    XTScancode::KP1,
+    XTScancode::KP2,
+    XTScancode::KP3,
+    XTScancode::KP4,
+    XTScancode::KP5,
+    XTScancode::KP6,
+    XTScancode::KP7,
+    XTScancode::KP8,
+    XTScancode::KP9,
+    XTScancode::KP0,
+    XTScancode::KPPeriod,
+
+    XTScancode::NonUSBackslash,
+
+    XTScancode::Invalid, // Application
+    XTScancode::Invalid, // Power
+
+    XTScancode::KPEquals,
+
+    // F13-F24
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+
+    // no mapping
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+    XTScancode::Invalid,
+
+    XTScancode::KPComma,
+    XTScancode::Invalid,
+
+    XTScancode::International1,
+    XTScancode::International2,
+    XTScancode::International3,
+    XTScancode::International4,
+    XTScancode::International5,
+    XTScancode::International6,
+    XTScancode::Invalid, // ...7
+    XTScancode::Invalid, // ...8
+    XTScancode::Invalid, // ...9
+    XTScancode::Lang1,
+    XTScancode::Lang2,
+    XTScancode::Lang3,
+    XTScancode::Lang4,
+    XTScancode::Lang5,
+};
+
+static const XTScancode modMap[]
+{
+    XTScancode::LeftCtrl,
+    XTScancode::LeftShift,
+    XTScancode::LeftAlt,
+    XTScancode::Invalid, // LeftGUI
+    XTScancode::Invalid, // RightCtrl
+    XTScancode::RightShift,
+    XTScancode::Invalid, // RightAlt
+    XTScancode::Invalid, // RightGUI
+};
 
 static void scanlineCallback(const uint8_t *data, int line, int w)
 {
@@ -58,11 +247,87 @@ static void alarmCallback(uint alarmNum) {
     hardware_alarm_set_target(alarmNum, make_timeout_time_ms(5));
 }
 
+void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len)
+{
+    // request report if it's a keyboard
+    auto protocol = tuh_hid_interface_protocol(dev_addr, instance);
+
+    if(protocol == HID_ITF_PROTOCOL_KEYBOARD)
+        tuh_hid_receive_report(dev_addr, instance);
+}
+
+void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len)
+{
+    auto protocol = tuh_hid_interface_protocol(dev_addr, instance);
+
+    if(protocol == HID_ITF_PROTOCOL_KEYBOARD)
+    {
+        auto keyboardReport = (hid_keyboard_report_t const*) report;
+
+        // check for new keys down
+        for(int i = 0; i < 6 && keyboardReport->keycode[i]; i++)
+        {
+            auto key = keyboardReport->keycode[i];
+            bool found = false;
+            for(int j = 0; j < 6 && lastKeys[j] && !found; j++)
+                found = lastKeys[j] == key;
+
+            if(found)
+                continue;
+
+            if(key < std::size(scancodeMap) && scancodeMap[key] != XTScancode::Invalid)
+                sys.sendKey(static_cast<uint8_t>(scancodeMap[key]));
+            else
+                printf("key down %i %i\n", i, key);
+        }
+
+        // do the reverse and check for released keys
+        for(int i = 0; i < 6 && lastKeys[i]; i++)
+        {
+            auto key = lastKeys[i];
+            bool found = false;
+            for(int j = 0; j < 6 && keyboardReport->keycode[j] && !found; j++)
+                found = keyboardReport->keycode[j] == key;
+
+            if(found)
+                continue;
+
+            if(key < std::size(scancodeMap) && scancodeMap[key] != XTScancode::Invalid)
+                sys.sendKey(0x80 | static_cast<uint8_t>(scancodeMap[key])); // break code
+            else
+                printf("key up %i %i\n", i, key);
+        }
+
+        // ...and mods
+        auto changedMods = lastKeyMod ^ keyboardReport->modifier;
+        auto pressedMods = changedMods & keyboardReport->modifier;
+        auto releasedMods = changedMods ^ pressedMods;
+        
+        for(int i = 0; i < 8; i++)
+        {
+            if(modMap[i] == XTScancode::Invalid)
+                continue;
+
+            if(pressedMods & (1 << i))
+                sys.sendKey(static_cast<uint8_t>(modMap[i]));
+            else if(releasedMods & (1 << i))
+                sys.sendKey(0x80 | static_cast<uint8_t>(modMap[i])); // break code
+        }
+
+        memcpy(lastKeys, keyboardReport->keycode, 6);
+        lastKeyMod = keyboardReport->modifier;
+
+        tuh_hid_receive_report(dev_addr, instance);
+    }
+}
+
 int main()
 {
     vreg_set_voltage(VREG_VOLTAGE_1_20);
     sleep_ms(10);
     set_sys_clock_khz(250000, false);
+
+    tusb_init();
 
     stdio_init_all();
     
@@ -90,6 +355,8 @@ int main()
   
     while(true)
     {
+        tuh_task();
+
         auto now = get_absolute_time();
         auto elapsed = absolute_time_diff_us(time, now) / 1000;
 

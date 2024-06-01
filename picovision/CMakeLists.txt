@@ -12,6 +12,7 @@ add_custom_command(
 
 add_executable(PACEPicoVision bios.o Display.cpp Main.cpp)
 
-target_link_libraries(PACEPicoVision PACECore hardware_i2c pico_stdlib aps6404 swd_load)
+target_include_directories(PACEPicoVision PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+target_link_libraries(PACEPicoVision PACECore hardware_i2c pico_stdlib tinyusb_host aps6404 swd_load)
 
 pico_add_extra_outputs(PACEPicoVision)
