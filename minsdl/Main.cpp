@@ -18,11 +18,13 @@ public:
 
     void openDisk(int unit, std::string path);
 
-private:
-    std::ifstream file;
+    static const int maxDrives = 4;
 
-    bool doubleSided;
-    int sectorsPerTrack;
+private:
+    std::ifstream file[maxDrives];
+
+    bool doubleSided[maxDrives];
+    int sectorsPerTrack[maxDrives];
 };
 
 static bool quit = false;
@@ -386,51 +388,51 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
 
 bool FileFloppyIO::isPresent(int unit)
 {
-    return unit == 0 && file;
+    return unit < maxDrives && file[unit];
 }
 
 bool FileFloppyIO::read(int unit, uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector)
 {
-    if(unit != 0)
+    if(unit >= maxDrives)
         return false;
 
-    int heads = doubleSided ? 2 : 1;
-    auto lba = ((cylinder * heads + head) * sectorsPerTrack) + sector - 1;
+    int heads = doubleSided[unit] ? 2 : 1;
+    auto lba = ((cylinder * heads + head) * sectorsPerTrack[unit]) + sector - 1;
 
-    return file.seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512).gcount() == 512;
+    return file[unit].seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512).gcount() == 512;
 }
 
 void FileFloppyIO::openDisk(int unit, std::string path)
 {
-    if(unit)
+    if(unit >= maxDrives)
         return;
 
-    file.open(path);
-    if(file)
+    file[unit].open(path);
+    if(file[unit])
     {
-        file.seekg(0, std::ios::end);
-        auto fdSize = file.tellg();
+        file[unit].seekg(0, std::ios::end);
+        auto fdSize = file[unit].tellg();
 
         // try to work out geometry
         switch(fdSize / 1024)
         {
             case 160:
-                doubleSided = false;
-                sectorsPerTrack = 8;
+                doubleSided[unit] = false;
+                sectorsPerTrack[unit] = 8;
                 break;
             case 180:
-                doubleSided = false;
-                sectorsPerTrack = 9;
+                doubleSided[unit] = false;
+                sectorsPerTrack[unit] = 9;
                 break;
             default:
                 std::cerr << "unhandled floppy image size " << fdSize << "(" << fdSize / 1024 << "k)\n";
                 // set... something
-                doubleSided = false;
-                sectorsPerTrack = 8;
+                doubleSided[unit] = false;
+                sectorsPerTrack[unit] = 8;
                 break;
         }
 
-        std::cout << "using " << (doubleSided ? 2 : 1) << " head(s) " << sectorsPerTrack << " sectors/track for floppy image\n";
+        std::cout << "using " << (doubleSided[unit] ? 2 : 1) << " head(s) " << sectorsPerTrack[unit] << " sectors/track for floppy image\n";
     }
 }
 
@@ -444,7 +446,7 @@ int main(int argc, char *argv[])
     uint32_t timeToRun = 0;
     bool timeLimit = false;
 
-    std::string floppyPath;
+    std::string floppyPaths[FileFloppyIO::maxDrives];
 
     int i = 1;
 
@@ -461,8 +463,12 @@ int main(int argc, char *argv[])
             timeLimit = true;
             timeToRun = std::stoi(argv[++i]) * 1000;
         }
-        else if(arg == "--floppy" && i + 1 < argc)
-            floppyPath = argv[++i];
+        else if(arg.compare(0, 8, "--floppy") == 0 && arg.length() == 9 && i + 1 < argc)
+        {
+            int n = arg[8] - '0';
+            if(n >= 0 && n < FileFloppyIO::maxDrives)
+                floppyPaths[n] = argv[++i];
+        }
         else
             break;
     }
@@ -501,9 +507,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // try to open floppy disk image
-    if(!floppyPath.empty())
-        floppyIO.openDisk(0, basePath + floppyPath);
+    // try to open floppy disk image(s)
+    for(int i = 0; i < FileFloppyIO::maxDrives; i++)
+    {
+        if(!floppyPaths[i].empty())
+            floppyIO.openDisk(i, basePath + floppyPaths[i]);
+    }
     
     fdc.setIOInterface(&floppyIO);
 
