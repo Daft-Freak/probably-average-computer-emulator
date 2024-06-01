@@ -24,6 +24,7 @@ static FloppyController fdc(sys);
 static uint8_t ram[192 * 1024];
 
 static uint8_t scanLineOutBuf[640];
+static int firstFrames = 2;
 
 static uint8_t lastKeys[6]{0, 0, 0, 0, 0};
 static uint8_t lastKeyMod = 0;
@@ -230,6 +231,14 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
         while(!display_render_needed());
 
         set_display_size(w, 240); /*really 200*/
+
+        if(firstFrames)
+        {
+            // fill the bottom part of the screen of the first two frames
+            for(int y = 200; y < 240; y++)
+                write_display(0, y, 640, scanLineOutBuf);
+            firstFrames--;
+        }
     }
 
     write_display(0, line, w, scanLineOutBuf);
