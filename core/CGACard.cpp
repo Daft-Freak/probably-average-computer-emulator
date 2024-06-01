@@ -149,7 +149,7 @@ void CGACard::draw(int start, int end)
             bool bright = (colSelect & (1 << 4));
             auto bg = colSelect & 0xF;
 
-            auto addr = curAddr + (scanline & 1) ? 0x2000 : 0;
+            auto addr = curAddr + ((scanline & 1) ? 0x2000 : 0);
 
             for(int cycle = start; cycle < end; cycle++)
             {
