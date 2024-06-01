@@ -446,6 +446,7 @@ int main(int argc, char *argv[])
     uint32_t timeToRun = 0;
     bool timeLimit = false;
 
+    std::string biosPath = "bios-xt.rom";
     std::string floppyPaths[FileFloppyIO::maxDrives];
 
     int i = 1;
@@ -463,6 +464,8 @@ int main(int argc, char *argv[])
             timeLimit = true;
             timeToRun = std::stoi(argv[++i]) * 1000;
         }
+        else if(arg == "--bios" && i + 1 < argc)
+            biosPath = argv[++i];
         else if(arg.compare(0, 8, "--floppy") == 0 && arg.length() == 9 && i + 1 < argc)
         {
             int n = arg[8] - '0';
@@ -487,7 +490,8 @@ int main(int argc, char *argv[])
     auto &cpu = sys.getCPU();
     sys.addMemory(0, sizeof(ram), ram);
 
-    std::ifstream biosFile(basePath + "bios-xt.rom", std::ios::binary);
+    std::ifstream biosFile(basePath + biosPath, std::ios::binary);
+
     if(biosFile)
     {
         biosFile.read(reinterpret_cast<char *>(biosROM), sizeof(biosROM));
@@ -503,7 +507,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        std::cerr << "bios-xt.rom not found in " << basePath << "\n";
+        std::cerr << biosPath << " not found in " << basePath << "\n";
         return 1;
     }
 
