@@ -232,8 +232,11 @@ void CGACard::draw(int start, int end)
             // check if char in cursor
             bool cursor = in == cursorPtr;
 
-            for(; cycle & 7; cycle++)
+            for(; cycle & 7 && cycle < end; cycle++)
                 doSingle(cursor, attr, fontData, cycle & 7);
+
+            if(cycle == end)
+                return;
         }
 
         // full chars
@@ -281,7 +284,7 @@ void CGACard::draw(int start, int end)
             bool cursor = in == cursorPtr;
 
             for(int i = 0; i < (end & 7); i++)
-                doSingle(cursor, attr, fontData, cycle & 7);
+                doSingle(cursor, attr, fontData, i);
         }
     }
 }
