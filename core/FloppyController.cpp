@@ -8,9 +8,9 @@ FloppyController::FloppyController(System &sys) : sys(sys)
     sys.addIODevice(0x3F0, 0x3F7, this);
 }
 
-void FloppyController::setReadCallback(ReadCallback cb)
+void FloppyController::setIOInterface(FloppyDiskIO *io)
 {
-    readCb = cb;
+    this->io = io;
 }
 
 uint8_t FloppyController::read(uint16_t addr)
@@ -146,6 +146,7 @@ void FloppyController::write(uint16_t addr, uint8_t data)
 
                     // transfers data through DMA...
                     // super-hack
+                    bool failed = false;
                     auto &dma = sys.dma;
                     auto dmaSize = dma.currentWordCount[2] + 1;
                     auto destAddr = dma.currentAddress[2];
@@ -154,11 +155,11 @@ void FloppyController::write(uint16_t addr, uint8_t data)
                     {
                         uint8_t buf[512];
 
-                        if(readCb)
-                            readCb(buf, cylinder, head, record, endOfTrack);
-                        else
+                        if(!io || !io->read(unit, buf, cylinder, head, record))
+                        {
+                            failed = true;
                             break;
-                        // should probably fail the read otherwise...
+                        }
 
                         for(int i = 0; i < sectorSize; i++)
                             sys.writeMem(destHigh + destAddr + i, buf[i]);
@@ -188,7 +189,7 @@ void FloppyController::write(uint16_t addr, uint8_t data)
 
                     status[0] = unit | head << 2;
 
-                    if(!readCb)
+                    if(failed)
                         status[0] |= 1 << 6;
 
                     resultLen = 7;
@@ -209,7 +210,7 @@ void FloppyController::write(uint16_t addr, uint8_t data)
 
                     status[0] = unit;
 
-                    if(!readCb || unit != 0)
+                    if(!io || !io->isPresent(unit))
                         status[0] |= 1 << 6 | 1 << 4; // abnormal termination/equipment check
                     else
                     {
@@ -270,7 +271,7 @@ void FloppyController::write(uint16_t addr, uint8_t data)
 
                     status[0] = unit;
 
-                    if(!readCb || unit != 0)
+                    if(!io || !io->isPresent(unit))
                         status[0] |= 1 << 6 | 1 << 4; // abnormal termination/equipment check
                     else
                     {

@@ -10,6 +10,12 @@
 #include "System.h"
 #include "Scancode.h"
 
+class FileFloppyIO final : public FloppyDiskIO
+{
+    bool isPresent(int unit) override;
+    bool read(int unit, uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector) override;
+};
+
 static bool quit = false;
 static bool turbo = false;
 
@@ -28,6 +34,7 @@ static uint8_t biosROM[0x10000];
 static std::string floppyPath;
 static bool floppyDoubleSided;
 static int floppySectorsPerTrack;
+static FileFloppyIO floppyIO;
 
 static XTScancode scancodeMap[SDL_NUM_SCANCODES]
 {
@@ -371,12 +378,20 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     curScreenW = w;
 }
 
-static void floppyReadCallback(uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector, uint8_t endOfTrack)
+bool FileFloppyIO::isPresent(int unit)
 {
+    return unit == 0;
+}
+
+bool FileFloppyIO::read(int unit, uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector)
+{
+    if(unit != 0)
+        return false;
+
     int heads = floppyDoubleSided ? 2 : 1;
     auto lba = ((cylinder * heads + head) * floppySectorsPerTrack) + sector - 1;
 
-    std::ifstream(floppyPath).seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512);
+    return std::ifstream(floppyPath).seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512).gcount() == 512;
 }
 
 int main(int argc, char *argv[])
@@ -477,7 +492,7 @@ int main(int argc, char *argv[])
 
             std::cout << "using " << (floppyDoubleSided ? 2 : 1) << " head(s) " << floppySectorsPerTrack << " sectors/track for floppy image\n";
 
-            fdc.setReadCallback(floppyReadCallback);
+            fdc.setIOInterface(&floppyIO);
         }
     }
 
