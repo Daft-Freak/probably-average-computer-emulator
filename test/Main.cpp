@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
                     continue;
 
                 // unimpl
-                if(k == "F6" && (subOpcode.key() == "5" || subOpcode.key() == "7"))
+                if(k == "F6" && subOpcode.key() == "7")
                     continue;
                 //
 

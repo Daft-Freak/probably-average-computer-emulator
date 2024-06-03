@@ -2616,7 +2616,23 @@ void CPU::executeInstruction()
                     cyclesExecuted(isReg ? 70 : 76 + cycles); // - 77/83
                     break;
                 }
-                // IMUL
+                case 5: // IMUL
+                {
+                    int32_t a = static_cast<int8_t>(reg(Reg8::AL));
+                    int16_t res = a * static_cast<int8_t>(v);
+
+                    reg(Reg16::AX) = res;
+
+                    // check if upper half matches lower half's sign
+                    if(res >> 8 != (res & 0x80 ? -1 : 0))
+                        flags |= Flag_C | Flag_O;
+                    else
+                        flags &= ~(Flag_C | Flag_O);
+
+                    reg(Reg16::IP)++;
+                    cyclesExecuted(isReg ? 80 : 86 + cycles); // - 98/104
+                    break;
+                }
                 case 6: // DIV
                 {
                     auto num = reg(Reg16::AX);
