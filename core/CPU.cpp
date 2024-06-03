@@ -2091,7 +2091,21 @@ void CPU::executeInstruction()
             cyclesExecuted(4);
             break;
         }
+    
+        case 0xC2: // RET near, add to SP
+        {
+            // pop from stack
+            auto newIP = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
+            reg(Reg16::SP) += 2;
 
+            // add imm to SP
+            auto imm = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
+            reg(Reg16::SP) += imm;
+
+            reg(Reg16::IP) = newIP;
+            cyclesExecuted(16 + 4);
+            break;
+        }
         case 0xC3: // RET near
         {
             // pop from stack
