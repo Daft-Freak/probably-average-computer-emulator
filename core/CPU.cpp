@@ -2392,8 +2392,8 @@ void CPU::executeInstruction()
         {
             auto modRM = sys.readMem(addr + 1);
 
-    
             int cycles = ((modRM >> 6) == 3 ? 2 : 8);
+            readRM8(modRM, cycles); // we need to at least decode it
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
