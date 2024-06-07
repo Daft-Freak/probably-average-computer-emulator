@@ -6,6 +6,7 @@
 #include <SDL.h>
 
 #include "CGACard.h"
+#include "FixedDiskAdapter.h"
 #include "FloppyController.h"
 #include "System.h"
 #include "Scancode.h"
@@ -27,12 +28,31 @@ private:
     int sectorsPerTrack[maxDrives];
 };
 
+class FileFixedIO final : public FixedDiskIO
+{
+public:
+    bool isPresent(int unit) override;
+    bool read(int unit, uint8_t *buf, uint32_t lba) override;
+    bool write(int unit, const uint8_t *buf, uint32_t lba) override;
+
+    void openDisk(int unit, std::string path);
+
+    static const int maxDrives = 2;
+
+private:
+    std::fstream file[maxDrives];
+
+    bool doubleSided[maxDrives];
+    int sectorsPerTrack[maxDrives];
+};
+
 static bool quit = false;
 static bool turbo = false;
 
 static System sys;
 
 static CGACard cga(sys);
+static FixedDiskAdapter fixDisk(sys);
 static FloppyController fdc(sys);
 
 static uint8_t ram[640 * 1024];
@@ -41,8 +61,10 @@ static uint8_t screenData[640 * 200 * 4];
 static int curScreenW = 0;
 
 static uint8_t biosROM[0x10000];
+static uint8_t fixedDiskBIOSROM[16 * 1024];
 
 static FileFloppyIO floppyIO;
+static FileFixedIO fixedIO;
 
 static XTScancode scancodeMap[SDL_NUM_SCANCODES]
 {
@@ -441,6 +463,48 @@ void FileFloppyIO::openDisk(int unit, std::string path)
     }
 }
 
+bool FileFixedIO::isPresent(int unit)
+{
+    return unit < maxDrives && file[unit];
+}
+
+bool FileFixedIO::read(int unit, uint8_t *buf, uint32_t lba)
+{
+    if(unit >= maxDrives)
+        return false;
+
+    return file[unit].seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512).gcount() == 512;
+}
+
+bool FileFixedIO::write(int unit, const uint8_t *buf, uint32_t lba)
+{
+    if(unit >= maxDrives)
+        return false;
+
+    return file[unit].seekp(lba * 512).write(reinterpret_cast<const char *>(buf), 512).good();
+}
+
+void FileFixedIO::openDisk(int unit, std::string path)
+{
+    if(unit >= maxDrives)
+        return;
+
+    if(!std::filesystem::exists(path))
+    {
+        // new disk image
+        file[unit].open(path, std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
+
+        // fill boot sector
+        for(int i = 0; i < 512; i++)
+            file[unit].put(0);
+    }
+    else
+        file[unit].open(path, std::ios::in | std::ios::out | std::ios::binary);
+
+    if(file[unit])
+        std::cout << "Loaded fixed-disk " << unit << ": " << path << "\n";
+}
+
 int main(int argc, char *argv[])
 {
     int screenWidth = 640;
@@ -453,6 +517,7 @@ int main(int argc, char *argv[])
 
     std::string biosPath = "bios-xt.rom";
     std::string floppyPaths[FileFloppyIO::maxDrives];
+    std::string fixedPaths[FileFixedIO::maxDrives];
 
     int i = 1;
 
@@ -476,6 +541,12 @@ int main(int argc, char *argv[])
             int n = arg[8] - '0';
             if(n >= 0 && n < FileFloppyIO::maxDrives)
                 floppyPaths[n] = argv[++i];
+        }
+        else if(arg.compare(0, 7, "--fixed") == 0 && arg.length() == 8 && i + 1 < argc)
+        {
+            int n = arg[7] - '0';
+            if(n >= 0 && n < FileFixedIO::maxDrives)
+                fixedPaths[n] = argv[++i];
         }
         else
             break;
@@ -509,11 +580,21 @@ int main(int argc, char *argv[])
             biosBase += sizeof(biosROM) - readLen;
 
         sys.addMemory(biosBase, 64 * 1024, biosROM);
+        biosFile.close();
     }
     else
     {
         std::cerr << biosPath << " not found in " << basePath << "\n";
         return 1;
+    }
+
+    // attempt to load BIOS rom for fixed-disk adapter
+    biosFile.open(basePath + "fixed-disk.rom");
+    if(biosFile)
+    {
+        std::cout << "loading fixed-disk adapter ROM at C8000\n";
+        biosFile.read(reinterpret_cast<char *>(fixedDiskBIOSROM), sizeof(fixedDiskBIOSROM));
+        sys.addMemory(0xC8000, sizeof(fixedDiskBIOSROM), fixedDiskBIOSROM);
     }
 
     // try to open floppy disk image(s)
@@ -522,8 +603,16 @@ int main(int argc, char *argv[])
         if(!floppyPaths[i].empty())
             floppyIO.openDisk(i, basePath + floppyPaths[i]);
     }
+
+    // ... and fixed disks
+    for(int i = 0; i < FileFixedIO::maxDrives; i++)
+    {
+        if(!fixedPaths[i].empty())
+            fixedIO.openDisk(i, basePath + fixedPaths[i]);
+    }
     
     fdc.setIOInterface(&floppyIO);
+    fixDisk.setIOInterface(&fixedIO);
 
     cga.setScanlineCallback(scanlineCallback);
 
