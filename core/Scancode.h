@@ -27,7 +27,7 @@ enum class XTScancode
     T = 0x14,
     U = 0x16,
     V = 0x2F,
-    W = 0x22,
+    W = 0x11,
     X = 0x2D,
     Y = 0x15,
     Z = 0x2C,
