@@ -67,6 +67,8 @@ static uint8_t fixedDiskBIOSROM[16 * 1024];
 static FileFloppyIO floppyIO;
 static FileFixedIO fixedIO;
 
+static std::list<std::string> nextFloppyImage;
+
 static XTScancode scancodeMap[SDL_NUM_SCANCODES]
 {
     XTScancode::Invalid,
@@ -337,6 +339,8 @@ static void audioCallback(void *userdata, Uint8 *stream, int len)
 
 static void pollEvents()
 {
+    const int escMod = KMOD_RCTRL | KMOD_RSHIFT;
+
     SDL_Event event;
     while(SDL_PollEvent(&event))
     {
@@ -344,18 +348,44 @@ static void pollEvents()
         {
             case SDL_KEYDOWN:
             {
-                auto code = scancodeMap[event.key.keysym.scancode];
+                if((event.key.keysym.mod & escMod) != escMod)
+                {
+                    auto code = scancodeMap[event.key.keysym.scancode];
 
-                if(code != XTScancode::Invalid)
-                    sys.sendKey(static_cast<uint8_t>(code));
+                    if(code != XTScancode::Invalid)
+                        sys.sendKey(static_cast<uint8_t>(code));
+                }
                 break;
             }
             case SDL_KEYUP:
             {
-                auto code = scancodeMap[event.key.keysym.scancode];
+                if((event.key.keysym.mod & escMod) == escMod)
+                {
+                    // emulator shortcuts
+                    switch(event.key.keysym.sym)
+                    {
+                        case SDLK_f:
+                        {
+                            // load next floppy
+                            if(!nextFloppyImage.empty())
+                            {
+                                auto newPath = nextFloppyImage.front();
+                                nextFloppyImage.splice(nextFloppyImage.end(), nextFloppyImage, nextFloppyImage.begin());
 
-                if(code != XTScancode::Invalid)
-                    sys.sendKey(0x80 | static_cast<uint8_t>(code)); // break code
+                                std::cout << "Swapping floppy 0 to " << newPath << "\n";
+                                floppyIO.openDisk(0, newPath);
+                            }
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    auto code = scancodeMap[event.key.keysym.scancode];
+
+                    if(code != XTScancode::Invalid)
+                        sys.sendKey(0x80 | static_cast<uint8_t>(code)); // break code
+                }
                 break;
             }
             case SDL_QUIT:
@@ -431,6 +461,8 @@ void FileFloppyIO::openDisk(int unit, std::string path)
 {
     if(unit >= maxDrives)
         return;
+
+    file[unit].close();
 
     file[unit].open(path);
     if(file[unit])
@@ -549,6 +581,11 @@ int main(int argc, char *argv[])
             if(n >= 0 && n < FileFloppyIO::maxDrives)
                 floppyPaths[n] = argv[++i];
         }
+        else if(arg == "--floppy-next" && i + 1 < argc)
+        {
+            // floppy image to load later
+            nextFloppyImage.push_back(argv[++i]);
+        }
         else if(arg.compare(0, 7, "--fixed") == 0 && arg.length() == 8 && i + 1 < argc)
         {
             int n = arg[7] - '0';
@@ -608,7 +645,13 @@ int main(int argc, char *argv[])
     for(int i = 0; i < FileFloppyIO::maxDrives; i++)
     {
         if(!floppyPaths[i].empty())
+        {
             floppyIO.openDisk(i, basePath + floppyPaths[i]);
+        
+            // add current image to end of floppy list so we can cycle
+            if(i == 0 && !nextFloppyImage.empty())
+                nextFloppyImage.push_back(floppyPaths[i]);
+        }
     }
 
     // ... and fixed disks
@@ -617,6 +660,9 @@ int main(int argc, char *argv[])
         if(!fixedPaths[i].empty())
             fixedIO.openDisk(i, basePath + fixedPaths[i]);
     }
+
+    for(auto &path : nextFloppyImage)
+        path = basePath + path;
     
     fdc.setIOInterface(&floppyIO);
     fixDisk.setIOInterface(&fixedIO);
