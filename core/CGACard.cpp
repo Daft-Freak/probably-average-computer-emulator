@@ -54,7 +54,12 @@ void CGACard::update()
         {
             // display line
             if(scanline < vDisplayed && scanCb)
-                scanCb(scanlineBuf, scanline, hDisplayed);
+            {
+                // hi-res gfx needs 2x width?
+                int w = (mode & (1 << 4)) ? hDisplayed * 2 : hDisplayed;
+
+                scanCb(scanlineBuf, scanline, w);
+            }
 
             scanlineCycle = 0;
             scanline++;
@@ -142,6 +147,27 @@ void CGACard::draw(int start, int end)
         if(mode & (1 << 4))
         {
             // hi-res
+            auto addr = curAddr + ((scanline & 1) ? 0x2000 : 0);
+
+            auto fg = colSelect & 0xF;
+
+            for(int cycle = start; cycle < end; cycle++)
+            {
+                auto charAddr = addr + (cycle / 4);
+
+                auto data = ram[charAddr];
+                auto col = (data << ((cycle & 3) * 2) >> 6) & 3;
+
+                auto col0 = 0, col1 = 0;
+                
+                if(col & 2)
+                    col0 = fg;
+                
+                if(col & 1)
+                    col1 = fg;
+
+                scanlineBuf[cycle] = col0 | col1 << 4;
+            }
         }
         else
         {
