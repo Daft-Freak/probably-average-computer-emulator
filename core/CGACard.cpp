@@ -67,7 +67,7 @@ void CGACard::update()
             {
                 scanline = 0;
                 frame++;
-                curAddr = regs[12] << 8 | regs[13];
+                curAddr = (regs[12] << 8 | regs[13]) * 2;
                 status &= ~(1 << 3); // clear vblank
             }
             else if(scanline >= vBlankStart)
