@@ -422,6 +422,8 @@ bool FileFloppyIO::read(int unit, uint8_t *buf, uint8_t cylinder, uint8_t head, 
     int heads = doubleSided[unit] ? 2 : 1;
     auto lba = ((cylinder * heads + head) * sectorsPerTrack[unit]) + sector - 1;
 
+    file[unit].clear();
+
     return file[unit].seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512).gcount() == 512;
 }
 
@@ -474,6 +476,8 @@ bool FileFixedIO::read(int unit, uint8_t *buf, uint32_t lba)
     if(unit >= maxDrives)
         return false;
 
+    file[unit].clear();
+
     return file[unit].seekg(lba * 512).read(reinterpret_cast<char *>(buf), 512).gcount() == 512;
 }
 
@@ -481,6 +485,8 @@ bool FileFixedIO::write(int unit, const uint8_t *buf, uint32_t lba)
 {
     if(unit >= maxDrives)
         return false;
+
+    file[unit].clear();
 
     return file[unit].seekp(lba * 512).write(reinterpret_cast<const char *>(buf), 512).good();
 }
