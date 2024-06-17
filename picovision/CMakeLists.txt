@@ -15,6 +15,7 @@ add_executable(PACEPicoVision bios.o
     fatfs/ffunicode.c
 
     Display.cpp
+    Filesystem.cpp
     Main.cpp
     Storage.cpp
 )
