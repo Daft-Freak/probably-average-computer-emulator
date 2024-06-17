@@ -5,6 +5,7 @@ target_sources(PACECore INTERFACE
     CPU.cpp
     FixedDiskAdapter.cpp
     FloppyController.cpp
+    SerialMouse.cpp
     System.cpp
 )
 
