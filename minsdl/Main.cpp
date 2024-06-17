@@ -9,8 +9,9 @@
 #include "CGACard.h"
 #include "FixedDiskAdapter.h"
 #include "FloppyController.h"
-#include "System.h"
 #include "Scancode.h"
+#include "SerialMouse.h"
+#include "System.h"
 
 class FileFloppyIO final : public FloppyDiskIO
 {
@@ -55,6 +56,7 @@ static System sys;
 static CGACard cga(sys);
 static FixedDiskAdapter fixDisk(sys);
 static FloppyController fdc(sys);
+static SerialMouse mouse(sys);
 
 static uint8_t ram[640 * 1024];
 
@@ -388,11 +390,26 @@ static void pollEvents()
                 }
                 break;
             }
+
+            case SDL_MOUSEMOTION:
+                mouse.addMotion(event.motion.xrel, event.motion.yrel);
+                break;
+
+            case SDL_MOUSEBUTTONDOWN:
+            case SDL_MOUSEBUTTONUP:
+                if(event.button.button == SDL_BUTTON_LEFT)
+                    mouse.setButton(0, event.button.state == SDL_PRESSED);
+                else if(event.button.button == SDL_BUTTON_RIGHT)
+                    mouse.setButton(1, event.button.state == SDL_PRESSED);
+                break;
+
             case SDL_QUIT:
                 quit = true;
                 break;
         }
     }
+
+    mouse.sync();
 }
 
 static void scanlineCallback(const uint8_t *data, int line, int w)
