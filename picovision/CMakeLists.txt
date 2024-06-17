@@ -10,7 +10,14 @@ add_custom_command(
     DEPENDS ${BIOS_PATH}${BIOS_FILE}
 )
 
-add_executable(PACEPicoVision bios.o Display.cpp Main.cpp Storage.cpp)
+add_executable(PACEPicoVision bios.o
+    fatfs/ff.c
+    fatfs/ffunicode.c
+
+    Display.cpp
+    Main.cpp
+    Storage.cpp
+)
 
 target_include_directories(PACEPicoVision PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 target_link_libraries(PACEPicoVision PACECore hardware_i2c pico_stdlib tinyusb_host aps6404 swd_load)
