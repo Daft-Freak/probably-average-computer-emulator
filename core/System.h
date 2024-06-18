@@ -24,6 +24,8 @@ public:
     void addMemory(uint32_t base, uint32_t size, uint8_t *ptr);
     // TODO: a const version somehow?
 
+    uint32_t *getMemoryDirtyMask();
+
     void addIODevice(uint16_t min, uint16_t max, IODevice *dev);
 
     uint8_t readMem(uint32_t addr) const;
@@ -46,6 +48,9 @@ public:
 
     bool hasSpeakerSample() const;
     int8_t getSpeakerSample();
+
+    static constexpr int getMemoryBlockSize() {return blockSize;}
+    static constexpr int getNumMemoryBlocks() {return maxAddress / blockSize;}
 
 private:
     struct IORange

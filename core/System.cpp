@@ -26,6 +26,11 @@ void System::addMemory(uint32_t base, uint32_t size, uint8_t *ptr)
         memMap[block + i] = ptr - base;
 }
 
+uint32_t *System::getMemoryDirtyMask()
+{
+    return memDirty;
+}
+
 void System::addIODevice(uint16_t min, uint16_t max, IODevice *dev)
 {
     ioDevices.emplace_back(IORange{min, max, dev});
