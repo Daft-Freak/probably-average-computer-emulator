@@ -6,9 +6,12 @@
 
 #include "tusb.h"
 
+#include "fatfs/ff.h"
+
 #include "Display.h"
 
 #include "CGACard.h"
+#include "FixedDiskAdapter.h"
 #include "FloppyController.h"
 #include "Scancode.h"
 #include "System.h"
@@ -16,10 +19,19 @@
 extern char _binary_bios_xt_rom_start[];
 extern char _binary_bios_xt_rom_end[];
 
+extern char _binary_fixed_disk_bios_rom_start[];
+extern char _binary_fixed_disk_bios_rom_end[];
+
+static FATFS fs;
+
 static System sys;
 
 static CGACard cga(sys);
 static FloppyController fdc(sys);
+
+#ifdef FIXED_DISK
+static FixedDiskAdapter fixDisk(sys);
+#endif
 
 static uint8_t ram[192 * 1024];
 
@@ -212,6 +224,66 @@ static const XTScancode modMap[]
     XTScancode::Invalid, // RightGUI
 };
 
+class FileFixedIO final : public FixedDiskIO
+{
+public:
+    bool isPresent(int unit) override;
+    bool read(int unit, uint8_t *buf, uint32_t lba) override;
+    bool write(int unit, const uint8_t *buf, uint32_t lba) override;
+
+    void openDisk(int unit, const char *path);
+
+    static const int maxDrives = 1;
+
+private:
+    FIL file[maxDrives];
+};
+
+bool FileFixedIO::isPresent(int unit)
+{
+    return unit < maxDrives;// && file[unit];
+}
+
+bool FileFixedIO::read(int unit, uint8_t *buf, uint32_t lba)
+{
+    if(unit >= maxDrives)
+        return false;
+
+    f_lseek(&file[unit], lba * 512);
+
+    UINT read = 0;
+    auto res = f_read(&file[unit], buf, 512, &read);
+
+    return res == FR_OK && read == 512;
+}
+
+bool FileFixedIO::write(int unit, const uint8_t *buf, uint32_t lba)
+{
+    if(unit >= maxDrives)
+        return false;
+
+    
+    f_lseek(&file[unit], lba * 512);
+
+    UINT written = 0;
+    auto res = f_write(&file[unit], buf, 512, &written);
+
+    return res == FR_OK && written == 512;
+}
+
+void FileFixedIO::openDisk(int unit, const char *path)
+{
+    if(unit >= maxDrives)
+        return;
+
+    auto res = f_open(&file[unit], path, FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
+
+    if(res == FR_OK)
+        printf("Loaded fixed-disk %i: %s\n", unit, path);
+}
+
+static FileFixedIO fixedIO;
+
 static void scanlineCallback(const uint8_t *data, int line, int w)
 {
     auto ptr = scanLineOutBuf;
@@ -339,7 +411,16 @@ int main()
     tusb_init();
 
     stdio_init_all();
-    
+
+    // init storage/filesystem
+    auto res = f_mount(&fs, "", 1);
+
+    if(res != FR_OK)
+    {
+        printf("Failed to mount filesystem! (%i)\n", res);
+        while(true);
+    }
+
     init_display();
 
     // emulator init
@@ -350,6 +431,14 @@ int main()
     auto biosSize = _binary_bios_xt_rom_end - _binary_bios_xt_rom_start;
     auto biosBase = 0x100000 - biosSize;
     sys.addMemory(biosBase, biosSize, (uint8_t *)bios);
+
+#ifdef FIXED_DISK
+    // size is wring, but mem mapping can't handle smaller
+    sys.addMemory(0xC8000, 0x4000, (uint8_t *)_binary_fixed_disk_bios_rom_start);
+
+    fixedIO.openDisk(0, "hd0.img");
+    fixDisk.setIOInterface(&fixedIO);
+#endif
 
     sys.reset();
 
