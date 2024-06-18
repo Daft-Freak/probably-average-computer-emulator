@@ -10,6 +10,7 @@ System::System() : cpu(*this)
 
 void System::reset()
 {
+    memset(memDirty, 0, sizeof(memDirty));
     cpu.reset();
 }
 
@@ -46,10 +47,14 @@ void System::writeMem(uint32_t addr, uint8_t data)
 {
     addr &= (maxAddress - 1);
 
-    auto ptr = memMap[addr / blockSize];
+    auto block = addr / blockSize;
+
+    auto ptr = memMap[block];
 
     if(ptr)
         ptr[addr] = data;
+
+    memDirty[block / 32] |= (block % 32);
 }
 
 const uint8_t *System::mapAddress(uint32_t addr) const

@@ -64,6 +64,7 @@ private:
     static const int blockSize = 16 * 1024;
 
     uint8_t *memMap[maxAddress / blockSize];
+    uint32_t memDirty[maxAddress / blockSize / 32];
 
     struct DMA
     {
