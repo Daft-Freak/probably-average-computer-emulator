@@ -184,3 +184,20 @@ void update_display() {
 bool display_render_needed() {
     return do_render;
 }
+
+void display_wait_for_frame() {
+    if(!display_enabled){
+        // haven't started, just swap banks
+        ram_bank ^= 1;
+        gpio_put(RAM_SEL, ram_bank);
+        return;
+    }
+
+    // this is a last resort if we need the other RAM bank right now
+    do_render = false;
+    while(!do_render);
+}
+
+pimoroni::APS6404 &display_get_ram() {
+    return ram;
+}
