@@ -1,3 +1,5 @@
+#include <forward_list>
+
 #include "hardware/irq.h"
 #include "hardware/timer.h"
 #include "hardware/vreg.h"
@@ -8,6 +10,8 @@
 
 #include "fatfs/ff.h"
 
+#include "aps6404.hpp"
+
 #include "Display.h"
 
 #include "CGACard.h"
@@ -15,6 +19,12 @@
 #include "FloppyController.h"
 #include "Scancode.h"
 #include "System.h"
+
+struct MemBlockMapping
+{
+    uint8_t cacheBlock;
+    uint8_t memBlock;
+};
 
 extern char _binary_bios_xt_rom_start[];
 extern char _binary_bios_xt_rom_end[];
@@ -33,7 +43,12 @@ static FloppyController fdc(sys);
 static FixedDiskAdapter fixDisk(sys);
 #endif
 
-static uint8_t ram[192 * 1024];
+static const int cacheBlocks = 8;
+static uint8_t ramCache[cacheBlocks * System::getMemoryBlockSize()];
+static std::forward_list<MemBlockMapping> ramCacheMap;
+static std::forward_list<MemBlockMapping>::iterator ramCacheEnd;
+
+static constexpr uint32_t psramBaseAddress = 0x100000;
 
 static uint8_t scanLineOutBuf[640];
 static int firstFrames = 2;
@@ -319,6 +334,62 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
         update_display();
 }
 
+static uint8_t *requestMem(unsigned int block)
+{
+    const auto blockSize = System::getMemoryBlockSize();
+
+    auto &psram = display_get_ram();
+
+    // find non-dirty block
+    auto it = ramCacheMap.begin();
+    auto prevIt = ramCacheMap.before_begin();
+    for(; it != ramCacheMap.end(); prevIt = it++)
+    {
+        // unused block
+        if(it->memBlock == 0xFF)
+            break;
+
+        if(!sys.getMemoryBlockDirty(it->memBlock))
+            break;
+    }
+
+    if(it == ramCacheMap.end())
+    {
+        // all cache dirty, force flush first
+        it = ramCacheMap.begin();
+        prevIt = ramCacheMap.before_begin();
+
+
+        psram.write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
+        psram.wait_for_finish_blocking();
+        // swap buf, write again
+        // this will cause a display glitch
+        display_wait_for_frame();
+        psram.write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
+
+        sys.clearMemoryBlockDirty(it->memBlock);
+    }
+
+    // got a cache block, fill it
+    psram.wait_for_finish_blocking();
+    psram.read_blocking(psramBaseAddress + block * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize / 4);
+
+    // remove old mapping
+    if(it->memBlock != 0xFF)
+        sys.removeMemory(it->memBlock);
+
+    it->memBlock = block;
+
+    if(it != ramCacheEnd)
+    {
+        // move to end of list
+        ramCacheMap.splice_after(ramCacheEnd, ramCacheMap, prevIt);
+        ramCacheEnd = it;
+    }
+
+    return ramCache + it->cacheBlock * blockSize;
+}
+
 static void alarmCallback(uint alarmNum) {
     // TODO: audio output
     while(sys.hasSpeakerSample())
@@ -423,8 +494,15 @@ int main()
 
     init_display();
 
+    // int ram map
+    ramCacheMap.emplace_front(MemBlockMapping{0, 0xFF});
+    ramCacheEnd = ramCacheMap.begin();
+
+    for(uint8_t i = 1; i < cacheBlocks; i++)
+        ramCacheEnd = ramCacheMap.emplace_after(ramCacheEnd, MemBlockMapping{i, 0xFF});
+
     // emulator init
-    sys.addMemory(0, sizeof(ram), ram);
+    sys.setMemoryRequestCallback(requestMem);
     cga.setScanlineCallback(scanlineCallback);
 
     auto bios = _binary_bios_xt_rom_start;
