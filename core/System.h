@@ -29,6 +29,8 @@ public:
     void removeMemory(unsigned int block);
 
     uint32_t *getMemoryDirtyMask();
+    bool getMemoryBlockDirty(unsigned int block) const;
+    void clearMemoryBlockDirty(unsigned int block);
 
     void setMemoryRequestCallback(MemRequestCallback cb);
 

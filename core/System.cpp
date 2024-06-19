@@ -38,6 +38,16 @@ uint32_t *System::getMemoryDirtyMask()
     return memDirty;
 }
 
+bool System::getMemoryBlockDirty(unsigned int block) const
+{
+    return memDirty[block / 32] & (1 << (block % 32));
+}
+
+void System::clearMemoryBlockDirty(unsigned int block)
+{
+    memDirty[block / 32] &= ~(1 << (block % 32));
+}
+
 void System::setMemoryRequestCallback(MemRequestCallback cb)
 {
     memReqCb = cb;
