@@ -32,16 +32,31 @@ uint32_t *System::getMemoryDirtyMask()
     return memDirty;
 }
 
+void System::setMemoryRequestCallback(MemRequestCallback cb)
+{
+    memReqCb = cb;
+}
+
 void System::addIODevice(uint16_t min, uint16_t max, IODevice *dev)
 {
     ioDevices.emplace_back(IORange{min, max, dev});
 }
 
-uint8_t System::readMem(uint32_t addr) const
+uint8_t System::readMem(uint32_t addr)
 {
     addr &= (maxAddress - 1);
 
-    auto ptr = memMap[addr / blockSize];
+    auto block = addr / blockSize;
+    
+    auto ptr = memMap[block];
+
+    // request more memory
+    if(!ptr && memReqCb)
+    {
+        ptr = memReqCb(block);
+        if(ptr)
+            ptr = memMap[block] = ptr - block * blockSize;
+    }
 
     if(ptr)
         return ptr[addr];
@@ -56,6 +71,14 @@ void System::writeMem(uint32_t addr, uint8_t data)
     auto block = addr / blockSize;
 
     auto ptr = memMap[block];
+
+    // request more memory
+    if(!ptr && memReqCb)
+    {
+        ptr = memReqCb(block);
+        if(ptr)
+            ptr = memMap[block] = ptr - block * blockSize;
+    }
 
     if(ptr)
         ptr[addr] = data;

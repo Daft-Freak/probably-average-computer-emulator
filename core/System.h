@@ -16,6 +16,8 @@ public:
 class System
 {
 public:
+    using MemRequestCallback = uint8_t *(*)(unsigned int block);
+
     System();
     void reset();
 
@@ -26,9 +28,11 @@ public:
 
     uint32_t *getMemoryDirtyMask();
 
+    void setMemoryRequestCallback(MemRequestCallback cb);
+
     void addIODevice(uint16_t min, uint16_t max, IODevice *dev);
 
-    uint8_t readMem(uint32_t addr) const;
+    uint8_t readMem(uint32_t addr);
     void writeMem(uint32_t addr, uint8_t data);
 
     const uint8_t *mapAddress(uint32_t addr) const;
@@ -70,6 +74,8 @@ private:
 
     uint8_t *memMap[maxAddress / blockSize];
     uint32_t memDirty[maxAddress / blockSize / 32];
+
+    MemRequestCallback memReqCb = nullptr;
 
     struct DMA
     {
