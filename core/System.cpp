@@ -27,6 +27,12 @@ void System::addMemory(uint32_t base, uint32_t size, uint8_t *ptr)
         memMap[block + i] = ptr - base;
 }
 
+void System::removeMemory(unsigned int block)
+{
+    assert(block < maxAddress / blockSize);
+    memMap[block] = nullptr;
+}
+
 uint32_t *System::getMemoryDirtyMask()
 {
     return memDirty;

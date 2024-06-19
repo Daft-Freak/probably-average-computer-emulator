@@ -26,6 +26,8 @@ public:
     void addMemory(uint32_t base, uint32_t size, uint8_t *ptr);
     // TODO: a const version somehow?
 
+    void removeMemory(unsigned int block);
+
     uint32_t *getMemoryDirtyMask();
 
     void setMemoryRequestCallback(MemRequestCallback cb);
