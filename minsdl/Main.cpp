@@ -640,7 +640,7 @@ int main(int argc, char *argv[])
         if(readLen < sizeof(biosROM))
             biosBase += sizeof(biosROM) - readLen;
 
-        sys.addMemory(biosBase, 64 * 1024, biosROM);
+        sys.addMemory(biosBase, readLen, biosROM);
         biosFile.close();
     }
     else
