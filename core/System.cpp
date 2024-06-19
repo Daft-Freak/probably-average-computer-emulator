@@ -18,6 +18,7 @@ void System::addMemory(uint32_t base, uint32_t size, uint8_t *ptr)
 {
     assert(size % blockSize == 0);
     assert(base % blockSize == 0);
+    assert(base + size <= maxAddress);
 
     auto block = base / blockSize;
     int numBlocks = size / blockSize;
