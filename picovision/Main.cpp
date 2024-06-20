@@ -303,6 +303,10 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
 {
     auto ptr = scanLineOutBuf;
 
+    // seems to be a bug sometimes when switching mode
+    if(w > 640)
+        w = 640;
+
     for(int x = 0; x < w; x += 2)
     {
         int index = *data & 0xF;
