@@ -43,10 +43,14 @@ static FloppyController fdc(sys);
 static FixedDiskAdapter fixDisk(sys);
 #endif
 
-static const int cacheBlocks = 8;
+static const int cacheBlocks = 12;
+static const int frameFlushThreshold = 4; // minimum dirty blocks before flushing at frame end
+static const int maxFlushBlocks = 2; // maximum blocks to flush at the end of a frame
+
 static uint8_t ramCache[cacheBlocks * System::getMemoryBlockSize()];
 static std::forward_list<MemBlockMapping> ramCacheMap;
 static std::forward_list<MemBlockMapping>::iterator ramCacheEnd;
+static std::forward_list<MemBlockMapping>::iterator lastFlushedBlock;
 
 static constexpr uint32_t psramBaseAddress = 0x100000;
 
@@ -299,6 +303,8 @@ void FileFixedIO::openDisk(int unit, const char *path)
 
 static FileFixedIO fixedIO;
 
+static std::forward_list<MemBlockMapping>::iterator cacheFlush();
+
 static void scanlineCallback(const uint8_t *data, int line, int w)
 {
     auto ptr = scanLineOutBuf;
@@ -335,7 +341,36 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     write_display(0, line, w, scanLineOutBuf);
 
     if(line == 199)
+    {
+        // attempt to flush some dirty blocks early
+        auto firstDirty = cacheFlush();
+        int psramBank = display_get_ram_bank();
+
         update_display();
+
+        // if we're flushing wait for the next frame now
+        // which won't cause a glitch since we're at the end of the frame anyway
+        if(firstDirty != ramCacheMap.end())
+        {
+            display_wait_for_frame(psramBank);
+
+            // finish writing blocks
+            int count = maxFlushBlocks;
+
+            for(auto it = firstDirty; it != ramCacheMap.end() && count; ++it)
+            {
+                if(!sys.getMemoryBlockDirty(it->memBlock))
+                    continue;
+
+                const auto blockSize = System::getMemoryBlockSize();
+                display_get_ram().write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
+
+                sys.clearMemoryBlockDirty(it->memBlock);
+
+                count--;
+            }
+        }
+    }
 }
 
 static uint8_t *requestMem(unsigned int block)
@@ -363,12 +398,12 @@ static uint8_t *requestMem(unsigned int block)
         it = ramCacheMap.begin();
         prevIt = ramCacheMap.before_begin();
 
-
+        int psramBank = display_get_ram_bank();
         psram.write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
         psram.wait_for_finish_blocking();
         // swap buf, write again
         // this will cause a display glitch
-        display_wait_for_frame();
+        display_wait_for_frame(psramBank);
         psram.write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
 
         sys.clearMemoryBlockDirty(it->memBlock);
@@ -394,7 +429,56 @@ static uint8_t *requestMem(unsigned int block)
     return ramCache + it->cacheBlock * blockSize;
 }
 
-static void alarmCallback(uint alarmNum) {
+static std::forward_list<MemBlockMapping>::iterator cacheFlush()
+{
+    const auto blockSize = System::getMemoryBlockSize();
+
+    // find dirty
+    int dirtyBlocks = 0;
+    auto firstDirty = lastFlushedBlock;
+
+    // try to avoid blocks flushed last time
+    for(; firstDirty != ramCacheMap.end(); ++firstDirty)
+    {
+        if(firstDirty != lastFlushedBlock && sys.getMemoryBlockDirty(firstDirty->memBlock))
+            break;
+    }
+
+    // if there were no more dirty blocks, we'll search from the start while counting
+
+    for(auto it = ramCacheMap.begin(); it != ramCacheMap.end(); ++it)
+    {
+        if(sys.getMemoryBlockDirty(it->memBlock))
+        {
+            dirtyBlocks++;
+            // track first dirty block
+            if(firstDirty == ramCacheMap.end())
+                firstDirty = it;
+        }
+    }
+
+    if(dirtyBlocks < frameFlushThreshold)
+        return ramCacheMap.end();
+
+    // now flush to the current PSRAM bank
+    int count = maxFlushBlocks;
+
+    for(auto it = firstDirty; it != ramCacheMap.end() && count; ++it)
+    {
+        if(!sys.getMemoryBlockDirty(it->memBlock))
+            continue;
+
+        display_get_ram().write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
+
+        count--;
+        lastFlushedBlock = it;
+    }
+
+    return firstDirty;
+}
+
+static void alarmCallback(uint alarmNum)
+{
     // TODO: audio output
     while(sys.hasSpeakerSample())
         sys.getSpeakerSample();
@@ -504,6 +588,8 @@ int main()
 
     for(uint8_t i = 1; i < cacheBlocks; i++)
         ramCacheEnd = ramCacheMap.emplace_after(ramCacheEnd, MemBlockMapping{i, 0xFF});
+
+    lastFlushedBlock = ramCacheMap.end();
 
     // emulator init
     sys.setMemoryRequestCallback(requestMem);

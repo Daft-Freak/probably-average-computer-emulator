@@ -15,6 +15,7 @@ void update_display();
 
 bool display_render_needed();
 
-void display_wait_for_frame();
+void display_wait_for_frame(int cur_bank);
 
 pimoroni::APS6404 &display_get_ram();
+int display_get_ram_bank();

@@ -185,13 +185,17 @@ bool display_render_needed() {
     return do_render;
 }
 
-void display_wait_for_frame() {
+void display_wait_for_frame(int cur_bank) {
     if(!display_enabled){
         // haven't started, just swap banks
         ram_bank ^= 1;
         gpio_put(RAM_SEL, ram_bank);
         return;
     }
+
+    // the swap already happened
+    if(ram_bank != cur_bank)
+        return;
 
     // this is a last resort if we need the other RAM bank right now
     do_render = false;
@@ -200,4 +204,8 @@ void display_wait_for_frame() {
 
 pimoroni::APS6404 &display_get_ram() {
     return ram;
+}
+
+int display_get_ram_bank() {
+    return ram_bank;
 }
