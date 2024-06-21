@@ -10,10 +10,9 @@ public:
         if(fullFlag)
             return;
 
-        data[writeOff++] = val;
+        data[writeOff] = val;
 
-        if(writeOff == size)
-            writeOff = 0;
+        writeOff = (writeOff + 1) % size;
 
         fullFlag = readOff == writeOff;
     }
@@ -23,10 +22,9 @@ public:
         if(empty())
             return T(0);
 
-        auto ret = data[readOff++];
+        auto ret = data[readOff];
 
-        if(readOff == size)
-            readOff = 0;
+        readOff = (readOff + 1) % size;
 
         fullFlag = false;
 
