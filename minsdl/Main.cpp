@@ -650,7 +650,7 @@ int main(int argc, char *argv[])
     }
 
     // attempt to load BIOS rom for fixed-disk adapter
-    biosFile.open(basePath + "fixed-disk.rom");
+    biosFile.open(basePath + "fixed-disk-bios.rom");
     if(biosFile)
     {
         std::cout << "loading fixed-disk adapter ROM at C8000\n";
