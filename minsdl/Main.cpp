@@ -762,6 +762,9 @@ int main(int argc, char *argv[])
                 if(checkTimeLimit())
                     break;
             }
+
+            cga.update();
+            sys.updateForDisplay();
         }
         else
         {
