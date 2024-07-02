@@ -642,6 +642,10 @@ void System::updateForInterrupts()
         if(passed >= pit.nextUpdateCycle - pit.lastUpdateCycle)
             updatePIT();
     }
+
+    // TODO: add mask to IORange to optimise?
+    for(auto &dev : ioDevices)
+        dev.dev->updateForInterrupts();
 }
 
 void System::updateForDisplay()
