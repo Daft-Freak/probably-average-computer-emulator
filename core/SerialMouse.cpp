@@ -9,6 +9,8 @@
 SerialMouse::SerialMouse(System &sys) : sys(sys)
 {
     sys.addIODevice(0x2F8, 0x2FF, this);
+
+    lineStatus = (1 << 5)/*tx empty*/ | (1 << 6)/*tx shift empty*/;
 }
 
 void SerialMouse::addMotion(int x, int y)
@@ -33,7 +35,10 @@ void SerialMouse::sync()
     if(!changedButtons && !xMotion && ! yMotion)
         return;
 
-    // TODO: make sure queue isn't full
+    // make sure queue isn't full
+    if(rxQueue.getCount() > 5)
+        return;
+
     // TODO: clamp motion?
 
     rxQueue.push(0x40 | (buttons & 1) << 5 | (buttons & 2) << 3 | (yMotion & 0xC0) >> 4 | (xMotion & 0xC0) >> 6);
@@ -43,13 +48,48 @@ void SerialMouse::sync()
     changedButtons = 0;
     xMotion = 0;
     yMotion = 0;
+}
 
-    if(interruptEnable & 1) // data available
-        sys.flagPICInterrupt(3);
+void SerialMouse::update()
+{
+    auto elapsed = sys.getCPU().getCycleCount() - lastUpdateCycle;
+
+    if(!cpuCyclesPerWord)
+    {
+        // skip
+        lastUpdateCycle += elapsed;
+        return;
+    }
+
+    while(elapsed)
+    {
+        auto step = std::min(elapsed, wordCycleCounter);
+
+        wordCycleCounter -= step;
+
+        if(wordCycleCounter == 0)
+        {
+            // received word
+            if(!rxQueue.empty())
+            {
+                // TODO: if already set, set overrun
+                lineStatus |= 1; // receive ready
+                if(interruptEnable & 1) // data available
+                    sys.flagPICInterrupt(3);
+            }
+        
+            wordCycleCounter = cpuCyclesPerWord;
+        }
+
+        lastUpdateCycle += step;
+        elapsed -= step;
+    }
 }
 
 uint8_t SerialMouse::read(uint16_t addr)
 {
+    update();
+
     switch(addr)
     {
         case 0x2F8: // RX buffer or divisor LSB
@@ -58,13 +98,13 @@ uint8_t SerialMouse::read(uint16_t addr)
                 return divisor;
             else
             {
-                auto v = rxQueue.pop();
+                if(lineStatus & 1)
+                {
+                    lineStatus &= ~1; // clear receive ready
+                    return rxQueue.pop();
+                }
 
-                // re-flag interrupt if we have more data
-                if(!rxQueue.empty() && (interruptEnable & 1))
-                    sys.flagPICInterrupt(3);
-
-                return v;
+                break;
             }
         }
         case 0x2F9: // interrupt enable or divisor MSB
@@ -82,7 +122,7 @@ uint8_t SerialMouse::read(uint16_t addr)
             return modemControl;
 
         case 0x2FD: // line status:
-            return (rxQueue.empty() ? 0 : 1) | (1 << 5)/*tx empty*/ | (1 << 6)/*tx shift empty*/;
+            return lineStatus;
 
         case 0x2FE: // modem status
             return 0;
@@ -95,12 +135,17 @@ uint8_t SerialMouse::read(uint16_t addr)
 
 void SerialMouse::write(uint16_t addr, uint8_t data)
 {
+    update();
+
     switch(addr)
     {
         case 0x2F8: // TX buffer or divisor LSB
         {
             if(lineControl & (1 << 7))
+            {
                 divisor = (divisor & 0xFF00) | data;
+                updateTimings();
+            }
             else
                 printf("serial/mouse tx %X\n", data);
             break;
@@ -108,7 +153,10 @@ void SerialMouse::write(uint16_t addr, uint8_t data)
         case 0x2F9: // interrupt enable or divisor MSB
         {
             if(lineControl & (1 << 7))
+            {
                 divisor = (divisor & 0xFF) | data << 8;
+                updateTimings();
+            }
             else
             {
                 interruptEnable = data;
@@ -121,6 +169,7 @@ void SerialMouse::write(uint16_t addr, uint8_t data)
         case 0x2FB: // line control
             lineControl = data;
             printf("serial/mouse line control %X\n", data);
+            updateTimings();
             break;
         case 0x2FC: // modem control
         {
@@ -146,4 +195,32 @@ void SerialMouse::write(uint16_t addr, uint8_t data)
         default:
             printf("serial/mouse W %04X = %02X @~%04X\n", addr, data, sys.getCPU().reg(CPU::Reg16::IP));
     }
+}
+
+void SerialMouse::updateForInterrupts()
+{
+    if(!interruptEnable)
+        return;
+
+    auto elapsed = sys.getCPU().getCycleCount() - lastUpdateCycle;
+
+    if(elapsed >= wordCycleCounter)
+        update();
+}
+
+void SerialMouse::updateTimings()
+{
+    if(divisor == 0)
+        return;
+
+    int bits = 5 + (lineControl & 3); // data bits
+    bits += 1 + ((lineControl >> 2) & 1); // stop bits
+    bits += (lineControl >> 3) & 1; // parity bit
+    bits++; // start bit
+
+    auto baud = 1843200 / divisor / 16;
+
+    // get rough number of cpu cycles per word
+    // (this emulator does not yet support multiple clocks...)
+    cpuCyclesPerWord = 4772726 * bits / baud;
 }
