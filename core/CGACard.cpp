@@ -109,13 +109,15 @@ void CGACard::write(uint16_t addr, uint8_t data)
     {
         case 0x3D4: // reg select
         {
-            regSelect = data;
+            regSelect = data & 0x1F;
             break;
         }
         case 0x3D5: // reg
         {
             update();
-            regs[regSelect] = data;
+
+            if(regSelect < 18)
+                regs[regSelect] = data;
             break;
         }
 
