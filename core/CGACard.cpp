@@ -72,7 +72,7 @@ void CGACard::update()
             {
                 scanline = 0;
                 frame++;
-                curAddr = (regs[12] << 8 | regs[13]) * 2;
+                curAddr = ((regs[12] << 8 | regs[13]) & 0x3FFF) * 2;
                 status &= ~(1 << 3); // clear vblank
             }
             else if(scanline >= vBlankStart)
@@ -215,7 +215,7 @@ void CGACard::draw(int start, int end)
 
         if(cursorLine)
         {
-            uint16_t cursorAddr = regs[14] << 8 | regs[15];
+            uint16_t cursorAddr = (regs[14] << 8 | regs[15]) & 0x3FFF;
 
             // +2 because we check after incrementing
             // set to null if not cursor line
