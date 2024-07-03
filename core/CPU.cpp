@@ -2653,10 +2653,31 @@ void CPU::executeInstruction()
                     }
                     break;
                 }
-                // IDIV
+                case 7: // IDIV
+                {
+                    int num = static_cast<int16_t>(reg(Reg16::AX));
+                    int iv = static_cast<int8_t>(v);
+
+                    int res = v == 0 ? 0xFF : num / iv;
+
+                    if(res > 0x7F || res < -0x7F)
+                    {
+                        // fault
+                        reg(Reg16::IP)++;
+                        serviceInterrupt(0);
+                    }
+                    else
+                    {
+                        reg(Reg8::AL) = res;
+                        reg(Reg8::AH) = num % iv;
+
+                        reg(Reg16::IP)++;
+                        cyclesExecuted(isReg ? 101 : 107 + cycles); // - 112/118
+                    }
+                    break;
+                }
                 default:
-                    printf("group1 b %x @%05x\n", exOp, addr);
-                    exit(1);
+                    assert(!"invalid group1!");
             }
             break;
         }
