@@ -218,7 +218,10 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
         }
         case 0x321: // reset
         {
-            //... something?
+            controlBlockOffset = commandDataOffset = responseOffset = 0;
+            commandDataLen = responseLen = 0;
+            status = 0;
+            dmaIntrMask = 0;
             break;
         }
 
