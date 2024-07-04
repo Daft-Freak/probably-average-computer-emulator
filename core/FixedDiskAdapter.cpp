@@ -102,7 +102,9 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
                 if(controlBlock[0] != 0x03)
                     sense[0] = 0;
 
-                if(controlBlock[0] == 0x01) // recalibrate
+                if(controlBlock[0] == 0x00) // test drive ready
+                {}
+                else if(controlBlock[0] == 0x01) // recalibrate
                 {
                     if(!io || !io->isPresent(drive))
                     {
@@ -197,8 +199,18 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
                     numCylinders[drive] = this->data[0] << 8 | this->data[1];
                     numHeads[drive] = this->data[2];
                 }
+                else if(controlBlock[0] == 0x0F) // write to sector buffer
+                {} // TODO?
+                else if(controlBlock[0] == 0xE0) // RAM diagnostic
+                {}
+                else if(controlBlock[0] == 0xE4) // controller diagnostic
+                {}
                 else
+                {
+                    failed = true;
+                    sense[0] |= 0x20; // invalid command
                     printf("FXD %02X (+%i)\n", controlBlock[0], commandDataOffset);
+                }
 
                 // needs to be set after "init characteristics"
                 status |= (1 << 1); // IO mode
