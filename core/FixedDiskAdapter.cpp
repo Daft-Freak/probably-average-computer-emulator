@@ -244,6 +244,9 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
         {
             // BIOS expects these bits
             status = 1 << 3/*busy*/ | 1 << 2/*bus*/ | 1 << 0/*req*/;
+
+            // hack to recover after bad control blocks
+            controlBlockOffset = 0;
             break;
         }
 
