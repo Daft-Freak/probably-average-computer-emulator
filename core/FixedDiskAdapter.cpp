@@ -40,7 +40,8 @@ uint8_t FixedDiskAdapter::read(uint16_t addr)
             auto ret = status;
 
             // this is a hack so that the "init characteristics" command works
-            status |= (1 << 0); // set request
+            if(commandDataOffset < commandDataLen)
+                status |= (1 << 0); // set request
             return ret;
         }
 
