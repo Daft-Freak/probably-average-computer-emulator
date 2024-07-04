@@ -19,11 +19,13 @@ uint8_t FixedDiskAdapter::read(uint16_t addr)
     {
         case 0x320: // read
         {
-            auto ret = data[responseOffset++];
+            auto ret = responseLen ? data[responseOffset++] : 0xFF;
 
             // when all bytes read
             if(responseOffset == responseLen)
             {
+                responseOffset = responseLen = 0;
+
                 // clear interrupt
                 status &= ~(1 << 5);
 
