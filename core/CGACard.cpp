@@ -85,6 +85,18 @@ uint8_t CGACard::read(uint16_t addr)
 {
     switch(addr)
     {
+        case 0x3D5: // reg
+        {
+            // write only
+            if(regSelect < 12) // datasheet suggests this should be 14, but that breaks HWiNFO?
+                return 0xFF;
+
+            if(regSelect < 18)
+                return regs[regSelect];
+
+            return 0xFF;
+        }
+
         case 0x3DA: // status
         {
             update();
