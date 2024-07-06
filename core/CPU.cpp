@@ -2010,8 +2010,6 @@ void CPU::executeInstruction()
                 else
                     reg(Reg16::DI)++;
 
-                reg(Reg16::CX)--;
-
                 cyclesExecuted(15);
             }
             break;
@@ -2052,8 +2050,6 @@ void CPU::executeInstruction()
                     reg(Reg16::DI) -= 2;
                 else
                     reg(Reg16::DI) += 2;
-
-                reg(Reg16::CX)--;
 
                 cyclesExecuted(15 + 4);
             }
