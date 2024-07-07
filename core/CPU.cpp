@@ -2541,6 +2541,15 @@ void CPU::executeInstruction()
             cyclesExecuted(8);
             break;
         }
+        case 0xED: // IN AX from DX
+        {
+            auto port = reg(Reg16::DX);
+
+            reg(Reg16::AX) = sys.readIOPort(port) | sys.readIOPort(port + 1) << 8;
+
+            cyclesExecuted(8 + 4);
+            break;
+        }
 
         case 0xEE: // OUT AL to DX
         {
