@@ -6,7 +6,7 @@ CGACard::CGACard(System &sys) : sys(sys)
 {
     sys.addMemory(0xB8000, sizeof(ram), ram);
     sys.addMemory(0xBC000, sizeof(ram), ram); // mirror
-    sys.addIODevice(0x3D4, 0x3DA, this);
+    sys.addIODevice(0x3D0, 0x3DF, this);
 }
 
 void CGACard::setScanlineCallback(ScanlineCallback cb)
@@ -85,7 +85,10 @@ uint8_t CGACard::read(uint16_t addr)
 {
     switch(addr)
     {
+        case 0x3D1:
+        case 0x3D3:
         case 0x3D5: // reg
+        case 0x3D7:
         {
             // write only
             if(regSelect < 12) // datasheet suggests this should be 14, but that breaks HWiNFO?
@@ -119,12 +122,18 @@ void CGACard::write(uint16_t addr, uint8_t data)
 {
     switch(addr)
     {
+        case 0x3D0:
+        case 0x3D2:
         case 0x3D4: // reg select
+        case 0x3D6:
         {
             regSelect = data & 0x1F;
             break;
         }
+        case 0x3D1:
+        case 0x3D3:
         case 0x3D5: // reg
+        case 0x3D7:
         {
             update();
             if(regSelect == 12 || regSelect == 14)
