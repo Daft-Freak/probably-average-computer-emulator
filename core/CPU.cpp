@@ -1124,6 +1124,7 @@ void CPU::executeInstruction()
         }
 
         case 0x80: // imm8 op
+        case 0x82: // same thing
         {
             auto modRM = sys.readMem(addr + 1);
             auto exOp = (modRM >> 3) & 0x7;
