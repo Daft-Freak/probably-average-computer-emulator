@@ -36,7 +36,7 @@ public:
 
     void setMemoryRequestCallback(MemRequestCallback cb);
 
-    void addIODevice(uint16_t min, uint16_t max, IODevice *dev);
+    void addIODevice(uint16_t mask, uint16_t value, IODevice *dev);
 
     uint8_t readMem(uint32_t addr);
     void writeMem(uint32_t addr, uint8_t data);
@@ -65,7 +65,7 @@ public:
 private:
     struct IORange
     {
-        uint16_t min, max;
+        uint16_t ioMask, ioValue;
         IODevice *dev;
     };
 

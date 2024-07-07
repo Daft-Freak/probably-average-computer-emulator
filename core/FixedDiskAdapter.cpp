@@ -5,7 +5,7 @@
 
 FixedDiskAdapter::FixedDiskAdapter(System &sys) : sys(sys)
 {
-    sys.addIODevice(0x320, 0x32F, this);
+    sys.addIODevice(0x3F0, 0x320, this);
 }
 
 void FixedDiskAdapter::setIOInterface(FixedDiskIO *io)

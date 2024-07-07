@@ -53,9 +53,9 @@ void System::setMemoryRequestCallback(MemRequestCallback cb)
     memReqCb = cb;
 }
 
-void System::addIODevice(uint16_t min, uint16_t max, IODevice *dev)
+void System::addIODevice(uint16_t mask, uint16_t value, IODevice *dev)
 {
-    ioDevices.emplace_back(IORange{min, max, dev});
+    ioDevices.emplace_back(IORange{mask, value, dev});
 }
 
 uint8_t System::readMem(uint32_t addr)
@@ -255,7 +255,7 @@ uint8_t System::readIOPort(uint16_t addr)
     {
         for(auto & dev : ioDevices)
         {
-            if(addr >= dev.min && addr <= dev.max)
+            if((addr & dev.ioMask) == dev.ioValue)
                 return dev.dev->read(addr);
         }
         printf("IO R %04X\n", addr);
@@ -606,7 +606,7 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
     {
         for(auto & dev : ioDevices)
         {
-            if(addr >= dev.min && addr <= dev.max)
+            if((addr & dev.ioMask) == dev.ioValue)
                 return dev.dev->write(addr, data);
         }
         printf("IO W %04X = %02X\n", addr, data);

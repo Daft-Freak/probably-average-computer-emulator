@@ -5,7 +5,7 @@
 
 FloppyController::FloppyController(System &sys) : sys(sys)
 {
-    sys.addIODevice(0x3F0, 0x3F7, this);
+    sys.addIODevice(0x3F8, 0x3F0, this);
 }
 
 void FloppyController::setIOInterface(FloppyDiskIO *io)

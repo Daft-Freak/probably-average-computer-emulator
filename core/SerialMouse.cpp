@@ -8,7 +8,7 @@
 
 SerialMouse::SerialMouse(System &sys) : sys(sys)
 {
-    sys.addIODevice(0x2F8, 0x2FF, this);
+    sys.addIODevice(0x3F8, 0x2F8, this);
 
     lineStatus = (1 << 5)/*tx empty*/ | (1 << 6)/*tx shift empty*/;
 }
