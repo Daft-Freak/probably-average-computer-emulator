@@ -96,7 +96,7 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
         if((page & 0x3FFF) != 0)
             return;
 
-        // don't map (or more importantly, UNMAP pages we don't control)
+        // don't map (or more importantly, UNMAP) pages we don't control
         if(page < 0xC0000 || page > 0xDC000)
             return;
 
@@ -130,11 +130,15 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
 
     switch(addr)
     {
-        case 0x258:
+        case 0x0258:
         case 0x4258:
         case 0x8258:
         case 0xC258:
             detect8[addr >> 14] = data;
+
+            // other than being used for detection, it seems these registers are used to map a page to E000 for TESTAB on some boards
+            // (the entire x258 range)
+
             break;
 
         case 0x25F:
