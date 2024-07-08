@@ -31,5 +31,5 @@ private:
     };
     uint16_t eepromData;
 
-    uint8_t ram[1024 * 1024];
+    uint8_t ram[2 * 1024 * 1024];
 };
