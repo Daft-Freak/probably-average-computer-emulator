@@ -91,6 +91,15 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
         if((page & 0x3FFF) != 0)
             return;
 
+        // don't map (or more importantly, UNMAP pages we don't control)
+        if(page < 0xC0000 || page > 0xDC000)
+            return;
+
+        int bit = (page - 0xC0000) / 0x4000;
+
+        if(!(pageMask & (1 << bit)))
+            return;
+
         if(data & 0x80)
         {
             auto index = data & 0x7F;
@@ -128,9 +137,9 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
             break;
 
         case 0x125F:
-            // looks like an enable mask for pages C400-DC00?
-            // probably need to do something with this
+            // looks like an enable mask for pages C000-DC00?
             printf("AB page mask %02X\n", data);
+            pageMask = data;
             break;
 
         // EEPROM access
