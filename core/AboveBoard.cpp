@@ -59,12 +59,17 @@ uint8_t AboveBoard::read(uint16_t addr)
 
         case 0x259:
             // part of board detection
+            // | 0x18 is "Matched Memory Classic" (if we return | 0x18 for 025F below)
             // | 0x20 seems to mean the board is configured for a 16-bit bus
             return 0x18;
 
         case 0x25F:
             // software expects bottom three bits to read back as +3 from what was written
             // some of the other bits determine board type
+            // | 0x18 is "Above Board Plus 8" or "Matched Memory Classic"
+            // | 0x10 is "Above Board Plus"
+            // ! 0x08 is invalid? (EMM.SYS fails)
+            // | 0x00 is also "Above Board Plus"?
             return (detectF & 0xE0) | ((detectF + 3) & 7) | 0x18;
 
         // EEPROM access
