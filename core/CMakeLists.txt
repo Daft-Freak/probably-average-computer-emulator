@@ -1,6 +1,7 @@
 add_library(PACECore INTERFACE)
 
 target_sources(PACECore INTERFACE
+    AboveBoard.cpp
     CGACard.cpp
     CPU.cpp
     FixedDiskAdapter.cpp
