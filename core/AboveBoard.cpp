@@ -42,7 +42,7 @@ AboveBoard::AboveBoard(System &sys) : sys(sys)
     // "base address" can be one of 208, 218, 248, 258, 2A8, 2B8 or 2E8
     // the page mapping registers seem to be at xx0-xx7 though
     // this is configured in the EEPROM
-    sys.addIODevice(0x3F0, 0x250, this);
+    sys.addIODevice(0x3F0, 0x250, 0, this);
 }
 
 uint8_t AboveBoard::read(uint16_t addr)

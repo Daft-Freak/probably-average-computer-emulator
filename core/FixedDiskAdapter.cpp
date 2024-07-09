@@ -5,7 +5,8 @@
 
 FixedDiskAdapter::FixedDiskAdapter(System &sys) : sys(sys)
 {
-    sys.addIODevice(0x3F0, 0x320, this);
+    // technically generates IRQ5, but not in a way that requires updateForInterrupts (yet?)
+    sys.addIODevice(0x3F0, 0x320, 0, this);
 }
 
 void FixedDiskAdapter::setIOInterface(FixedDiskIO *io)

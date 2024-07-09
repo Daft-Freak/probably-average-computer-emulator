@@ -53,9 +53,9 @@ void System::setMemoryRequestCallback(MemRequestCallback cb)
     memReqCb = cb;
 }
 
-void System::addIODevice(uint16_t mask, uint16_t value, IODevice *dev)
+void System::addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev)
 {
-    ioDevices.emplace_back(IORange{mask, value, dev});
+    ioDevices.emplace_back(IORange{mask, value, picMask, dev});
 }
 
 uint8_t System::readMem(uint32_t addr)
@@ -643,9 +643,11 @@ void System::updateForInterrupts()
             updatePIT();
     }
 
-    // TODO: add mask to IORange to optimise?
     for(auto &dev : ioDevices)
-        dev.dev->updateForInterrupts();
+    {
+        if(dev.picMask & ~pic.mask)
+            dev.dev->updateForInterrupts();
+    }
 }
 
 void System::updateForDisplay()

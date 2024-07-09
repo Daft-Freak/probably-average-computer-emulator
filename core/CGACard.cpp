@@ -6,7 +6,7 @@ CGACard::CGACard(System &sys) : sys(sys)
 {
     sys.addMemory(0xB8000, sizeof(ram), ram);
     sys.addMemory(0xBC000, sizeof(ram), ram); // mirror
-    sys.addIODevice(0x3F0, 0x3D0, this);
+    sys.addIODevice(0x3F0, 0x3D0, 0, this);
 }
 
 void CGACard::setScanlineCallback(ScanlineCallback cb)
