@@ -503,6 +503,14 @@ void FileFloppyIO::openDisk(int unit, std::string path)
                 sectorsPerTrack[unit] = 9;
                 // could also be a single-sided 3.5-inch disk
                 break;
+            case 720: // 3.5 inch
+                doubleSided[unit] = true;
+                sectorsPerTrack[unit] = 9;
+                break;
+            case 1200:
+                doubleSided[unit] = true;
+                sectorsPerTrack[unit] = 15;
+                break;
             default:
                 std::cerr << "unhandled floppy image size " << fdSize << "(" << fdSize / 1024 << "k)\n";
                 // set... something
