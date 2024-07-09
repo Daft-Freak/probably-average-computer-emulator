@@ -50,10 +50,10 @@ uint8_t AboveBoard::read(uint16_t addr)
     if((addr & 0x300F) <= 8)
     {
         // mapping readback
-        auto page = ((addr & 0xF) + 6) << 16 | (addr & 0xF000);
+        auto page = ((addr & 0xF) + 6) << 16 | (addr & 0xC000);
         int index = (page - 0xC0000) / 0x4000;
 
-        if(index >= 0 && index < 8)
+        if(index >= 0 && index < 16)
             return pageMapping[index];
     }
 
