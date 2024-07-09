@@ -47,16 +47,18 @@ AboveBoard::AboveBoard(System &sys) : sys(sys)
 
 uint8_t AboveBoard::read(uint16_t addr)
 {
+    if((addr & 0x300F) <= 8)
+    {
+        // mapping readback
+        auto page = ((addr & 0xF) + 6) << 16 | (addr & 0xF000);
+        int index = (page - 0xC0000) / 0x4000;
+
+        if(index >= 0 && index < 8)
+            return pageMapping[index];
+    }
+
     switch(addr)
     {
-        case 0x258:
-        case 0x4258:
-        case 0x8258:
-        case 0xC258:
-            // incrementing values are written here and read back
-            // software expects the value to not match at some point, so mask out a bit
-            return detect8[addr >> 14] & 0x7F;
-
         case 0x259:
             // part of board detection
             // | 0x18 is "Matched Memory Classic" (if we return | 0x18 for 025F below)
@@ -86,23 +88,26 @@ uint8_t AboveBoard::read(uint16_t addr)
 
 void AboveBoard::write(uint16_t addr, uint8_t data)
 {
-    if((addr & 0xFF8) == 0x250)
+    if((addr & 0xF) <= 8)
     {
         // page mapping registers
         // there are 4x too many for 16k pages though
-        auto page = ((addr & 7) + 6) << 16 | (addr & 0xF000);
+        auto page = ((addr & 0xF) + 6) << 16 | (addr & 0xF000);
 
         // we're just ignoring the low two bits for now
         if((page & 0x3FFF) != 0)
             return;
 
         // don't map (or more importantly, UNMAP) pages we don't control
-        if(page < 0xC0000 || page > 0xDC000)
+        if(page < 0xC0000)
             return;
 
         int bit = (page - 0xC0000) / 0x4000;
 
-        if(!(pageMask & (1 << bit)))
+        pageMapping[bit] = data;
+
+        // register is too small for the last 4, assume enabled?
+        if(bit < 8 && !(pageMask & (1 << bit)))
             return;
 
         if(data & 0x80)
@@ -130,17 +135,6 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
 
     switch(addr)
     {
-        case 0x0258:
-        case 0x4258:
-        case 0x8258:
-        case 0xC258:
-            detect8[addr >> 14] = data;
-
-            // other than being used for detection, it seems these registers are used to map a page to E000 for TESTAB on some boards
-            // (the entire x258 range)
-
-            break;
-
         case 0x25F:
             detectF = data;
             break;

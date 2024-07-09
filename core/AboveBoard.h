@@ -14,7 +14,6 @@ public:
 private:
     System &sys;
 
-    uint8_t detect8[4];
     uint8_t detectF;
 
     uint8_t pageMask = 0;
@@ -30,6 +29,8 @@ private:
         0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xAA01,
     };
     uint16_t eepromData;
+
+    uint8_t pageMapping[16];
 
     uint8_t ram[2 * 1024 * 1024];
 };
