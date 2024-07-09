@@ -418,10 +418,13 @@ void CPU::run(int ms)
 
     while(cyclesToRun > 0)
     {
-        sys.updateForInterrupts();
+        if(flags & Flag_I)
+        {
+            sys.updateForInterrupts();
 
-        if(!delayInterrupt && sys.hasInterrupt() && (flags & Flag_I))
-            serviceInterrupt(sys.acknowledgeInterrupt());
+            if(!delayInterrupt && sys.hasInterrupt())
+                serviceInterrupt(sys.acknowledgeInterrupt());
+        }
 
         delayInterrupt = false;
 
