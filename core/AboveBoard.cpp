@@ -91,12 +91,7 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
     if((addr & 0xF) <= 8)
     {
         // page mapping registers
-        // there are 4x too many for 16k pages though
-        auto page = ((addr & 0xF) + 6) << 16 | (addr & 0xF000);
-
-        // we're just ignoring the low two bits for now
-        if((page & 0x3FFF) != 0)
-            return;
+        auto page = ((addr & 0xF) + 6) << 16 | (addr & 0xC000);
 
         // don't map (or more importantly, UNMAP) pages we don't control
         if(page < 0xC0000)
@@ -112,7 +107,8 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
 
         if(data & 0x80)
         {
-            auto index = data & 0x7F;
+            // the upper bits are in the address
+            auto index = (data & 0x7F) | (addr & 0x3000) >> 5;
             
             size_t offset = index * 16 * 1024;
 
