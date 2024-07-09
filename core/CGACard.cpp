@@ -176,22 +176,41 @@ void CGACard::draw(int start, int end)
 
             auto fg = colSelect & 0xF;
 
-            for(int cycle = start; cycle < end; cycle++)
+            int cycle = start;
+
+            auto out = scanlineBuf + cycle;
+            auto in = ram + addr + (cycle / 4);
+
+            // round up
+            if(cycle & 3)
             {
-                auto charAddr = addr + (cycle / 4);
+                auto data = *in++;
+                data <<= (cycle & 3) * 2;
+                for(; cycle & 3 && cycle < end; cycle++, data <<= 2)
+                    *out++ = (data & 0x80 ? fg : 0) | (data & 0x40 ? fg << 4 : 0);
 
-                auto data = ram[charAddr];
-                auto col = (data << ((cycle & 3) * 2) >> 6) & 3;
+                if(cycle == end)
+                    return;
+            }
 
-                auto col0 = 0, col1 = 0;
-                
-                if(col & 2)
-                    col0 = fg;
-                
-                if(col & 1)
-                    col1 = fg;
+            // full bytes
+            auto count = (end - cycle) / 4;
+            while(count--)
+            {
+                auto data = *in++;
 
-                scanlineBuf[cycle] = col0 | col1 << 4;
+                *out++ = (data & 0x80 ? fg : 0) | (data & 0x40 ? fg << 4 : 0);
+                *out++ = (data & 0x20 ? fg : 0) | (data & 0x10 ? fg << 4 : 0);
+                *out++ = (data & 0x08 ? fg : 0) | (data & 0x04 ? fg << 4 : 0);
+                *out++ = (data & 0x02 ? fg : 0) | (data & 0x01 ? fg << 4 : 0);
+            }
+
+            // remainder
+            if(end & 3)
+            {
+                auto data = *in;
+                for(int i = 0; i < (end & 7); i++, data <<= 2)
+                    *out++ = (data & 0x80 ? fg : 0) | (data & 0x40 ? fg << 4 : 0);
             }
         }
         else
