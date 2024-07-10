@@ -12,6 +12,7 @@ System::System() : cpu(*this)
 void System::reset()
 {
     memset(memDirty, 0, sizeof(memDirty));
+    memset(memReadOnly, 0, sizeof(memReadOnly));
     cpu.reset();
 }
 
@@ -26,6 +27,23 @@ void System::addMemory(uint32_t base, uint32_t size, uint8_t *ptr)
 
     for(int i = 0; i < numBlocks; i++)
         memMap[block + i] = ptr - base;
+}
+
+void System::addReadOnlyMemory(uint32_t base, uint32_t size, const uint8_t *ptr)
+{
+    assert(size % blockSize == 0);
+    assert(base % blockSize == 0);
+    assert(base + size <= maxAddress);
+
+    auto block = base / blockSize;
+    int numBlocks = size / blockSize;
+
+    for(int i = 0; i < numBlocks; i++)
+    {
+        memMap[block + i] = const_cast<uint8_t *>(ptr) - base;
+    
+        memReadOnly[(block + i) / 32] |= 1 << ((block + i) % 32);
+    }
 }
 
 void System::removeMemory(unsigned int block)
@@ -96,6 +114,10 @@ void System::writeMem(uint32_t addr, uint8_t data)
         if(ptr)
             ptr = memMap[block] = ptr - block * blockSize;
     }
+
+    // no writing the ROM
+    if(memReadOnly[block / 32] & (1 << (block % 32)))
+        return;
 
     if(ptr)
         ptr[addr] = data;

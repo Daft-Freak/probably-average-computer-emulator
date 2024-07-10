@@ -85,6 +85,7 @@ private:
 
     uint8_t *memMap[maxAddress / blockSize];
     uint32_t memDirty[maxAddress / blockSize / 32];
+    uint32_t memReadOnly[maxAddress / blockSize / 32];
 
     MemRequestCallback memReqCb = nullptr;
 
