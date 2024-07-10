@@ -444,7 +444,11 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                         if(enabled & 1)
                             updatePIT();
 
-                        // io devs...
+                        for(auto &dev : ioDevices)
+                        {
+                            if(dev.picMask & enabled)
+                                dev.dev->updateForInterrupts();
+                        }
                     }
 
                     pic.mask = data;
