@@ -405,6 +405,9 @@ static uint8_t *requestMem(unsigned int block)
         it = ramCacheMap.begin();
         prevIt = ramCacheMap.before_begin();
 
+        // we really don't want the bank switching here, so make sure the next frame has started
+        while(!display_render_needed());
+
         int psramBank = display_get_ram_bank();
         psram.write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
         psram.wait_for_finish_blocking();
@@ -438,6 +441,11 @@ static uint8_t *requestMem(unsigned int block)
 
 static std::forward_list<MemBlockMapping>::iterator cacheFlush()
 {
+    // this should be true at this point
+    // but if it isn't we could end up switching bank part way through
+    if(!display_render_needed())
+        return ramCacheMap.end();
+
     const auto blockSize = System::getMemoryBlockSize();
 
     // find dirty
