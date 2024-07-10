@@ -59,6 +59,7 @@ static constexpr uint32_t psramBaseAddress = 0x100000;
 
 static uint8_t scanLineOutBuf[640];
 static int firstFrames = 2;
+static bool discardFrame = false;
 
 static uint8_t lastKeys[6]{0, 0, 0, 0, 0};
 static uint8_t lastKeyMod = 0;
@@ -328,7 +329,8 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     if(line == 0)
     {
         // sync
-        while(!display_render_needed());
+        while(!discardFrame && !display_render_needed());
+        discardFrame = false;
 
         set_display_size(w, 240); /*really 200*/
 
@@ -340,8 +342,9 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
             firstFrames--;
         }
     }
-
-    write_display(0, line, w, scanLineOutBuf);
+    
+    if(!discardFrame)
+        write_display(0, line, w, scanLineOutBuf);
 
     if(line == 199)
     {
@@ -409,14 +412,24 @@ static uint8_t *requestMem(unsigned int block)
         while(!display_render_needed());
 
         int psramBank = display_get_ram_bank();
-        psram.write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
+
+        // as we're going to block for an entire frame anyway, might as well use the time to flush all the blocks
+        for(auto it2 = it; it2 != ramCacheMap.end(); ++it2)
+            psram.write(psramBaseAddress + it2->memBlock * blockSize, (uint32_t *)(ramCache + it2->cacheBlock * blockSize), blockSize);
+
         psram.wait_for_finish_blocking();
         // swap buf, write again
         // this will cause a display glitch
         display_wait_for_frame(psramBank);
-        psram.write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
 
-        sys.clearMemoryBlockDirty(it->memBlock);
+        for(auto it2 = it; it2 != ramCacheMap.end(); ++it2)
+        {
+            psram.write(psramBaseAddress + it2->memBlock * blockSize, (uint32_t *)(ramCache + it2->cacheBlock * blockSize), blockSize);
+            sys.clearMemoryBlockDirty(it2->memBlock);
+        }
+
+        // drop the rest of this frame, one broken frame is better than two...
+        discardFrame = true;
     }
 
     // got a cache block, fill it
