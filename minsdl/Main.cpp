@@ -648,7 +648,7 @@ int main(int argc, char *argv[])
         if(readLen < sizeof(biosROM))
             biosBase += sizeof(biosROM) - readLen;
 
-        sys.addMemory(biosBase, readLen, biosROM);
+        sys.addReadOnlyMemory(biosBase, readLen, biosROM);
         biosFile.close();
     }
     else
@@ -663,7 +663,7 @@ int main(int argc, char *argv[])
     {
         std::cout << "loading fixed-disk adapter ROM at C8000\n";
         biosFile.read(reinterpret_cast<char *>(fixedDiskBIOSROM), sizeof(fixedDiskBIOSROM));
-        sys.addMemory(0xC8000, sizeof(fixedDiskBIOSROM), fixedDiskBIOSROM);
+        sys.addReadOnlyMemory(0xC8000, sizeof(fixedDiskBIOSROM), fixedDiskBIOSROM);
     }
 
     // try to open floppy disk image(s)

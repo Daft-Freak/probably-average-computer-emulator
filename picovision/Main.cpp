@@ -637,11 +637,11 @@ int main()
     auto bios = _binary_bios_xt_rom_start;
     auto biosSize = _binary_bios_xt_rom_end - _binary_bios_xt_rom_start;
     auto biosBase = 0x100000 - biosSize;
-    sys.addMemory(biosBase, biosSize, (uint8_t *)bios);
+    sys.addReadOnlyMemory(biosBase, biosSize, (const uint8_t *)bios);
 
 #ifdef FIXED_DISK
     // size is wring, but mem mapping can't handle smaller
-    sys.addMemory(0xC8000, 0x4000, (uint8_t *)_binary_fixed_disk_bios_rom_start);
+    sys.addReadOnlyMemory(0xC8000, 0x4000, (const uint8_t *)_binary_fixed_disk_bios_rom_start);
 
     fixedIO.openDisk(0, "hd0.img");
     fixDisk.setIOInterface(&fixedIO);
