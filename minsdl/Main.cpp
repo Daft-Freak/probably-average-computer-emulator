@@ -458,7 +458,7 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
 
 bool FileFloppyIO::isPresent(int unit)
 {
-    return unit < maxDrives && file[unit];
+    return unit < maxDrives && file[unit].is_open();
 }
 
 bool FileFloppyIO::read(int unit, uint8_t *buf, uint8_t cylinder, uint8_t head, uint8_t sector)
@@ -525,7 +525,7 @@ void FileFloppyIO::openDisk(int unit, std::string path)
 
 bool FileFixedIO::isPresent(int unit)
 {
-    return unit < maxDrives && file[unit];
+    return unit < maxDrives && file[unit].is_open();
 }
 
 bool FileFixedIO::read(int unit, uint8_t *buf, uint32_t lba)
