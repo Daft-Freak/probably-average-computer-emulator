@@ -18,6 +18,7 @@
 #include "FixedDiskAdapter.h"
 #include "FloppyController.h"
 #include "Scancode.h"
+#include "SerialMouse.h"
 #include "System.h"
 
 struct MemBlockMapping
@@ -42,6 +43,8 @@ static FloppyController fdc(sys);
 #ifdef FIXED_DISK
 static FixedDiskAdapter fixDisk(sys);
 #endif
+
+static SerialMouse mouse(sys);
 
 static const int cacheBlocks = 12;
 static const int frameFlushThreshold = 4; // minimum dirty blocks before flushing at frame end
@@ -489,10 +492,10 @@ static void alarmCallback(uint alarmNum)
 
 void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len)
 {
-    // request report if it's a keyboard
+    // request report if it's a keyboard/mouse
     auto protocol = tuh_hid_interface_protocol(dev_addr, instance);
 
-    if(protocol == HID_ITF_PROTOCOL_KEYBOARD)
+    if(protocol == HID_ITF_PROTOCOL_KEYBOARD || protocol == HID_ITF_PROTOCOL_MOUSE)
         tuh_hid_receive_report(dev_addr, instance);
 }
 
@@ -556,6 +559,17 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 
         memcpy(lastKeys, keyboardReport->keycode, 6);
         lastKeyMod = keyboardReport->modifier;
+
+        tuh_hid_receive_report(dev_addr, instance);
+    }
+    else if(protocol == HID_ITF_PROTOCOL_MOUSE)
+    {
+        auto mouseReport = (hid_mouse_report_t const*) report;
+
+        mouse.addMotion(mouseReport->x, mouseReport->y);
+        mouse.setButton(0, mouseReport->buttons & MOUSE_BUTTON_LEFT);
+        mouse.setButton(1, mouseReport->buttons & MOUSE_BUTTON_RIGHT);
+        mouse.sync();
 
         tuh_hid_receive_report(dev_addr, instance);
     }
