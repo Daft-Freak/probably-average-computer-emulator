@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 
 #include "System.h"
 
@@ -435,7 +436,19 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                 }
                 else // mask
                 {
+                    auto enabled = pic.mask & ~data;
+
+                    if(enabled)
+                    {
+                        // sync devices that are getting their IRQ unmasked
+                        if(enabled & 1)
+                            updatePIT();
+
+                        // io devs...
+                    }
+
                     pic.mask = data;
+                    calculateNextInterruptCycle(cpu.getCycleCount());
                 }
                 break;
             }
@@ -480,6 +493,7 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                                 pit.outState |= (1 << channel);
 
                             calculateNextPITUpdate();
+                            calculateNextInterruptCycle(cpu.getCycleCount());
                         }
                     }
 
@@ -522,6 +536,7 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                     printf("PIT ch%i access %i mode %i\n", channel, access, mode);
 
                     calculateNextPITUpdate();
+                    calculateNextInterruptCycle(cpu.getCycleCount());
                 }
 
                 break;
@@ -562,6 +577,7 @@ void System::writeIOPort(uint16_t addr, uint8_t data)
                             // send reply a little later
                             keyboardTestReplyCycle = cpu.getCycleCount();
                             keyboardTestDelay = 1000;
+                            calculateNextInterruptCycle(cpu.getCycleCount());
                         }
                     }
                     else
@@ -648,6 +664,8 @@ void System::updateForInterrupts()
         if(dev.picMask & ~pic.mask)
             dev.dev->updateForInterrupts();
     }
+
+    calculateNextInterruptCycle(cpu.getCycleCount());
 }
 
 void System::updateForDisplay()
@@ -655,6 +673,29 @@ void System::updateForDisplay()
     // PIT may update speaker, so we need to run that first
     updatePIT();
     updateSpeaker(cpu.getCycleCount());
+}
+
+void System::calculateNextInterruptCycle(uint32_t cycleCount)
+{
+    int toUpdate = std::numeric_limits<int>::max();
+
+    // keyboard self-test
+    if(keyboardTestDelay)
+        toUpdate = std::min(toUpdate, static_cast<int>(keyboardTestDelay - (cycleCount - keyboardTestReplyCycle)));
+
+    // timer
+    if(!(pic.mask & 1))
+        toUpdate = std::min(toUpdate, static_cast<int>(pit.nextUpdateCycle - cycleCount));
+
+    for(auto &dev : ioDevices)
+    {
+        if(dev.picMask & ~pic.mask)
+            toUpdate = std::min(toUpdate, dev.dev->getCyclesToNextInterrupt(cycleCount));
+    }
+
+    assert(toUpdate >= 0 || nextInterruptCycle == cycleCount + toUpdate);
+
+    nextInterruptCycle = cycleCount + toUpdate;
 }
 
 uint8_t System::acknowledgeInterrupt()

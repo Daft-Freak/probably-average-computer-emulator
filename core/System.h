@@ -13,6 +13,7 @@ public:
     virtual void write(uint16_t addr, uint8_t data) = 0;
 
     virtual void updateForInterrupts() = 0;
+    virtual int getCyclesToNextInterrupt(uint32_t cycleCount) = 0;
 };
 
 class System
@@ -50,6 +51,9 @@ public:
 
     void updateForInterrupts();
     void updateForDisplay();
+
+    void calculateNextInterruptCycle(uint32_t cycleCount);
+    uint32_t getNextInterruptCycle() const {return nextInterruptCycle;}
 
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
     uint8_t acknowledgeInterrupt();
@@ -155,6 +159,8 @@ private:
     PPI ppi;
 
     std::vector<IORange> ioDevices;
+
+    uint32_t nextInterruptCycle = 0;
 
     FIFO<uint8_t, 8> keyboardQueue;
     uint32_t keyboardClockLowCycle = 0;

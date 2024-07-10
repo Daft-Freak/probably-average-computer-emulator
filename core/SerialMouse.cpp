@@ -208,6 +208,16 @@ void SerialMouse::updateForInterrupts()
         update();
 }
 
+int SerialMouse::getCyclesToNextInterrupt(uint32_t cycleCount)
+{
+    if(!cpuCyclesPerWord)
+        return 0x7FFFFFFF;
+
+    auto passed = cycleCount - lastUpdateCycle;
+
+    return wordCycleCounter - passed;
+}
+
 void SerialMouse::updateTimings()
 {
     if(divisor == 0)
@@ -223,4 +233,6 @@ void SerialMouse::updateTimings()
     // get rough number of cpu cycles per word
     // (this emulator does not yet support multiple clocks...)
     cpuCyclesPerWord = 4772726 * bits / baud;
+
+    sys.calculateNextInterruptCycle(sys.getCPU().getCycleCount());
 }

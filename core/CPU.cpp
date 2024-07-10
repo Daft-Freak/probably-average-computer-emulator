@@ -418,10 +418,10 @@ void CPU::run(int ms)
 
     while(cyclesToRun > 0)
     {
+        auto oldCycles = cycleCount;
+
         if(flags & Flag_I)
         {
-            sys.updateForInterrupts();
-
             if(!delayInterrupt && sys.hasInterrupt())
                 serviceInterrupt(sys.acknowledgeInterrupt());
         }
@@ -429,6 +429,13 @@ void CPU::run(int ms)
         delayInterrupt = false;
 
         executeInstruction();
+
+        // sync for interrupts
+        uint32_t exec = cycleCount - oldCycles;
+
+        bool shouldUpdate = sys.getNextInterruptCycle() - oldCycles <= exec;
+        if(shouldUpdate)
+            sys.updateForInterrupts();
     }
 }
 

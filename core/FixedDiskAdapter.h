@@ -23,6 +23,7 @@ public:
     void write(uint16_t addr, uint8_t data) override;
 
     void updateForInterrupts() override {};
+    int getCyclesToNextInterrupt(uint32_t cycleCount) override {return 0;}
 
 private:
     System &sys;
