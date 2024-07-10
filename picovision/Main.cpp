@@ -380,6 +380,10 @@ static uint8_t *requestMem(unsigned int block)
 {
     const auto blockSize = System::getMemoryBlockSize();
 
+    // don't map over 640k
+    if(block * blockSize > 0xA0000)
+        return nullptr;
+
     auto &psram = display_get_ram();
 
     // find non-dirty block
