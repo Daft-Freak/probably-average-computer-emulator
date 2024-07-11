@@ -6,6 +6,9 @@ class AboveBoard final : public IODevice
 public:
     AboveBoard(System &sys);
 
+    unsigned int remapMemoryBlockFromWindow(unsigned int block);
+    unsigned int remapMemoryBlockToWindow(unsigned int block);
+
     uint8_t read(uint16_t addr) override;
     void write(uint16_t addr, uint8_t data) override;
 
@@ -31,5 +34,5 @@ private:
     };
     uint16_t eepromData;
 
-    uint8_t pageMapping[16];
+    uint16_t pageMapping[16];
 };

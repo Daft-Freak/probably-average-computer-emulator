@@ -45,6 +45,53 @@ AboveBoard::AboveBoard(System &sys) : sys(sys)
     sys.addIODevice(0x3F0, 0x250, 0, this);
 }
 
+unsigned int AboveBoard::remapMemoryBlockFromWindow(unsigned int block)
+{
+    // hopefully all the * 16k / 16k gets optimised out...
+    auto addr = block * System::getMemoryBlockSize();
+
+    if(addr < 0xC0000 || addr >= 0x100000)
+        return block;
+
+    int index = (addr - 0xC0000) / 0x4000;
+
+    if(!(pageMapping[index] & 0x80))
+        return block;
+
+    auto abPage = (pageMapping[index] & 0x7F) | (pageMapping[index] & 0x300) >> 1;
+
+    auto mappedAddr = System::getNumMemoryBlocks() * System::getMemoryBlockSize() + abPage * (16 * 1024);
+
+    return mappedAddr / System::getMemoryBlockSize();
+}
+
+unsigned int AboveBoard::remapMemoryBlockToWindow(unsigned int block)
+{
+    auto addr = block * System::getMemoryBlockSize();
+
+    if(addr < System::getNumMemoryBlocks() * System::getMemoryBlockSize())
+        return block;
+
+    addr -= System::getNumMemoryBlocks() * System::getMemoryBlockSize();
+
+    auto abPage = addr / (16 * 1024);
+
+    // adjust to internal format
+    abPage = (abPage & 0x7F) | 0x80 | (abPage & 0x18) << 1;
+
+    uint32_t windowAddr = 0xC0000;
+
+    for(auto &mapping : pageMapping)
+    {
+        if(mapping == abPage)
+            break;
+
+        windowAddr += 0x4000;
+    }
+
+    return windowAddr / System::getMemoryBlockSize();
+}
+
 uint8_t AboveBoard::read(uint16_t addr)
 {
     if((addr & 0x300F) <= 8)
@@ -99,7 +146,8 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
 
         int bit = (page - 0xC0000) / 0x4000;
 
-        pageMapping[bit] = data;
+        // keep the upper bits as well
+        pageMapping[bit] = data | (addr & 0x3000) >> 4;
 
         // register is too small for the last 4, assume enabled?
         if(bit < 8 && !(pageMask & (1 << bit)))
