@@ -26,7 +26,7 @@ void System::addMemory(uint32_t base, uint32_t size, uint8_t *ptr)
     int numBlocks = size / blockSize;
 
     for(int i = 0; i < numBlocks; i++)
-        memMap[block + i] = ptr - base;
+        memMap[block + i] = ptr ? ptr - base : nullptr;
 }
 
 void System::addReadOnlyMemory(uint32_t base, uint32_t size, const uint8_t *ptr)
