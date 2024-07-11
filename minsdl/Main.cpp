@@ -5,6 +5,7 @@
 
 #include <SDL.h>
 
+#include "AboveBoard.h"
 #include "CGACard.h"
 #include "FixedDiskAdapter.h"
 #include "FloppyController.h"
@@ -19,12 +20,14 @@ static bool turbo = false;
 
 static System sys;
 
+static AboveBoard aboveBoard(sys);
 static CGACard cga(sys);
 static FixedDiskAdapter fixDisk(sys);
 static FloppyController fdc(sys);
 static SerialMouse mouse(sys);
 
 static uint8_t ram[640 * 1024];
+static uint8_t aboveRAM[8 * 1024 * 1024];
 
 static uint8_t screenData[640 * 200 * 4];
 static int curScreenW = 0;
@@ -423,6 +426,22 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     curScreenW = w;
 }
 
+static uint8_t *requestMem(unsigned int block)
+{
+    auto addr = block * System::getMemoryBlockSize();
+
+    // this is only for mapping above board memory
+    if(addr < 0x100000)
+        return nullptr;
+
+    addr -= 0x100000;
+
+    if(addr >= sizeof(aboveRAM))
+        return nullptr;
+    
+    return aboveRAM + addr;
+}
+
 int main(int argc, char *argv[])
 {
     int screenWidth = 640;
@@ -488,6 +507,7 @@ int main(int argc, char *argv[])
     // emu init
     auto &cpu = sys.getCPU();
     sys.addMemory(0, sizeof(ram), ram);
+    sys.setMemoryRequestCallback(requestMem);
 
     std::ifstream biosFile(basePath + biosPath, std::ios::binary);
 
