@@ -25,8 +25,8 @@
 struct MemBlockMapping
 {
     uint8_t cacheBlock;
-    uint8_t memBlock;
     uint8_t windowBlock; // where expanded memory is mapped to
+    uint16_t memBlock;
 };
 
 extern char _binary_bios_xt_rom_start[];
@@ -393,7 +393,8 @@ static uint8_t *requestMem(unsigned int block)
     if(block * blockSize > 0xA0000 && block * blockSize < 0x100000)
         return nullptr;
 
-    if(block >= 0xFF)
+    // limit to PSRAM (rounded down a bit)
+    if(block * blockSize >= 7 * 1024 * 1024)
         return nullptr;
 
     auto &psram = display_get_ram();
@@ -404,7 +405,7 @@ static uint8_t *requestMem(unsigned int block)
     for(; it != ramCacheMap.end(); prevIt = it++)
     {
         // unused block
-        if(it->memBlock == 0xFF)
+        if(it->memBlock == 0xFFFF)
             break;
 
         if(!sys.getMemoryBlockDirty(it->windowBlock))
@@ -446,7 +447,7 @@ static uint8_t *requestMem(unsigned int block)
     psram.read_blocking(psramBaseAddress + block * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize / 4);
 
     // remove old mapping
-    if(it->memBlock != 0xFF)
+    if(it->memBlock != 0xFFFF)
         sys.removeMemory(it->windowBlock);
 
     it->memBlock = block;
@@ -632,11 +633,11 @@ int main()
     init_display();
 
     // int ram map
-    ramCacheMap.emplace_front(MemBlockMapping{0, 0xFF, 0xFF});
+    ramCacheMap.emplace_front(MemBlockMapping{0, 0xFF, 0xFFFF});
     ramCacheEnd = ramCacheMap.begin();
 
     for(uint8_t i = 1; i < cacheBlocks; i++)
-        ramCacheEnd = ramCacheMap.emplace_after(ramCacheEnd, MemBlockMapping{i, 0xFF, 0xFF});
+        ramCacheEnd = ramCacheMap.emplace_after(ramCacheEnd, MemBlockMapping{i, 0xFF, 0xFFFF});
 
     lastFlushedBlock = ramCacheMap.end();
 
