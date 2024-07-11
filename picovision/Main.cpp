@@ -14,6 +14,7 @@
 
 #include "Display.h"
 
+#include "AboveBoard.h"
 #include "CGACard.h"
 #include "FixedDiskAdapter.h"
 #include "FloppyController.h"
@@ -25,6 +26,7 @@ struct MemBlockMapping
 {
     uint8_t cacheBlock;
     uint8_t memBlock;
+    uint8_t windowBlock; // where expanded memory is mapped to
 };
 
 extern char _binary_bios_xt_rom_start[];
@@ -36,6 +38,8 @@ extern char _binary_fixed_disk_bios_rom_end[];
 static FATFS fs;
 
 static System sys;
+
+static AboveBoard aboveBoard(sys);
 
 static CGACard cga(sys);
 static FloppyController fdc(sys);
@@ -365,13 +369,13 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
 
             for(auto it = firstDirty; it != ramCacheMap.end() && count; ++it)
             {
-                if(!sys.getMemoryBlockDirty(it->memBlock))
+                if(!sys.getMemoryBlockDirty(it->windowBlock))
                     continue;
 
                 const auto blockSize = System::getMemoryBlockSize();
                 display_get_ram().write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
 
-                sys.clearMemoryBlockDirty(it->memBlock);
+                sys.clearMemoryBlockDirty(it->windowBlock);
 
                 count--;
             }
@@ -383,8 +387,13 @@ static uint8_t *requestMem(unsigned int block)
 {
     const auto blockSize = System::getMemoryBlockSize();
 
+    block = aboveBoard.remapMemoryBlockFromWindow(block);
+
     // don't map over 640k
-    if(block * blockSize > 0xA0000)
+    if(block * blockSize > 0xA0000 && block * blockSize < 0x100000)
+        return nullptr;
+
+    if(block >= 0xFF)
         return nullptr;
 
     auto &psram = display_get_ram();
@@ -398,7 +407,7 @@ static uint8_t *requestMem(unsigned int block)
         if(it->memBlock == 0xFF)
             break;
 
-        if(!sys.getMemoryBlockDirty(it->memBlock))
+        if(!sys.getMemoryBlockDirty(it->windowBlock))
             break;
     }
 
@@ -425,7 +434,7 @@ static uint8_t *requestMem(unsigned int block)
         for(auto it2 = it; it2 != ramCacheMap.end(); ++it2)
         {
             psram.write(psramBaseAddress + it2->memBlock * blockSize, (uint32_t *)(ramCache + it2->cacheBlock * blockSize), blockSize);
-            sys.clearMemoryBlockDirty(it2->memBlock);
+            sys.clearMemoryBlockDirty(it->windowBlock);
         }
 
         // drop the rest of this frame, one broken frame is better than two...
@@ -438,9 +447,10 @@ static uint8_t *requestMem(unsigned int block)
 
     // remove old mapping
     if(it->memBlock != 0xFF)
-        sys.removeMemory(it->memBlock);
+        sys.removeMemory(it->windowBlock);
 
     it->memBlock = block;
+    it->windowBlock = aboveBoard.remapMemoryBlockToWindow(block);
 
     if(it != ramCacheEnd)
     {
@@ -468,7 +478,7 @@ static std::forward_list<MemBlockMapping>::iterator cacheFlush()
     // try to avoid blocks flushed last time
     for(; firstDirty != ramCacheMap.end(); ++firstDirty)
     {
-        if(firstDirty != lastFlushedBlock && sys.getMemoryBlockDirty(firstDirty->memBlock))
+        if(firstDirty != lastFlushedBlock && sys.getMemoryBlockDirty(firstDirty->windowBlock))
             break;
     }
 
@@ -476,7 +486,7 @@ static std::forward_list<MemBlockMapping>::iterator cacheFlush()
 
     for(auto it = ramCacheMap.begin(); it != ramCacheMap.end(); ++it)
     {
-        if(sys.getMemoryBlockDirty(it->memBlock))
+        if(sys.getMemoryBlockDirty(it->windowBlock))
         {
             dirtyBlocks++;
             // track first dirty block
@@ -493,7 +503,7 @@ static std::forward_list<MemBlockMapping>::iterator cacheFlush()
 
     for(auto it = firstDirty; it != ramCacheMap.end() && count; ++it)
     {
-        if(!sys.getMemoryBlockDirty(it->memBlock))
+        if(!sys.getMemoryBlockDirty(it->windowBlock))
             continue;
 
         display_get_ram().write(psramBaseAddress + it->memBlock * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize);
@@ -622,11 +632,11 @@ int main()
     init_display();
 
     // int ram map
-    ramCacheMap.emplace_front(MemBlockMapping{0, 0xFF});
+    ramCacheMap.emplace_front(MemBlockMapping{0, 0xFF, 0xFF});
     ramCacheEnd = ramCacheMap.begin();
 
     for(uint8_t i = 1; i < cacheBlocks; i++)
-        ramCacheEnd = ramCacheMap.emplace_after(ramCacheEnd, MemBlockMapping{i, 0xFF});
+        ramCacheEnd = ramCacheMap.emplace_after(ramCacheEnd, MemBlockMapping{i, 0xFF, 0xFF});
 
     lastFlushedBlock = ramCacheMap.end();
 
