@@ -25,14 +25,14 @@ void SerialMouse::setButton(int button, bool state)
 
     if(buttons ^ newButton)
     {
-        changedButtons |= newButton;
+        changedButtons |= (1 << button);
         buttons ^= (1 << button);
     }
 }
 
 void SerialMouse::sync()
 {
-    if(!changedButtons && !xMotion && ! yMotion)
+    if(!changedButtons && !xMotion && !yMotion)
         return;
 
     // make sure queue isn't full
