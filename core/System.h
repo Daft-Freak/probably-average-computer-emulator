@@ -27,7 +27,7 @@ public:
     CPU &getCPU() {return cpu;}
 
     void addMemory(uint32_t base, uint32_t size, uint8_t *ptr);
-    // TODO: a const version somehow?
+    void addReadOnlyMemory(uint32_t base, uint32_t size, const uint8_t *ptr);
 
     void removeMemory(unsigned int block);
 
