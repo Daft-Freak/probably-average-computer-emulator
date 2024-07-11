@@ -1,6 +1,9 @@
 # minimal SDL shell
 
-add_executable(PACE_SDL Main.cpp)
+add_executable(PACE_SDL
+    DiskIO.cpp
+    Main.cpp
+)
 
 find_package(SDL2 REQUIRED)
 
