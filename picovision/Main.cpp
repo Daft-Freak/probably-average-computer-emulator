@@ -145,25 +145,25 @@ static const XTScancode scancodeMap[]{
     XTScancode::Invalid, // PrintScreen
     XTScancode::ScrollLock,
     XTScancode::Invalid, // Pause
-    XTScancode::Invalid, // Insert
+    XTScancode::Insert,
     
-    XTScancode::Invalid, // Home
-    XTScancode::Invalid, // PageUp
-    XTScancode::Invalid, // Delete
-    XTScancode::Invalid, // End
-    XTScancode::Invalid, // PageDown
-    XTScancode::Invalid, // Right
-    XTScancode::Invalid, // Left
-    XTScancode::Invalid, // Down
-    XTScancode::Invalid, // Up
+    XTScancode::Home,
+    XTScancode::PageUp,
+    XTScancode::Delete,
+    XTScancode::End,
+    XTScancode::PageDown,
+    XTScancode::Right,
+    XTScancode::Left,
+    XTScancode::Down,
+    XTScancode::Up,
 
     XTScancode::NumLock,
 
-    XTScancode::Invalid, // KPDivide
+    XTScancode::KPDivide,
     XTScancode::KPMultiply,
     XTScancode::KPMinus,
     XTScancode::KPPlus,
-    XTScancode::Invalid, // KPEnter
+    XTScancode::KPEnter,
     XTScancode::KP1,
     XTScancode::KP2,
     XTScancode::KP3,
@@ -241,9 +241,9 @@ static const XTScancode modMap[]
     XTScancode::LeftShift,
     XTScancode::LeftAlt,
     XTScancode::Invalid, // LeftGUI
-    XTScancode::Invalid, // RightCtrl
+    XTScancode::RightCtrl,
     XTScancode::RightShift,
-    XTScancode::Invalid, // RightAlt
+    XTScancode::RightAlt,
     XTScancode::Invalid, // RightGUI
 };
 
