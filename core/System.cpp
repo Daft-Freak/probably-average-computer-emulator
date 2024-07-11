@@ -72,6 +72,11 @@ void System::setMemoryRequestCallback(MemRequestCallback cb)
     memReqCb = cb;
 }
 
+System::MemRequestCallback System::getMemoryRequestCallback() const
+{
+    return memReqCb;
+}
+
 void System::addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev)
 {
     ioDevices.emplace_back(IORange{mask, value, picMask, dev});

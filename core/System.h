@@ -37,6 +37,7 @@ public:
     void clearMemoryBlockDirty(unsigned int block);
 
     void setMemoryRequestCallback(MemRequestCallback cb);
+    MemRequestCallback getMemoryRequestCallback() const;
 
     void addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev);
 

@@ -114,11 +114,13 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
 
             printf("AB map %04X = %02X\n", page, index);
 
-            // unmap on out-of-bounds page
-            if(offset >= sizeof(ram))
-                sys.removeMemory(page / System::getMemoryBlockSize());
-            else
-                sys.addMemory(page, 16 * 1024, ram + offset);
+            // remap to after CPU address space
+            auto mapOffset = offset + System::getNumMemoryBlocks() * System::getMemoryBlockSize();
+
+            // try to map memory
+            auto memReqCb = sys.getMemoryRequestCallback();
+            if(memReqCb)
+                sys.addMemory(page, 16 * 1024, memReqCb(mapOffset / System::getMemoryBlockSize()));
         }
         else
         {

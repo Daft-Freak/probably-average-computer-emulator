@@ -32,6 +32,4 @@ private:
     uint16_t eepromData;
 
     uint8_t pageMapping[16];
-
-    uint8_t ram[2 * 1024 * 1024];
 };
