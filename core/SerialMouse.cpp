@@ -21,12 +21,13 @@ void SerialMouse::addMotion(int x, int y)
 
 void SerialMouse::setButton(int button, bool state)
 {
-    auto newButton = (state ? 1 : 0) << button;
+    auto buttonMask = 1 << button;
+    auto newState = (state ? 1 : 0) << button;
 
-    if(buttons ^ newButton)
+    if((buttons & buttonMask) != newState)
     {
-        changedButtons |= (1 << button);
-        buttons ^= (1 << button);
+        changedButtons |= buttonMask;
+        buttons ^= buttonMask;
     }
 }
 
