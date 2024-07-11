@@ -744,7 +744,14 @@ uint8_t System::acknowledgeInterrupt()
 
 void System::sendKey(XTScancode scancode, bool down)
 {
-    keyboardQueue.push(static_cast<uint8_t>(scancode) | (down ? 0 : 0x80));
+    auto rawCode = static_cast<uint16_t>(scancode);
+
+    // send extended code
+    if(rawCode & 0xFF00)
+        keyboardQueue.push(rawCode >> 8);
+
+    // add break bit
+    keyboardQueue.push(rawCode | (down ? 0 : 0x80));
     flagPICInterrupt(1);
 }
 
