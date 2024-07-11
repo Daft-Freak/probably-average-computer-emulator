@@ -742,9 +742,9 @@ uint8_t System::acknowledgeInterrupt()
     return serviceIndex | (pic.initCommand[1] & 0xF8);
 }
 
-void System::sendKey(uint8_t scancode)
+void System::sendKey(XTScancode scancode, bool down)
 {
-    keyboardQueue.push(scancode);
+    keyboardQueue.push(static_cast<uint8_t>(scancode) | (down ? 0 : 0x80));
     flagPICInterrupt(1);
 }
 

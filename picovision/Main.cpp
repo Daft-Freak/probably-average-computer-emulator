@@ -544,7 +544,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
                 continue;
 
             if(key < std::size(scancodeMap) && scancodeMap[key] != XTScancode::Invalid)
-                sys.sendKey(static_cast<uint8_t>(scancodeMap[key]));
+                sys.sendKey(scancodeMap[key], true);
             else
                 printf("key down %i %i\n", i, key);
         }
@@ -561,7 +561,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
                 continue;
 
             if(key < std::size(scancodeMap) && scancodeMap[key] != XTScancode::Invalid)
-                sys.sendKey(0x80 | static_cast<uint8_t>(scancodeMap[key])); // break code
+                sys.sendKey(scancodeMap[key], false);
             else
                 printf("key up %i %i\n", i, key);
         }
@@ -577,9 +577,9 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
                 continue;
 
             if(pressedMods & (1 << i))
-                sys.sendKey(static_cast<uint8_t>(modMap[i]));
+                sys.sendKey(modMap[i], true);
             else if(releasedMods & (1 << i))
-                sys.sendKey(0x80 | static_cast<uint8_t>(modMap[i])); // break code
+                sys.sendKey(modMap[i], false);
         }
 
         memcpy(lastKeys, keyboardReport->keycode, 6);

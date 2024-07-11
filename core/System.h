@@ -5,6 +5,7 @@
 
 #include "CPU.h"
 #include "FIFO.h"
+#include "Scancode.h"
 
 class IODevice
 {
@@ -58,7 +59,7 @@ public:
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
     uint8_t acknowledgeInterrupt();
 
-    void sendKey(uint8_t scancode);
+    void sendKey(XTScancode scancode, bool down);
 
     bool hasSpeakerSample() const;
     int8_t getSpeakerSample();

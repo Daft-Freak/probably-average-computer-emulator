@@ -355,7 +355,7 @@ static void pollEvents()
                     auto code = scancodeMap[event.key.keysym.scancode];
 
                     if(code != XTScancode::Invalid)
-                        sys.sendKey(static_cast<uint8_t>(code));
+                        sys.sendKey(code, true);
                 }
                 break;
             }
@@ -386,7 +386,7 @@ static void pollEvents()
                     auto code = scancodeMap[event.key.keysym.scancode];
 
                     if(code != XTScancode::Invalid)
-                        sys.sendKey(0x80 | static_cast<uint8_t>(code)); // break code
+                        sys.sendKey(code, false);
                 }
                 break;
             }
