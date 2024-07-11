@@ -410,15 +410,15 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     auto ptr32 = reinterpret_cast<uint32_t *>(ptr);
     auto pal32 = reinterpret_cast<const uint32_t *>(palette);
 
-    for(int x = 0; x < w; x += 2)
+    auto endPtr = ptr32 + w;
+
+    do
     {
         auto in = *data++;
-        int index = in & 0xF;
-        *ptr32++ = pal32[index];
-
-        index = in >> 4;
-        *ptr32++ = pal32[index];
+        *ptr32++ = pal32[in & 0xF];
+        *ptr32++ = pal32[in >> 4];
     }
+    while(ptr32 != endPtr);
 
     curScreenW = w;
 }
