@@ -153,25 +153,25 @@ static XTScancode scancodeMap[SDL_NUM_SCANCODES]
     XTScancode::Invalid, // PrintScreen
     XTScancode::ScrollLock,
     XTScancode::Invalid, // Pause
-    XTScancode::Invalid, // Insert
-    
-    XTScancode::Invalid, // Home
-    XTScancode::Invalid, // PageUp
-    XTScancode::Invalid, // Delete
-    XTScancode::Invalid, // End
-    XTScancode::Invalid, // PageDown
-    XTScancode::Invalid, // Right
-    XTScancode::Invalid, // Left
-    XTScancode::Invalid, // Down
-    XTScancode::Invalid, // Up
+    XTScancode::Insert,
+
+    XTScancode::Home,
+    XTScancode::PageUp,
+    XTScancode::Delete,
+    XTScancode::End,
+    XTScancode::PageDown,
+    XTScancode::Right,
+    XTScancode::Left,
+    XTScancode::Down,
+    XTScancode::Up,
 
     XTScancode::NumLock,
 
-    XTScancode::Invalid, // KPDivide
+    XTScancode::KPDivide,
     XTScancode::KPMultiply,
     XTScancode::KPMinus,
     XTScancode::KPPlus,
-    XTScancode::Invalid, // KPEnter
+    XTScancode::KPEnter,
     XTScancode::KP1,
     XTScancode::KP2,
     XTScancode::KP3,
@@ -323,8 +323,9 @@ static XTScancode scancodeMap[SDL_NUM_SCANCODES]
     XTScancode::LeftShift,
     XTScancode::LeftAlt,
     XTScancode::Invalid, // LeftGUI
-    XTScancode::Invalid, // RightCtrl
+    XTScancode::RightCtrl,
     XTScancode::RightShift,
+    XTScancode::RightAlt,
 };
 
 static void audioCallback(void *userdata, Uint8 *stream, int len)
