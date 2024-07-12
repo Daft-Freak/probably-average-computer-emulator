@@ -7,12 +7,12 @@
 
 System::System() : cpu(*this)
 {
+    memset(memReadOnly, 0, sizeof(memReadOnly));
 }
 
 void System::reset()
 {
     memset(memDirty, 0, sizeof(memDirty));
-    memset(memReadOnly, 0, sizeof(memReadOnly));
     cpu.reset();
 }
 
