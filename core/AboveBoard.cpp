@@ -160,8 +160,6 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
             
             size_t offset = index * 16 * 1024;
 
-            printf("AB map %04X = %02X\n", page, index);
-
             // remap to after CPU address space
             auto mapOffset = offset + System::getNumMemoryBlocks() * System::getMemoryBlockSize();
 
@@ -172,7 +170,6 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
         }
         else
         {
-            printf("AB unmap %04X\n", page);
             sys.removeMemory(page / System::getMemoryBlockSize());
         }
 
@@ -214,6 +211,6 @@ void AboveBoard::write(uint16_t addr, uint8_t data)
         }
 
         default:
-            printf("AB W %04X = %02X @~%04X\n", addr, data, sys.getCPU().reg(CPU::Reg16::IP));
+            printf("AB W %04X = %02X @~%04X:%04X\n", addr, data, sys.getCPU().reg(CPU::Reg16::CS), sys.getCPU().reg(CPU::Reg16::IP));
     }
 }
