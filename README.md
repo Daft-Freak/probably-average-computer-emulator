@@ -8,6 +8,8 @@
 - Colour Graphics Adapter
 - Some floppy controller support
 - Some fixed disk adapter support
+- A basic serial mouse
+- An "Above Board" for up to 8MB of expanded memory (TESTAB says it's a "Matched Memory Classic")
 
 ## BIOS
 
@@ -48,9 +50,9 @@ would boot from `hd0.img` and allow installing something from the two floppy ima
 
 The more interesting frontend, depends on the pico-sdk.
 
-Currently only supports a single hard disk, loaded from `hd0.img` on the SD card. Keyboard input is supported through USB HID. The BIOS files should be placed at the root of the repository before building.
+Currently only supports a single hard disk, loaded from `hd0.img` on the SD card. Keyboard/mouse input is supported through USB HID. The BIOS files should be placed at the root of the repository before building.
 
-Supports the full 640k of memory through paging 16k blocks in and out of the PicoVision's PSRAMs (theoretically could handle a few MBs, but the emulator doesn't support that). 192k of memory is kept in the Pico's RAM at once, software that accesses a lot of RAM frequently may cause display glitches as I have to force a wait for vsync to write the other PSRAM. (If possible, I try to flush dirty memory at the end of a frame to avoid this)
+Supports the full 640k of memory and 6MB of expanded memory through paging 16k blocks in and out of the PicoVision's PSRAMs. 192k of memory is kept in the Pico's RAM at once, software that accesses a lot of RAM frequently may cause display glitches as I have to force a wait for vsync to write the other PSRAM. (If possible, I try to flush dirty memory at the end of a frame to avoid this).
 
 ### Building
 
