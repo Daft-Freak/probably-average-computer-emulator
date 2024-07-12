@@ -77,7 +77,7 @@ unsigned int AboveBoard::remapMemoryBlockToWindow(unsigned int block)
     auto abPage = addr / (16 * 1024);
 
     // adjust to internal format
-    abPage = (abPage & 0x7F) | 0x80 | (abPage & 0x18) << 1;
+    abPage = (abPage & 0x7F) | 0x80 | (abPage & 0x180) << 1;
 
     uint32_t windowAddr = 0xC0000;
 
