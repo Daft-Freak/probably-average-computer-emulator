@@ -130,9 +130,12 @@ void System::writeMem(uint32_t addr, uint8_t data)
         return;
 
     if(ptr)
-        ptr[addr] = data;
+    {
+        if(ptr[addr] != data)
+            memDirty[block / 32] |= (1 << (block % 32));
 
-    memDirty[block / 32] |= (1 << (block % 32));
+        ptr[addr] = data;
+    }
 }
 
 const uint8_t *System::mapAddress(uint32_t addr) const
