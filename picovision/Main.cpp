@@ -439,7 +439,8 @@ static uint8_t *requestMem(unsigned int block)
         }
 
         // drop the rest of this frame, one broken frame is better than two...
-        discardFrame = true;
+        if(!cga.isInVBlank())
+            discardFrame = true;
     }
 
     // got a cache block, fill it
