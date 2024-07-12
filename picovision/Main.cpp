@@ -53,11 +53,13 @@ static SerialMouse mouse(sys);
 static const int cacheBlocks = 12;
 static const int frameFlushThreshold = 4; // minimum dirty blocks before flushing at frame end
 static const int maxFlushBlocks = 2; // maximum blocks to flush at the end of a frame
+static const int totalPSRAMBlocks = 7 * 1024 * 1024 / System::getMemoryBlockSize(); // (1MB CPU address space + 6MB expanded)
 
 static uint8_t ramCache[cacheBlocks * System::getMemoryBlockSize()];
 static std::forward_list<MemBlockMapping> ramCacheMap;
 static std::forward_list<MemBlockMapping>::iterator ramCacheEnd;
 static std::forward_list<MemBlockMapping>::iterator lastFlushedBlock;
+static uint32_t cacheUsedMem[totalPSRAMBlocks / 32];
 
 static constexpr uint32_t psramBaseAddress = 0x100000;
 
@@ -444,8 +446,15 @@ static uint8_t *requestMem(unsigned int block)
     }
 
     // got a cache block, fill it
-    psram.wait_for_finish_blocking();
-    psram.read_blocking(psramBaseAddress + block * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize / 4);
+    bool used = (cacheUsedMem[block / 32] & (1 << (block % 32)));
+    if(used)
+    {
+        // load if previously used
+        psram.wait_for_finish_blocking();
+        psram.read_blocking(psramBaseAddress + block * blockSize, (uint32_t *)(ramCache + it->cacheBlock * blockSize), blockSize / 4);
+    }
+    else // otherwise just clear it
+        memset(ramCache + it->cacheBlock * blockSize, 0, blockSize);
 
     // remove old mapping
     if(it->memBlock != 0xFFFF)
@@ -453,6 +462,13 @@ static uint8_t *requestMem(unsigned int block)
 
     it->memBlock = block;
     it->windowBlock = aboveBoard.remapMemoryBlockToWindow(block);
+
+    // the first time we use a block, mark it as dirty
+    if(!used)
+    {
+        cacheUsedMem[block / 32] |= (1 << (block % 32));
+        sys.setMemoryBlockDirty(it->windowBlock);
+    }
 
     if(it != ramCacheEnd)
     {

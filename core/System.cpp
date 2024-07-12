@@ -62,6 +62,11 @@ bool System::getMemoryBlockDirty(unsigned int block) const
     return memDirty[block / 32] & (1 << (block % 32));
 }
 
+void System::setMemoryBlockDirty(unsigned int block)
+{
+    memDirty[block / 32] |= 1 << (block % 32);
+}
+
 void System::clearMemoryBlockDirty(unsigned int block)
 {
     memDirty[block / 32] &= ~(1 << (block % 32));

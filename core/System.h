@@ -34,6 +34,7 @@ public:
 
     uint32_t *getMemoryDirtyMask();
     bool getMemoryBlockDirty(unsigned int block) const;
+    void setMemoryBlockDirty(unsigned int block);
     void clearMemoryBlockDirty(unsigned int block);
 
     void setMemoryRequestCallback(MemRequestCallback cb);
