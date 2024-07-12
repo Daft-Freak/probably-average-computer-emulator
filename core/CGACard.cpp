@@ -9,6 +9,13 @@ CGACard::CGACard(System &sys) : sys(sys)
     sys.addIODevice(0x3F0, 0x3D0, 0, this);
 }
 
+bool CGACard::isInVBlank() const
+{
+    int charHeight = regs[9/*max char scan*/] + 1;
+    int vBlankStart = regs[7/*v sync*/] * charHeight;
+    return scanline >= vBlankStart;
+}
+
 void CGACard::setScanlineCallback(ScanlineCallback cb)
 {
     scanCb = cb;
