@@ -1,5 +1,6 @@
 #include <forward_list>
 
+#include "hardware/clocks.h"
 #include "hardware/irq.h"
 #include "hardware/timer.h"
 #include "hardware/vreg.h"
