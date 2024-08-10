@@ -125,13 +125,6 @@ void __scratch_x("display") DVHSTX::gfx_dma_handler() {
                     *dst_ptr++ = val;
                 }
             }
-            else if (line_bytes_per_pixel == 1) {
-                uint8_t* src_ptr = &frame_buffer_display[y * (timing_mode->h_active_pixels >> h_repeat_shift)];
-                for (uint i = 0; i < timing_mode->h_active_pixels >> 2; ++i) {
-                    uint32_t val = (uint32_t)(*src_ptr++) * 0x01010101;
-                    *dst_ptr++ = val;
-                }                
-            }
             else if (line_bytes_per_pixel == 4) {
                 uint8_t* src_ptr = &frame_buffer_display[y * (timing_mode->h_active_pixels >> h_repeat_shift)];
                 if (h_repeat_shift == 2) {
