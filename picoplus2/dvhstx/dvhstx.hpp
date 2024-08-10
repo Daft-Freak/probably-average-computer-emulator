@@ -97,7 +97,7 @@ namespace pimoroni {
       uint ch_num = 0;
       int line_num = -1;
 
-      volatile int v_scanline = 2;
+      volatile uint v_scanline = 2;
       volatile bool flip_next;
 
       uint32_t* line_buffers;

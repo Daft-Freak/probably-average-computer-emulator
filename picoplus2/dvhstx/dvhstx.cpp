@@ -119,7 +119,7 @@ void __scratch_x("display") DVHSTX::gfx_dma_handler() {
 
             if (line_bytes_per_pixel == 2) {
                 uint16_t* src_ptr = (uint16_t*)&frame_buffer_display[y * 2 * (timing_mode->h_active_pixels >> h_repeat_shift)];
-                for (int i = 0; i < timing_mode->h_active_pixels >> 1; i += 2) {
+                for (uint i = 0; i < timing_mode->h_active_pixels >> 1; i += 2) {
                     uint32_t val = (uint32_t)(*src_ptr++) * 0x10001;
                     *dst_ptr++ = val;
                     *dst_ptr++ = val;
@@ -127,7 +127,7 @@ void __scratch_x("display") DVHSTX::gfx_dma_handler() {
             }
             else if (line_bytes_per_pixel == 1) {
                 uint8_t* src_ptr = &frame_buffer_display[y * (timing_mode->h_active_pixels >> h_repeat_shift)];
-                for (int i = 0; i < timing_mode->h_active_pixels >> 2; ++i) {
+                for (uint i = 0; i < timing_mode->h_active_pixels >> 2; ++i) {
                     uint32_t val = (uint32_t)(*src_ptr++) * 0x01010101;
                     *dst_ptr++ = val;
                 }                
@@ -135,7 +135,7 @@ void __scratch_x("display") DVHSTX::gfx_dma_handler() {
             else if (line_bytes_per_pixel == 4) {
                 uint8_t* src_ptr = &frame_buffer_display[y * (timing_mode->h_active_pixels >> h_repeat_shift)];
                 if (h_repeat_shift == 2) {
-                    for (int i = 0; i < timing_mode->h_active_pixels; i += 4) {
+                    for (uint i = 0; i < timing_mode->h_active_pixels; i += 4) {
                         uint32_t val = display_palette[*src_ptr++];
                         *dst_ptr++ = val;
                         *dst_ptr++ = val;
@@ -144,7 +144,7 @@ void __scratch_x("display") DVHSTX::gfx_dma_handler() {
                     }
                 }
                 else {
-                    for (int i = 0; i < timing_mode->h_active_pixels; i += 2) {
+                    for (uint i = 0; i < timing_mode->h_active_pixels; i += 2) {
                         uint32_t val = display_palette[*src_ptr++];
                         *dst_ptr++ = val;
                         *dst_ptr++ = val;
@@ -398,7 +398,7 @@ bool DVHSTX::init(uint16_t width, uint16_t height, Mode mode_)
     memset(frame_buffer_display, 0, frame_width * frame_height * frame_bytes_per_pixel);
     memset(frame_buffer_back, 0, frame_width * frame_height * frame_bytes_per_pixel);
 
-    memset(palette, 0, PALETTE_SIZE);
+    memset(palette, 0, sizeof(palette));
 
     frame_buffer_display = frame_buffer_display;
 
