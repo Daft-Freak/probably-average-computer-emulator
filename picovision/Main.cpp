@@ -13,6 +13,8 @@
 
 #include "aps6404.hpp"
 
+#include "BIOS.h"
+
 #include "Display.h"
 
 #include "AboveBoard.h"
@@ -29,12 +31,6 @@ struct MemBlockMapping
     uint8_t windowBlock; // where expanded memory is mapped to
     uint16_t memBlock;
 };
-
-extern char _binary_bios_xt_rom_start[];
-extern char _binary_bios_xt_rom_end[];
-
-extern char _binary_fixed_disk_bios_rom_start[];
-extern char _binary_fixed_disk_bios_rom_end[];
 
 static FATFS fs;
 

@@ -11,6 +11,8 @@
 
 #include "dvhstx/dvhstx.hpp"
 
+#include "BIOS.h"
+
 #include "AboveBoard.h"
 #include "CGACard.h"
 #include "FixedDiskAdapter.h"
@@ -18,12 +20,6 @@
 #include "Scancode.h"
 #include "SerialMouse.h"
 #include "System.h"
-
-extern char _binary_bios_xt_rom_start[];
-extern char _binary_bios_xt_rom_end[];
-
-extern char _binary_fixed_disk_bios_rom_start[];
-extern char _binary_fixed_disk_bios_rom_end[];
 
 static System sys;
 
