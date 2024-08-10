@@ -67,7 +67,7 @@ namespace pimoroni {
 
       void clear();
 
-      bool init(uint16_t width, uint16_t height, Mode mode = MODE_RGB565);
+      bool init(uint16_t width, uint16_t height, Mode mode = MODE_RGB565, bool double_buffer = true);
 
       // Wait for vsync and then flip the buffers
       void flip_blocking();

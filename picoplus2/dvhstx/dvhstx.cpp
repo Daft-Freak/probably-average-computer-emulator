@@ -276,7 +276,7 @@ void DVHSTX::clear()
     memset(frame_buffer_back, 0, frame_width * frame_height * frame_bytes_per_pixel);
 }
 
-bool DVHSTX::init(uint16_t width, uint16_t height, Mode mode_)
+bool DVHSTX::init(uint16_t width, uint16_t height, Mode mode_, bool double_buffer)
 {
     display_width = width;
     display_height = height;
@@ -392,9 +392,13 @@ bool DVHSTX::init(uint16_t width, uint16_t height, Mode mode_)
     }
 
     frame_buffer_display = (uint8_t*)malloc(frame_width * frame_height * frame_bytes_per_pixel);
-    frame_buffer_back = (uint8_t*)malloc(frame_width * frame_height * frame_bytes_per_pixel);
     memset(frame_buffer_display, 0, frame_width * frame_height * frame_bytes_per_pixel);
-    memset(frame_buffer_back, 0, frame_width * frame_height * frame_bytes_per_pixel);
+
+    if(double_buffer) {
+        frame_buffer_back = (uint8_t*)malloc(frame_width * frame_height * frame_bytes_per_pixel);
+        memset(frame_buffer_back, 0, frame_width * frame_height * frame_bytes_per_pixel);
+    } else
+        frame_buffer_back = frame_buffer_display;
 
     memset(palette, 0, sizeof(palette));
 
