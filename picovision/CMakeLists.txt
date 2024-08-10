@@ -37,7 +37,7 @@ if(EXISTS ${BIOS_PATH}/${DISK_BIOS_FILE})
 endif()
 
 target_include_directories(PACEPicoVision PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(PACEPicoVision PACECore hardware_i2c pico_stdlib tinyusb_host aps6404 swd_load)
+target_link_libraries(PACEPicoVision PACECore PACEPicoShared hardware_i2c pico_stdlib aps6404 swd_load)
 
 pico_generate_pio_header(PACEPicoVision ${CMAKE_CURRENT_LIST_DIR}/spi.pio)
 
