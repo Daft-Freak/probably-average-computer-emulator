@@ -38,7 +38,7 @@ static FixedDiskAdapter fixDisk(sys);
 
 static SerialMouse mouse(sys);
 
-static uint8_t ram[128 * 1024];
+static uint8_t ram[256 * 1024];
 
 static pimoroni::DVHSTX dv;
 
@@ -362,7 +362,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 
 static void display_init()
 {
-    dv.init(640, 240, pimoroni::DVHSTX::MODE_PALETTE);
+    dv.init(640, 240, pimoroni::DVHSTX::MODE_PALETTE, false);
 
     static const uint8_t palette[16][4]
     {
