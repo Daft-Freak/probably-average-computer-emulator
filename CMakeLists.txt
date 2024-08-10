@@ -12,6 +12,10 @@ project(ProbablyAverageComputorEmulator)
 if(PICO_SDK_PATH) # set by import file
   set(IS_PICO true)
   pico_sdk_init()
+
+  if(PICO_PLATFORM STREQUAL "rp2350-arm-s")
+    set(IS_PICO2 true)
+  endif()
 endif()
 
 if(MSVC)
@@ -22,7 +26,8 @@ endif()
 
 include(CMakeDependentOption)
 cmake_dependent_option(BUILD_SDL "Build minimal SDL UI" ON "NOT IS_PICO" OFF)
-cmake_dependent_option(BUILD_PICOVISION "Build PicoVision UI" ON "IS_PICO" OFF)
+cmake_dependent_option(BUILD_PICOVISION "Build PicoVision UI" ON "IS_PICO AND NOT IS_PICO2" OFF)
+cmake_dependent_option(BUILD_PICOPLUS2 "Build Pico Plus 2 UI" ON "IS_PICO2" OFF)
 
 add_subdirectory(core)
 
@@ -36,6 +41,10 @@ endif()
 
 if(BUILD_PICOVISION)
   add_subdirectory(picovision)
+endif()
+
+if(BUILD_PICOPLUS2)
+  add_subdirectory(picoplus2)
 endif()
 
 # setup release packages
