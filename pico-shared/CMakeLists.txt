@@ -4,11 +4,15 @@ target_sources(PACEPicoShared INTERFACE
     fatfs/ff.c
     fatfs/ffunicode.c
 
+    Filesystem.cpp
+    Storage.cpp
     USBHID.cpp
 )
 
 target_include_directories(PACEPicoShared INTERFACE ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(PACEPicoShared INTERFACE PACECore tinyusb_host)
+target_link_libraries(PACEPicoShared INTERFACE PACECore hardware_pio tinyusb_host)
+
+pico_generate_pio_header(PACEPicoShared ${CMAKE_CURRENT_LIST_DIR}/spi.pio)
 
 #embed BIOS
 set(BIOS_FILE bios-xt.rom)
