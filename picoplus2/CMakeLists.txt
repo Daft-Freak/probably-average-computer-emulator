@@ -3,6 +3,8 @@ add_executable(PACEPicoPlus2
     dvhstx/dvi.cpp
 
     Main.cpp
+
+    psram.c
 )
 
 target_include_directories(PACEPicoPlus2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
