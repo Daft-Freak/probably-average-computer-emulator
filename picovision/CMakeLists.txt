@@ -1,9 +1,6 @@
 include(picovision_import.cmake)
 
 add_executable(PACEPicoVision
-    fatfs/ff.c
-    fatfs/ffunicode.c
-
     Display.cpp
     Filesystem.cpp
     Main.cpp
