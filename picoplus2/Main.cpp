@@ -11,6 +11,7 @@
 
 #include "dvhstx/dvhstx.hpp"
 #include "fatfs/ff.h"
+#include "psram.h"
 
 #include "BIOS.h"
 #include "DiskIO.h"
@@ -27,7 +28,7 @@ static FATFS fs;
 
 static System sys;
 
-// static AboveBoard aboveBoard(sys);
+static AboveBoard aboveBoard(sys);
 
 static CGACard cga(sys);
 static FloppyController fdc(sys);
@@ -39,8 +40,6 @@ static FixedDiskAdapter fixDisk(sys);
 static SerialMouse mouse(sys);
 
 static FileFixedIO fixedIO;
-
-static uint8_t ram[256 * 1024];
 
 static pimoroni::DVHSTX dv;
 
@@ -79,6 +78,24 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
         // end
         dv.flip_async();
     }
+}
+
+static uint8_t *requestMem(unsigned int block)
+{
+    auto addr = block * System::getMemoryBlockSize();
+
+    // this is only for mapping above board memory
+    if(addr < 0x100000)
+        return nullptr;
+
+    addr -= 0x100000;
+
+    // needs to be a multiple of 2MB and we're already using some
+    if(addr >= 6 * 1024 * 1024)
+        return nullptr;
+    
+    auto psram = reinterpret_cast<uint8_t *>(PSRAM_LOCATION);
+    return psram + 640 * 1024 + addr;
 }
 
 static void alarmCallback(uint alarmNum)
@@ -140,7 +157,11 @@ int main()
 
     stdio_init_all();
 
-    display_init();
+    display_init(); // this messes with clocks
+
+    size_t psramSize = psram_init(PIMORONI_PICO_PLUS2_PSRAM_CS_PIN);
+
+    printf("detected %i bytes PSRAM\n", psramSize);
 
     // init storage/filesystem
     auto res = f_mount(&fs, "", 1);
@@ -152,7 +173,9 @@ int main()
     }
 
     // emulator init
-    sys.addMemory(0, sizeof(ram), ram);
+    auto psram = reinterpret_cast<uint8_t *>(PSRAM_LOCATION);
+    sys.addMemory(0, 640 * 1024, psram);
+    sys.setMemoryRequestCallback(requestMem);
     cga.setScanlineCallback(scanlineCallback);
 
     auto bios = _binary_bios_xt_rom_start;
