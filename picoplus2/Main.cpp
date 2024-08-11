@@ -10,8 +10,10 @@
 #include "tusb.h"
 
 #include "dvhstx/dvhstx.hpp"
+#include "fatfs/ff.h"
 
 #include "BIOS.h"
+#include "DiskIO.h"
 
 #include "AboveBoard.h"
 #include "CGACard.h"
@@ -20,6 +22,8 @@
 #include "Scancode.h"
 #include "SerialMouse.h"
 #include "System.h"
+
+static FATFS fs;
 
 static System sys;
 
@@ -33,6 +37,8 @@ static FixedDiskAdapter fixDisk(sys);
 #endif
 
 static SerialMouse mouse(sys);
+
+static FileFixedIO fixedIO;
 
 static uint8_t ram[256 * 1024];
 
@@ -134,9 +140,16 @@ int main()
 
     stdio_init_all();
 
-    // init storage/filesystem
-
     display_init();
+
+    // init storage/filesystem
+    auto res = f_mount(&fs, "", 1);
+
+    if(res != FR_OK)
+    {
+        printf("Failed to mount filesystem! (%i)\n", res);
+        while(true);
+    }
 
     // emulator init
     sys.addMemory(0, sizeof(ram), ram);
@@ -151,8 +164,8 @@ int main()
     // size is wring, but mem mapping can't handle smaller
     sys.addReadOnlyMemory(0xC8000, 0x4000, (const uint8_t *)_binary_fixed_disk_bios_rom_start);
 
-    // fixedIO.openDisk(0, "hd-win3.0.img");
-    // fixDisk.setIOInterface(&fixedIO);
+    fixedIO.openDisk(0, "hd0.img");
+    fixDisk.setIOInterface(&fixedIO);
 #endif
 
     sys.reset();
