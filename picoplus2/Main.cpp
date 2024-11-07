@@ -24,6 +24,14 @@
 #include "SerialMouse.h"
 #include "System.h"
 
+#ifdef PIMORONI_PICO_PLUS2_RP2350
+#define PSRAM_CS_PIN PIMORONI_PICO_PLUS2_PSRAM_CS_PIN
+#elif defined(SOLDERPARTY_RP2350_STAMP_XL)
+#define PSRAM_CS_PIN 8
+#else
+#error "No PSRAM CS!"
+#endif
+
 static FATFS fs;
 
 static System sys;
@@ -159,7 +167,7 @@ int main()
 
     display_init(); // this messes with clocks
 
-    size_t psramSize = psram_init(PIMORONI_PICO_PLUS2_PSRAM_CS_PIN);
+    size_t psramSize = psram_init(PSRAM_CS_PIN);
 
     printf("detected %i bytes PSRAM\n", psramSize);
 
