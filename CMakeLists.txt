@@ -27,7 +27,7 @@ endif()
 include(CMakeDependentOption)
 cmake_dependent_option(BUILD_SDL "Build minimal SDL UI" ON "NOT IS_PICO" OFF)
 cmake_dependent_option(BUILD_PICOVISION "Build PicoVision UI" ON "IS_PICO AND NOT IS_PICO2" OFF)
-cmake_dependent_option(BUILD_PICOPLUS2 "Build Pico Plus 2 UI" ON "IS_PICO2" OFF)
+cmake_dependent_option(BUILD_PICO2 "Build Pico 2 UI" ON "IS_PICO2" OFF)
 
 add_subdirectory(core)
 
@@ -43,8 +43,8 @@ if(BUILD_PICOVISION)
   add_subdirectory(picovision)
 endif()
 
-if(BUILD_PICOPLUS2)
-  add_subdirectory(picoplus2)
+if(BUILD_PICO2)
+  add_subdirectory(pico2)
 endif()
 
 # setup release packages
