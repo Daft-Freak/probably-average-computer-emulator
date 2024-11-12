@@ -5,6 +5,7 @@ add_executable(PACEPico2
     psram.c
 )
 
+target_compile_definitions(PACEPico2 PRIVATE PICO_EMBED_XIP_SETUP=1)
 target_include_directories(PACEPico2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 target_link_libraries(PACEPico2 PACECore PACEPicoShared PACEPicoBIOS hardware_dma pico_stdlib)
 
