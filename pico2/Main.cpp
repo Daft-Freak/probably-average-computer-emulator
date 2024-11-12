@@ -9,12 +9,12 @@
 
 #include "tusb.h"
 
-#include "dvhstx/dvhstx.hpp"
 #include "fatfs/ff.h"
 #include "psram.h"
 
 #include "BIOS.h"
 #include "DiskIO.h"
+#include "Display.h"
 
 #include "AboveBoard.h"
 #include "CGACard.h"
@@ -49,42 +49,29 @@ static SerialMouse mouse(sys);
 
 static FileFixedIO fixedIO;
 
-static pimoroni::DVHSTX dv;
-
 static void scanlineCallback(const uint8_t *data, int line, int w)
 {
     // seems to be a bug sometimes when switching mode
     if(w > 640)
         w = 640;
 
-    auto fb = dv.get_back_buffer();
-    auto ptr = fb + line * 640;
+    auto fb = display_get_framebuffer();
+    auto ptr = fb + line * w;
 
-    // convert
-    for(int x = 0; x < w; x += 2)
-    {
-        int index = *data & 0xF;
-        *ptr++ = index;
-        if(w == 320) *ptr++ = index;
-
-        index = *data++ >> 4;
-        *ptr++ = index;
-        if(w == 320) *ptr++ = index;
-    }
+    // copy
+    memcpy(ptr, data, w / 2);
 
     if(line == 0)
     {
         // sync
-        dv.wait_for_flip();
-        // set_display_size(w, 240); /*really 200*/
+        while(!display_render_needed()) {}
+        set_display_size(w, 240); /*really 200*/
     }
-    
-    // write
 
     if(line == 199)
     {
         // end
-        dv.flip_async();
+        update_display();
     }
 }
 
@@ -129,43 +116,16 @@ void update_mouse_state(int8_t x, int8_t y, bool left, bool right)
     mouse.sync();
 }
 
-static void display_init()
-{
-    dv.init(640, 240, pimoroni::DVHSTX::MODE_PALETTE, false);
-
-    static const uint8_t palette[16][4]
-    {
-        // B, G, R, X
-        {0x00, 0x00, 0x00}, // black
-        {0xAA, 0x00, 0x00}, // blue
-        {0x00, 0xAA, 0x00}, // green
-        {0xAA, 0xAA, 0x00}, // cyan
-        {0x00, 0x00, 0xAA}, // red
-        {0xAA, 0x00, 0xAA}, // magenta
-        {0x00, 0x55, 0xAA}, // brown
-        {0xAA, 0xAA, 0xAA}, // light grey
-
-        {0x55, 0x55, 0x55}, // dark grey
-        {0xFF, 0x55, 0x55}, // light blue
-        {0x55, 0xFF, 0x55}, // light green
-        {0xFF, 0xFF, 0x55}, // light cyan
-        {0x55, 0x55, 0xFF}, // light red
-        {0xFF, 0x55, 0xFF}, // light magenta
-        {0x55, 0xFF, 0xFF}, // yellow
-        {0xFF, 0xFF, 0xFF}, // white
-    };
-
-    for(int i = 0; i < 16; i++)
-        dv.set_palette_colour(i, reinterpret_cast<const uint32_t *>(palette)[i]);
-}
-
 int main()
 {
+    set_sys_clock_khz(250000, false);
+
     tusb_init();
 
     stdio_init_all();
 
-    display_init(); // this messes with clocks
+    init_display();
+    set_display_size(320, 240);
 
     size_t psramSize = psram_init(PSRAM_CS_PIN);
 

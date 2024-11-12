@@ -1,7 +1,5 @@
 add_executable(PACEPico2
-    dvhstx/dvhstx.cpp
-    dvhstx/dvi.cpp
-
+    Display.cpp
     Main.cpp
 
     psram.c
