@@ -69,6 +69,12 @@ jobs:
         sudo apt update && sudo apt install ${{matrix.apt-packages}}
         pip3 install 32blit
 
+    # grab a BIOS
+    # some things don't quite work with this one, but at least we can compile
+    - name: Download BIOS
+      working-directory: main
+      run: wget -O bios-xt.rom https://github.com/skiselev/8088_bios/blob/v1.0.0/binaries/bios-xt.bin
+
     # Set up the cmake build environment
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/main/build
