@@ -3,10 +3,13 @@
 // only change is replacing blit::debugf -> printf
 
 #include <cstdio>
+#include <cmath>
+
 #include "Storage.h"
 
 #include "pico/time.h"
 #include "pico/binary_info.h"
+#include "hardware/clocks.h"
 
 #include "config.h"
 
@@ -39,18 +42,21 @@ static void spi_write(const uint8_t *buf, size_t len) {
 }
 
 static void spi_read(uint8_t *buf, size_t len) {
-  size_t tx_remain = len, rx_remain = len;
+  size_t rx_remain = len;
   auto txfifo = (io_rw_8 *) &sd_pio->txf[sd_sm];
   auto rxfifo = (io_rw_8 *) &sd_pio->rxf[sd_sm];
 
-  while (tx_remain || rx_remain) {
-    if (tx_remain && !pio_sm_is_tx_fifo_full(sd_pio, sd_sm)) {
-      *txfifo = 0xFF;
-      --tx_remain;
-    }
-    if (rx_remain && !pio_sm_is_rx_fifo_empty(sd_pio, sd_sm)) {
+  // assume FIFO is empty
+  *txfifo = 0xFF;
+  *txfifo = 0xFF;
+  *txfifo = 0xFF;
+  *txfifo = 0xFF;
+
+  while(rx_remain) {
+    if (!pio_sm_is_rx_fifo_empty(sd_pio, sd_sm)) {
       *buf++ = *rxfifo;
-      --rx_remain;
+      if(--rx_remain > 3)
+        *txfifo = 0xFF;
     }
   }
 }
@@ -260,6 +266,13 @@ bool storage_init() {
 
   // this will be called again it it fails
   if(!sd_io_initialised) {
+    int base = 0;
+#if SD_MOSI >= 32 || SD_MISO >= 32 || SD_SCK >= 32
+    static_assert(SD_MOSI >= 16 && SD_MISO >= 16 && SD_SCK >= 16);
+    pio_set_gpio_base(sd_pio, 16);
+    base = 16;
+#endif
+
     uint offset = pio_add_program(sd_pio, &spi_cpha0_program);
 
     sd_sm = pio_claim_unused_sm(sd_pio, true);
@@ -274,8 +287,8 @@ bool storage_init() {
     sm_config_set_in_shift(&c, false, true, 8);
 
     // MOSI, SCK output are low, MISO is input
-    pio_sm_set_pins_with_mask(sd_pio, sd_sm, 0, (1u << SD_SCK) | (1u << SD_MOSI));
-    pio_sm_set_pindirs_with_mask(sd_pio, sd_sm, (1u << SD_SCK) | (1u << SD_MOSI), (1u << SD_SCK) | (1u << SD_MOSI) | (1u << SD_MISO));
+    pio_sm_set_pins_with_mask(sd_pio, sd_sm, 0, (1u << (SD_SCK - base)) | (1u << (SD_MOSI - base)));
+    pio_sm_set_pindirs_with_mask(sd_pio, sd_sm, (1u << (SD_SCK - base)) | (1u << (SD_MOSI - base)), (1u << (SD_SCK - base)) | (1u << (SD_MOSI - base)) | (1u << (SD_MISO - base)));
     pio_gpio_init(sd_pio, SD_MOSI);
     pio_gpio_init(sd_pio, SD_MISO);
     pio_gpio_init(sd_pio, SD_SCK);
@@ -283,7 +296,7 @@ bool storage_init() {
     gpio_pull_up(SD_MISO);
 
     // SPI is synchronous, so bypass input synchroniser to reduce input delay.
-    hw_set_bits(&sd_pio->input_sync_bypass, 1u << SD_MISO);
+    hw_set_bits(&sd_pio->input_sync_bypass, 1u << (SD_MISO - base));
 
     pio_sm_init(sd_pio, sd_sm, offset, &c);
     pio_sm_set_enabled(sd_pio, sd_sm, true);
@@ -387,21 +400,26 @@ bool storage_init() {
   printf("Detected %s card, size %i blocks\n", is_v2 ? (is_hcs ? "SDHC" : "SDv2") : "SDv1", card_size_blocks);
 
   // set speed (PIO program is 2 cycles/clock)
-  // these are a little fast
-  int div = 2; // 125/(2*2) = 31.25MHz
 
-#if OVERCLOCK_250
-  div *= 2;
+  // according to the SD specs high speed in SPI mode is "Same as SD mode", helpful.
+#if SD_SPI_OVERCLOCK
+  // these are too fast, but usually okay and the best we can do with a 125MHz clock
+  // 75MHz is definitely not okay (from 150MHz clock on RP2350)
+  int clkdiv = std::ceil(clock_get_hz(clk_sys) / (31250000.0f * 2.0f));
+  int clkdiv_high_speed = std::ceil(clock_get_hz(clk_sys) / (62500000.0f * 2.0f));
+#else
+  int clkdiv = std::ceil(clock_get_hz(clk_sys) / (25000000.0f * 2.0f));
+  int clkdiv_high_speed = std::ceil(clock_get_hz(clk_sys) / (50000000.0f * 2.0f));
 #endif
 
   // attempt high speed
   uint8_t switch_res[64];
   if(sd_command_read_block(6, 0x80FFFFF1, switch_res) == 0) { // SWITCH
     if((switch_res[16] & 0xF) == 1)
-      div /= 2; // successful switch, double speed
+      clkdiv = clkdiv_high_speed; // successful switch, use high speed
   }
 
-  pio_sm_set_clkdiv(sd_pio, sd_sm, div);
+  pio_sm_set_clkdiv(sd_pio, sd_sm, clkdiv);
   pio_sm_restart(sd_pio, sd_sm);
 
   return true;

@@ -26,6 +26,10 @@ cmake_dependent_option(BUILD_PICOVISION "Build PicoVision UI" ON "IS_PICO" OFF)
 
 add_subdirectory(core)
 
+if(IS_PICO)
+  add_subdirectory(pico-shared)
+endif()
+
 if(BUILD_SDL)
   add_subdirectory(minsdl)
 endif()

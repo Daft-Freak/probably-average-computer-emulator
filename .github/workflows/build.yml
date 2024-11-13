@@ -1,0 +1,93 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - '**' # only run on branches
+  pull_request:
+  release:
+    types: [created]
+
+env:
+  BUILD_TYPE: Release
+  EM_VERSION: 2.0.18 # Emscripten version
+  EM_CACHE_FOLDER: 'emsdk-cache' # Cache for Emscripten libs
+
+jobs:
+
+  build:
+
+    name: ${{matrix.name}}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: Linux
+            release-suffix: LIN64
+            apt-packages: libsdl2-dev
+
+          - os: ubuntu-24.04
+            name: PicoVision
+            cache-key: picovision
+            release-suffix: PicoVision
+            cmake-args: -DPICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk -DPICO_BOARD=pico_w
+            apt-packages: gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+
+    runs-on: ${{matrix.os}}
+
+    env:
+      RELEASE_FILE: ${{github.event.repository.name}}-${{github.event.release.tag_name}}-${{matrix.release-suffix}}
+
+    steps:
+    # Check out the main repo
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        path: main
+
+    # pico sdk
+    - name: Checkout Pico SDK
+      uses: actions/checkout@v4
+      with:
+        repository: raspberrypi/pico-sdk
+        path: pico-sdk
+        submodules: true
+
+    # PicoVision needs the RAM driver and the firmware
+    - name: Checkout PicoVision
+      if: matrix.name == 'PicoVision'
+      uses: actions/checkout@v4
+      with:
+        repository: pimoroni/picovision
+        ref: 03df7694ed4fb396c1d12adf90d0150ada6baedc
+        path: picovision
+
+    # Linux dependencies
+    - name: Install Linux deps
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt update && sudo apt install ${{matrix.apt-packages}}
+        pip3 install 32blit
+
+    # grab a BIOS
+    # some things don't quite work with this one, but at least we can compile
+    - name: Download BIOS
+      working-directory: main
+      run: wget -O bios-xt.rom https://github.com/skiselev/8088_bios/blob/v1.0.0/binaries/bios-xt.bin
+
+    # Set up the cmake build environment
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/main/build
+
+    # Ask cmake to build the makefiles
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/main/build
+      run: ${{matrix.cmake-prefix}} cmake $GITHUB_WORKSPACE/main -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCPACK_PACKAGE_FILE_NAME=${{env.RELEASE_FILE}} ${{matrix.cmake-args}}
+
+    # And then run the build itself
+    - name: Build
+      working-directory: ${{runner.workspace}}/main/build
+      shell: bash
+      run: |
+        cmake --build . --config $BUILD_TYPE -j 2
