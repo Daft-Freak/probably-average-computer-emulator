@@ -98,11 +98,12 @@ static uint8_t cur_dma_ch = HSTX_DMA_CH_BASE;
 
 // pixel/line repeat
 static uint8_t h_shift = 0;
-static uint8_t v_shift = 0;
 static uint8_t new_h_shift = 0;
-static uint8_t new_v_shift = 0;
 
 static uint v_scanline = HSTX_NUM_DMA_CHANNELS;
+static uint32_t in_scanline = 0, last_in_scanline = 1;
+static uint32_t in_scanline_step = 1 << 16;
+static uint32_t new_scanline_step = 0;
 
 static bool started = false;
 static volatile bool do_render = true;
@@ -156,9 +157,10 @@ static void __scratch_x("") dma_irq_handler() {
         ch->read_addr = (uintptr_t)vblank_line_vsync_off;
         ch->transfer_count = std::size(vblank_line_vsync_off);
     } else {
-        int display_line = v_scanline - (MODE_V_TOTAL_LINES - MODE_V_ACTIVE_LINES);
-        bool first = !(display_line & ((1 << v_shift) - 1));
-        display_line >>= v_shift;
+        auto display_line = in_scanline >> 16;
+        in_scanline += in_scanline_step;
+        bool first = display_line != last_in_scanline;
+        last_in_scanline = display_line;
 
         const auto line_buf_size_words = sizeof(scanline_buffer) / sizeof(uint32_t) / 2;
         auto temp_ptr = scanline_buffer + (display_line & 1) * line_buf_size_words;
@@ -192,6 +194,7 @@ static void __scratch_x("") dma_irq_handler() {
 
     if(v_scanline == MODE_V_TOTAL_LINES) {
         v_scanline = 0;
+        in_scanline = 0;
     } else if(v_scanline == 2) {
         // new frame, swap buffers and trigger render
         // wait until scanline 2 so that there are no active lines in progress
@@ -204,10 +207,11 @@ static void __scratch_x("") dma_irq_handler() {
         // set h/v shift
         if(need_mode_change) {
             h_shift = new_h_shift;
-            v_shift = new_v_shift;
+            in_scanline_step = new_scanline_step;
 
             need_mode_change = false;
-            new_h_shift = new_v_shift = 0xFF;
+            new_h_shift = 0xFF;
+            new_scanline_step = 0;
         }
     }
 }
@@ -329,19 +333,18 @@ void set_display_size(int w, int h) {
     // prevent buffer swap while we're doing this
     do_render = true;
 
-    // set h/v shift
+    // set h shift/v scale
     new_h_shift = 0;
-    new_v_shift = 0;
+    
+    new_scanline_step = (h << 16) / MODE_V_ACTIVE_LINES;
 
     while(MODE_H_ACTIVE_PIXELS >> new_h_shift > w)
         new_h_shift++;
 
-    while(MODE_V_ACTIVE_LINES >> new_v_shift > h)
-        new_v_shift++;
-
     // check if we're actually changing scale
-    if(new_v_shift == v_shift && new_h_shift == h_shift) {
-        new_h_shift = new_v_shift = 0xFF;
+    if(new_scanline_step == in_scanline_step && new_h_shift == h_shift) {
+        new_h_shift = 0xFF;
+        new_scanline_step = 0;
         return;
     }
 
@@ -351,8 +354,8 @@ void set_display_size(int w, int h) {
         return;
 
     h_shift = new_h_shift;
-    v_shift = new_v_shift;
-    new_h_shift = new_v_shift = 0;
+    in_scanline_step = new_scanline_step;
+    new_h_shift = 0;
 }
 
 void update_display() {

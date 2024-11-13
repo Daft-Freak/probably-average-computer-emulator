@@ -67,7 +67,7 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     {
         // sync
         while(!display_render_needed()) {}
-        set_display_size(w, 240); /*really 200*/
+        set_display_size(w, 200);
     }
 
     if(line == 199)
@@ -127,7 +127,7 @@ int main()
     stdio_init_all();
 
     init_display();
-    set_display_size(320, 240);
+    set_display_size(320, 200);
 
     size_t psramSize = psram_init(PSRAM_CS_PIN);
 
