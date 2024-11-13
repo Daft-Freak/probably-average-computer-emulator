@@ -33,6 +33,13 @@ jobs:
             cmake-args: -DPICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk -DPICO_BOARD=pico_w
             apt-packages: gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
 
+          - os: ubuntu-24.04
+            name: RP2350 Stamp XL
+            cache-key: stamp-xl
+            release-suffix: RP2350StampXL
+            cmake-args: -DPICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk -DPICO_BOARD=solderparty_rp2350_stamp_xl
+            apt-packages: gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+
     runs-on: ${{matrix.os}}
 
     env:
