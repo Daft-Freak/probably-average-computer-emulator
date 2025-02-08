@@ -65,24 +65,24 @@ private:
     uint16_t readMem16(uint16_t offset, uint32_t segment);
     void writeMem16(uint16_t offset, uint32_t segment, uint16_t data);
 
-    std::tuple<uint16_t, uint32_t> getEffectiveAddress(int mod, int rm, int &cycles, bool rw, uint32_t addr, Reg16 segmentOverride);
+    std::tuple<uint16_t, uint32_t> getEffectiveAddress(int mod, int rm, int &cycles, bool rw, uint32_t addr);
 
     // R/M helpers
 
-    uint8_t readRM8(uint8_t modRM, int &cycles, uint32_t addr, Reg16 segmentOverride);
-    uint16_t readRM16(uint8_t modRM, int &cycles, uint32_t addr, Reg16 segmentOverride);
+    uint8_t readRM8(uint8_t modRM, int &cycles, uint32_t addr);
+    uint16_t readRM16(uint8_t modRM, int &cycles, uint32_t addr);
 
-    void writeRM8(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, Reg16 segmentOverride, bool rw = false);
-    void writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, Reg16 segmentOverride, bool rw = false);
+    void writeRM8(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, bool rw = false);
+    void writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, bool rw = false);
 
     // ALU helpers
     using ALUOp8 = uint8_t(*)(uint8_t, uint8_t, uint16_t &);
     using ALUOp16 = uint16_t(*)(uint16_t, uint16_t, uint16_t &);
 
     template<ALUOp8 op, bool d, int regCycles, int memCycles>
-    void doALU8(uint32_t addr, Reg16 segmentOverride);
+    void doALU8(uint32_t addr);
     template<ALUOp16 op, bool d, int regCycles, int memCycles>
-    void doALU16(uint32_t addr, Reg16 segmentOverride);
+    void doALU16(uint32_t addr);
 
     template<ALUOp8 op>
     void doALU8AImm(uint32_t addr);
@@ -105,6 +105,8 @@ private:
 
     // enabling interrupts happens one opcode later
     bool delayInterrupt = false;
+
+    Reg16 segmentOverride;
 
     // RAM
     System &sys;

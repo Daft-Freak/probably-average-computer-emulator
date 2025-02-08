@@ -540,16 +540,16 @@ void CPU::executeInstruction()
     switch(opcode)
     {
         case 0x00: // ADD r/m8 r8
-            doALU8<doAdd, false, 3, 16>(addr, segmentOverride);
+            doALU8<doAdd, false, 3, 16>(addr);
             break;
         case 0x01: // ADD r/m16 r16
-            doALU16<doAdd, false, 3, 16>(addr, segmentOverride);
+            doALU16<doAdd, false, 3, 16>(addr);
             break;
         case 0x02: // ADD r8 r/m8
-            doALU8<doAdd, true, 3, 9>(addr, segmentOverride);
+            doALU8<doAdd, true, 3, 9>(addr);
             break;
         case 0x03: // ADD r16 r/m16
-            doALU16<doAdd, true, 3, 9>(addr, segmentOverride);
+            doALU16<doAdd, true, 3, 9>(addr);
             break;
         case 0x04: // ADD AL imm8
             doALU8AImm<doAdd>(addr);
@@ -587,16 +587,16 @@ void CPU::executeInstruction()
         }
 
         case 0x08: // OR r/m8 r8
-            doALU8<doOr, false, 3, 16>(addr, segmentOverride);
+            doALU8<doOr, false, 3, 16>(addr);
             break;
         case 0x09: // OR r/m16 r16
-            doALU16<doOr, false, 3, 16>(addr, segmentOverride);
+            doALU16<doOr, false, 3, 16>(addr);
             break;
         case 0x0A: // OR r8 r/m8
-            doALU8<doOr, true, 3, 9>(addr, segmentOverride);
+            doALU8<doOr, true, 3, 9>(addr);
             break;
         case 0x0B: // OR r16 r/m16
-            doALU16<doOr, true, 3, 9>(addr, segmentOverride);
+            doALU16<doOr, true, 3, 9>(addr);
             break;
         case 0x0C: // OR AL imm8
             doALU8AImm<doOr>(addr);
@@ -606,16 +606,16 @@ void CPU::executeInstruction()
             break;
 
         case 0x10: // ADC r/m8 r8
-            doALU8<doAddWithCarry, false, 3, 16>(addr, segmentOverride);
+            doALU8<doAddWithCarry, false, 3, 16>(addr);
             break;
         case 0x11: // ADC r/m16 r16
-            doALU16<doAddWithCarry, false, 3, 16>(addr, segmentOverride);
+            doALU16<doAddWithCarry, false, 3, 16>(addr);
             break;
         case 0x12: // ADC r8 r/m8
-            doALU8<doAddWithCarry, true, 3, 9>(addr, segmentOverride);
+            doALU8<doAddWithCarry, true, 3, 9>(addr);
             break;
         case 0x13: // ADC r16 r/m16
-            doALU16<doAddWithCarry, true, 3, 9>(addr, segmentOverride);
+            doALU16<doAddWithCarry, true, 3, 9>(addr);
             break;
         case 0x14: // ADC AL imm8
             doALU8AImm<doAddWithCarry>(addr);
@@ -625,16 +625,16 @@ void CPU::executeInstruction()
             break;
 
         case 0x18: // SBB r/m8 r8
-            doALU8<doSubWithBorrow, false, 3, 16>(addr, segmentOverride);
+            doALU8<doSubWithBorrow, false, 3, 16>(addr);
             break;
         case 0x19: // SBB r/m16 r16
-            doALU16<doSubWithBorrow, false, 3, 16>(addr, segmentOverride);
+            doALU16<doSubWithBorrow, false, 3, 16>(addr);
             break;
         case 0x1A: // SBB r8 r/m8
-            doALU8<doSubWithBorrow, true, 3, 9>(addr, segmentOverride);
+            doALU8<doSubWithBorrow, true, 3, 9>(addr);
             break;
         case 0x1B: // SBB r16 r/m16
-            doALU16<doSubWithBorrow, true, 3, 9>(addr, segmentOverride);
+            doALU16<doSubWithBorrow, true, 3, 9>(addr);
             break;
         case 0x1C: // SBB AL imm8
             doALU8AImm<doSubWithBorrow>(addr);
@@ -644,16 +644,16 @@ void CPU::executeInstruction()
             break;
     
         case 0x20: // AND r/m8 r8
-            doALU8<doAnd, false, 3, 16>(addr, segmentOverride);
+            doALU8<doAnd, false, 3, 16>(addr);
             break;
         case 0x21: // AND r/m16 r16
-            doALU16<doAnd, false, 3, 16>(addr, segmentOverride);
+            doALU16<doAnd, false, 3, 16>(addr);
             break;
         case 0x22: // AND r8 r/m8
-            doALU8<doAnd, true, 3, 9>(addr, segmentOverride);
+            doALU8<doAnd, true, 3, 9>(addr);
             break;
         case 0x23: // AND r16 r/m16
-            doALU16<doAnd, true, 3, 9>(addr, segmentOverride);
+            doALU16<doAnd, true, 3, 9>(addr);
             break;
         case 0x24: // AND AL imm8
             doALU8AImm<doAnd>(addr);
@@ -692,16 +692,16 @@ void CPU::executeInstruction()
         }
 
         case 0x28: // SUB r/m8 r8
-            doALU8<doSub, false, 3, 16>(addr, segmentOverride);
+            doALU8<doSub, false, 3, 16>(addr);
             break;
         case 0x29: // SUB r/m16 r16
-            doALU16<doSub, false, 3, 16>(addr, segmentOverride);
+            doALU16<doSub, false, 3, 16>(addr);
             break;
         case 0x2A: // SUB r8 r/m8
-            doALU8<doSub, true, 3, 9>(addr, segmentOverride);
+            doALU8<doSub, true, 3, 9>(addr);
             break;
         case 0x2B: // SUB r16 r/m16
-            doALU16<doSub, true, 3, 9>(addr, segmentOverride);
+            doALU16<doSub, true, 3, 9>(addr);
             break;
         case 0x2C: // SUB AL imm8
             doALU8AImm<doSub>(addr);
@@ -711,16 +711,16 @@ void CPU::executeInstruction()
             break;
 
         case 0x30: // XOR r/m8 r8
-            doALU8<doXor, false, 3, 16>(addr, segmentOverride);
+            doALU8<doXor, false, 3, 16>(addr);
             break;
         case 0x31: // XOR r/m16 r16
-            doALU16<doXor, false, 3, 16>(addr, segmentOverride);
+            doALU16<doXor, false, 3, 16>(addr);
             break;
         case 0x32: // XOR r8 r/m8
-            doALU8<doXor, true, 3, 9>(addr, segmentOverride);
+            doALU8<doXor, true, 3, 9>(addr);
             break;
         case 0x33: // XOR r16 r/m16
-            doALU16<doXor, true, 3, 9>(addr, segmentOverride);
+            doALU16<doXor, true, 3, 9>(addr);
             break;
         case 0x34: // XOR AL imm8
             doALU8AImm<doXor>(addr);
@@ -735,7 +735,7 @@ void CPU::executeInstruction()
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9;
-            uint8_t dest = readRM8(modRM, cycles, addr, segmentOverride);
+            uint8_t dest = readRM8(modRM, cycles, addr);
 
             auto srcReg = static_cast<Reg8>(r);
 
@@ -753,7 +753,7 @@ void CPU::executeInstruction()
             int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
     
             auto src = reg(static_cast<Reg16>(r));
-            auto dest = readRM16(modRM, cycles, addr, segmentOverride);
+            auto dest = readRM16(modRM, cycles, addr);
 
             doSub(dest, src, flags);
 
@@ -767,7 +767,7 @@ void CPU::executeInstruction()
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9;
-            uint8_t src = readRM8(modRM, cycles, addr, segmentOverride);
+            uint8_t src = readRM8(modRM, cycles, addr);
 
             auto dstReg = static_cast<Reg8>(r);
 
@@ -783,7 +783,7 @@ void CPU::executeInstruction()
             auto r = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
-            uint16_t src = readRM16(modRM, cycles, addr, segmentOverride);
+            uint16_t src = readRM16(modRM, cycles, addr);
 
             auto dstReg = static_cast<Reg16>(r);
 
@@ -909,32 +909,32 @@ void CPU::executeInstruction()
             auto exOp = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 4 : (exOp == 7/*CMP*/ ? 10 : 17); //?
-            auto dest = readRM8(modRM, cycles, addr, segmentOverride);
+            auto dest = readRM8(modRM, cycles, addr);
             int immOff = 2 + getDispLen(modRM);
             auto imm = sys.readMem(addr + immOff);
 
             switch(exOp)
             {
                 case 0: // ADD
-                    writeRM8(modRM, doAdd(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, doAdd(dest, imm, flags), cycles, addr, true);
                     break;
                 case 1: // OR
-                    writeRM8(modRM, doOr(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, doOr(dest, imm, flags), cycles, addr, true);
                     break;
                 case 2: // ADC
-                    writeRM8(modRM, doAddWithCarry(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, doAddWithCarry(dest, imm, flags), cycles, addr, true);
                     break;
                 case 3: // SBB
-                    writeRM8(modRM, doSubWithBorrow(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, doSubWithBorrow(dest, imm, flags), cycles, addr, true);
                     break;
                 case 4: // AND
-                    writeRM8(modRM, doAnd(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, doAnd(dest, imm, flags), cycles, addr, true);
                     break;
                 case 5: // SUB
-                    writeRM8(modRM, doSub(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, doSub(dest, imm, flags), cycles, addr, true);
                     break;
                 case 6: // XOR
-                    writeRM8(modRM, doXor(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, doXor(dest, imm, flags), cycles, addr, true);
                     break;
                 case 7: // CMP
                     doSub(dest, imm, flags);
@@ -951,7 +951,7 @@ void CPU::executeInstruction()
             auto exOp = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 4 : (exOp == 7/*CMP*/ ? 10 : 17) + 4; //?
-            auto dest = readRM16(modRM, cycles, addr, segmentOverride);
+            auto dest = readRM16(modRM, cycles, addr);
 
             int immOff = 2 + getDispLen(modRM);
             uint16_t imm = sys.readMem(addr + immOff) | sys.readMem(addr + immOff + 1) << 8;
@@ -959,25 +959,25 @@ void CPU::executeInstruction()
             switch(exOp)
             {
                 case 0: // ADD
-                    writeRM16(modRM, doAdd(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doAdd(dest, imm, flags), cycles, addr, true);
                     break;
                 case 1: // OR
-                    writeRM16(modRM, doOr(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doOr(dest, imm, flags), cycles, addr, true);
                     break;
                 case 2: // ADC
-                    writeRM16(modRM, doAddWithCarry(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doAddWithCarry(dest, imm, flags), cycles, addr, true);
                     break;
                 case 3: // SBB
-                    writeRM16(modRM, doSubWithBorrow(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doSubWithBorrow(dest, imm, flags), cycles, addr, true);
                     break;
                 case 4: // AND
-                    writeRM16(modRM, doAnd(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doAnd(dest, imm, flags), cycles, addr, true);
                     break;
                 case 5: // SUB
-                    writeRM16(modRM, doSub(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doSub(dest, imm, flags), cycles, addr, true);
                     break;
                 case 6: // XOR
-                    writeRM16(modRM, doXor(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doXor(dest, imm, flags), cycles, addr, true);
                     break;
                 case 7: // CMP
                     doSub(dest, imm, flags);
@@ -994,7 +994,7 @@ void CPU::executeInstruction()
             auto exOp = (modRM >> 3) & 0x7;
 
             int cycles = (modRM >> 6) == 3 ? 4 : (exOp == 7/*CMP*/ ? 10 : 17) + 4; //?
-            auto dest = readRM16(modRM, cycles, addr, segmentOverride);
+            auto dest = readRM16(modRM, cycles, addr);
 
             int immOff = 2 + getDispLen(modRM);
             uint16_t imm = sys.readMem(addr + immOff);
@@ -1006,25 +1006,25 @@ void CPU::executeInstruction()
             switch(exOp)
             {
                 case 0: // ADD
-                    writeRM16(modRM, doAdd(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doAdd(dest, imm, flags), cycles, addr, true);
                     break;
                 case 1: // OR
-                    writeRM16(modRM, doOr(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doOr(dest, imm, flags), cycles, addr, true);
                     break;
                 case 2: // ADC
-                    writeRM16(modRM, doAddWithCarry(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doAddWithCarry(dest, imm, flags), cycles, addr, true);
                     break;
                 case 3: // SBB
-                    writeRM16(modRM, doSubWithBorrow(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doSubWithBorrow(dest, imm, flags), cycles, addr, true);
                     break;
                 case 4: // AND
-                    writeRM16(modRM, doAnd(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doAnd(dest, imm, flags), cycles, addr, true);
                     break;
                 case 5: // SUB
-                    writeRM16(modRM, doSub(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doSub(dest, imm, flags), cycles, addr, true);
                     break;
                 case 6: // XOR
-                    writeRM16(modRM, doXor(dest, imm, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doXor(dest, imm, flags), cycles, addr, true);
                     break;
                 case 7: // CMP
                     doSub(dest, imm, flags);
@@ -1044,7 +1044,7 @@ void CPU::executeInstruction()
             int cycles = (modRM >> 6) == 3 ? 3 : 9;
     
             auto src = reg(static_cast<Reg8>(r));
-            auto dest = readRM8(modRM, cycles, addr, segmentOverride);
+            auto dest = readRM8(modRM, cycles, addr);
 
             doAnd(dest, src, flags);
 
@@ -1060,7 +1060,7 @@ void CPU::executeInstruction()
             int cycles = (modRM >> 6) == 3 ? 3 : 9 + 4;
     
             auto src = reg(static_cast<Reg16>(r));
-            auto dest = readRM16(modRM, cycles, addr, segmentOverride);
+            auto dest = readRM16(modRM, cycles, addr);
 
             doAnd(dest, src, flags);
 
@@ -1078,8 +1078,8 @@ void CPU::executeInstruction()
 
             int cycles = (modRM >> 6) == 3 ? 4 : 17;
 
-            auto tmp = readRM8(modRM, cycles, addr, segmentOverride);
-            writeRM8(modRM, reg(srcReg), cycles, addr, segmentOverride, true);
+            auto tmp = readRM8(modRM, cycles, addr);
+            writeRM8(modRM, reg(srcReg), cycles, addr, true);
             reg(srcReg) = tmp;
 
             reg(Reg16::IP) += 1;
@@ -1095,8 +1095,8 @@ void CPU::executeInstruction()
 
             int cycles = (modRM >> 6) == 3 ? 4 : 17 + 2 * 4;
 
-            auto tmp = readRM16(modRM, cycles, addr, segmentOverride);
-            writeRM16(modRM, reg(srcReg), cycles, addr, segmentOverride, true);
+            auto tmp = readRM16(modRM, cycles, addr);
+            writeRM16(modRM, reg(srcReg), cycles, addr, true);
             reg(srcReg) = tmp;
 
             reg(Reg16::IP) += 1;
@@ -1112,7 +1112,7 @@ void CPU::executeInstruction()
 
             auto srcReg = static_cast<Reg8>(r);
 
-            writeRM8(modRM, reg(srcReg), cycles, addr, segmentOverride);
+            writeRM8(modRM, reg(srcReg), cycles, addr);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1127,7 +1127,7 @@ void CPU::executeInstruction()
 
             auto srcReg = static_cast<Reg16>(r);
 
-            writeRM16(modRM, reg(srcReg), cycles, addr, segmentOverride);
+            writeRM16(modRM, reg(srcReg), cycles, addr);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1142,7 +1142,7 @@ void CPU::executeInstruction()
     
             auto destReg = static_cast<Reg8>(r);
 
-            reg(destReg) = readRM8(modRM, cycles, addr, segmentOverride);
+            reg(destReg) = readRM8(modRM, cycles, addr);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1158,7 +1158,7 @@ void CPU::executeInstruction()
 
             auto destReg = static_cast<Reg16>(r);
 
-            reg(destReg) = readRM16(modRM, cycles, addr, segmentOverride);
+            reg(destReg) = readRM16(modRM, cycles, addr);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1174,7 +1174,7 @@ void CPU::executeInstruction()
 
             auto srcReg = static_cast<Reg16>(r + static_cast<int>(Reg16::ES));
 
-            writeRM16(modRM, reg(srcReg), cycles, addr, segmentOverride);
+            writeRM16(modRM, reg(srcReg), cycles, addr);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1189,7 +1189,7 @@ void CPU::executeInstruction()
 
             int cycles = 2;
             // the only time we don't want the segment added...
-            reg(static_cast<Reg16>(r)) = std::get<0>(getEffectiveAddress(modRM >> 6, modRM & 7, cycles, false, addr, segmentOverride));
+            reg(static_cast<Reg16>(r)) = std::get<0>(getEffectiveAddress(modRM >> 6, modRM & 7, cycles, false, addr));
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1205,7 +1205,7 @@ void CPU::executeInstruction()
 
             auto destReg = static_cast<Reg16>(r + static_cast<int>(Reg16::ES));
 
-            reg(destReg) = readRM16(modRM, cycles, addr, segmentOverride);
+            reg(destReg) = readRM16(modRM, cycles, addr);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1222,7 +1222,7 @@ void CPU::executeInstruction()
 
             auto v = readMem16(reg(Reg16::SP), reg(Reg16::SS) << 4);
             reg(Reg16::SP) += 2;
-            writeRM16(modRM, v, cycles, addr, segmentOverride);
+            writeRM16(modRM, v, cycles, addr);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -1906,7 +1906,7 @@ void CPU::executeInstruction()
 
             int cycles = 16 + 2 * 4;
     
-            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr, segmentOverride);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr);
             reg(static_cast<Reg16>(r)) = readMem16(offset, segment);
             reg(Reg16::ES) = readMem16(offset + 2, segment);
             
@@ -1925,7 +1925,7 @@ void CPU::executeInstruction()
 
             int cycles = 16 + 2 * 4;
     
-            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr, segmentOverride);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr);
             reg(static_cast<Reg16>(r)) = readMem16(offset, segment);
             reg(Reg16::DS) = readMem16(offset + 2, segment);
             
@@ -1944,7 +1944,7 @@ void CPU::executeInstruction()
 
             int cycles = (modRM >> 6) == 3 ? 4 : 10;
 
-            writeRM8(modRM, imm, cycles, addr, segmentOverride);
+            writeRM8(modRM, imm, cycles, addr);
 
             reg(Reg16::IP) += 2;
             cyclesExecuted(cycles);
@@ -1960,7 +1960,7 @@ void CPU::executeInstruction()
 
             int cycles = (modRM >> 6) == 3 ? 4 : 10 + 4;
 
-            writeRM16(modRM, imm, cycles, addr, segmentOverride);
+            writeRM16(modRM, imm, cycles, addr);
 
             reg(Reg16::IP) += 3;
             cyclesExecuted(cycles);
@@ -2041,9 +2041,9 @@ void CPU::executeInstruction()
             auto count = 1;
     
             int cycles = (modRM >> 6) == 3 ? 2 : 15;
-            auto v = readRM8(modRM, cycles, addr, segmentOverride);
+            auto v = readRM8(modRM, cycles, addr);
 
-            writeRM8(modRM, doShift(exOp, v, count, flags), cycles, addr, segmentOverride, true);
+            writeRM8(modRM, doShift(exOp, v, count, flags), cycles, addr, true);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -2057,9 +2057,9 @@ void CPU::executeInstruction()
             auto count = 1;
     
             int cycles = (modRM >> 6) == 3 ? 2 : 15 + 2 * 4;
-            auto v = readRM16(modRM, cycles, addr, segmentOverride);
+            auto v = readRM16(modRM, cycles, addr);
 
-            writeRM16(modRM, doShift(exOp, v, count, flags), cycles, addr, segmentOverride, true);
+            writeRM16(modRM, doShift(exOp, v, count, flags), cycles, addr, true);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -2073,9 +2073,9 @@ void CPU::executeInstruction()
             auto count = reg(Reg8::CL);
     
             int cycles = ((modRM >> 6) == 3 ? 8 : 20) + count * 4;
-            auto v = readRM8(modRM, cycles, addr, segmentOverride);
+            auto v = readRM8(modRM, cycles, addr);
 
-            writeRM8(modRM, doShift(exOp, v, count, flags), cycles, addr, segmentOverride, true);
+            writeRM8(modRM, doShift(exOp, v, count, flags), cycles, addr, true);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -2089,9 +2089,9 @@ void CPU::executeInstruction()
             auto count = reg(Reg8::CL);
     
             int cycles = ((modRM >> 6) == 3 ? 8 : 20 + 2 * 4) + count * 4;
-            auto v = readRM16(modRM, cycles, addr, segmentOverride);
+            auto v = readRM16(modRM, cycles, addr);
 
-            writeRM16(modRM, doShift(exOp, v, count, flags), cycles, addr, segmentOverride, true);
+            writeRM16(modRM, doShift(exOp, v, count, flags), cycles, addr, true);
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -2171,7 +2171,7 @@ void CPU::executeInstruction()
             auto modRM = sys.readMem(addr + 1);
 
             int cycles = ((modRM >> 6) == 3 ? 2 : 8);
-            readRM8(modRM, cycles, addr, segmentOverride); // we need to at least decode it
+            readRM8(modRM, cycles, addr); // we need to at least decode it
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -2359,7 +2359,7 @@ void CPU::executeInstruction()
             bool isReg = (modRM >> 6) == 3;
 
             int cycles = 0;
-            auto v = readRM8(modRM, cycles, addr, segmentOverride); // NOT/NEG write back...
+            auto v = readRM8(modRM, cycles, addr); // NOT/NEG write back...
 
             switch(exOp)
             {
@@ -2376,14 +2376,14 @@ void CPU::executeInstruction()
                 // 1 is invalid
                 case 2: // NOT
                 {
-                    writeRM8(modRM, ~v, cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, ~v, cycles, addr, true);
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 3 : 16 + cycles);
                     break;
                 }
                 case 3: // NEG
                 {
-                    writeRM8(modRM, doSub(uint8_t(0), v, flags), cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, doSub(uint8_t(0), v, flags), cycles, addr, true);
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 3 : 16 + cycles);
                     break;
@@ -2476,7 +2476,7 @@ void CPU::executeInstruction()
             bool isReg = (modRM >> 6) == 3;
 
             int cycles = 0;
-            auto v = readRM16(modRM, cycles, addr, segmentOverride);
+            auto v = readRM16(modRM, cycles, addr);
 
             switch(exOp)
             {
@@ -2494,14 +2494,14 @@ void CPU::executeInstruction()
                 // 1 is invalid
                 case 2: // NOT
                 {
-                    writeRM16(modRM, ~v, cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, ~v, cycles, addr, true);
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 3 : 16 + 2 * 4 + cycles);
                     break;
                 }
                 case 3: // NEG
                 {
-                    writeRM16(modRM, doSub(uint16_t(0), v, flags), cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, doSub(uint16_t(0), v, flags), cycles, addr, true);
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 3 : 16 + 2 * 4 + cycles);
                     break;
@@ -2635,14 +2635,14 @@ void CPU::executeInstruction()
             bool isReg = (modRM >> 6) == 3;
 
             int cycles = 0;
-            auto v = readRM8(modRM, cycles, addr, segmentOverride);
+            auto v = readRM8(modRM, cycles, addr);
 
             switch(exOp)
             {
                 case 0: // INC
                 {
                     auto res = doInc(v, flags);
-                    writeRM8(modRM, res, cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, res, cycles, addr, true);
 
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 3 : 15 + cycles);
@@ -2651,7 +2651,7 @@ void CPU::executeInstruction()
                 case 1: // DEC
                 {
                     auto res = doDec(v, flags);
-                    writeRM8(modRM, res, cycles, addr, segmentOverride, true);
+                    writeRM8(modRM, res, cycles, addr, true);
 
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 3 : 15 + cycles);
@@ -2673,14 +2673,14 @@ void CPU::executeInstruction()
             bool isReg = (modRM >> 6) == 3;
 
             int cycles = 0;
-            auto v = readRM16(modRM, cycles, addr, segmentOverride);
+            auto v = readRM16(modRM, cycles, addr);
 
             switch(exOp)
             {
                 case 0: // INC
                 {
                     auto res = doInc(v, flags);
-                    writeRM16(modRM, res, cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, res, cycles, addr, true);
 
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 3 : (15 + 2 * 4) + cycles);
@@ -2689,7 +2689,7 @@ void CPU::executeInstruction()
                 case 1: // DEC
                 {
                     auto res = doDec(v, flags);
-                    writeRM16(modRM, res, cycles, addr, segmentOverride, true);
+                    writeRM16(modRM, res, cycles, addr, true);
 
                     reg(Reg16::IP)++;
                     cyclesExecuted(isReg ? 3 : (15 + 2 * 4) + cycles);
@@ -2712,7 +2712,7 @@ void CPU::executeInstruction()
 
                     // need the addr again...
                     int cycleTmp;
-                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true, addr, segmentOverride);
+                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true, addr);
                     auto newCS = readMem16(offset + 2, segment);
 
                     // push CS
@@ -2741,7 +2741,7 @@ void CPU::executeInstruction()
 
                     // need the addr again...
                     int cycleTmp;
-                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true, addr, segmentOverride);
+                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true, addr);
                     auto newCS = readMem16(offset + 2, segment);
 
                     reg(Reg16::CS) = newCS;
@@ -2790,7 +2790,7 @@ void CPU::writeMem16(uint16_t offset, uint32_t segment, uint16_t data)
 
 // rw is true if this is a write that was read in the same op (to avoid counting disp twice)
 // TODO: should addr cycles be counted twice?
-std::tuple<uint16_t, uint32_t> CPU::getEffectiveAddress(int mod, int rm, int &cycles, bool rw, uint32_t addr, Reg16 segmentOverride)
+std::tuple<uint16_t, uint32_t> CPU::getEffectiveAddress(int mod, int rm, int &cycles, bool rw, uint32_t addr)
 {
     uint16_t memAddr = 0;
     Reg16 segBase = Reg16::DS;
@@ -2881,56 +2881,56 @@ std::tuple<uint16_t, uint32_t> CPU::getEffectiveAddress(int mod, int rm, int &cy
     return {memAddr, reg(segBase) << 4};
 }
 
-uint8_t CPU::readRM8(uint8_t modRM, int &cycles, uint32_t addr, Reg16 segmentOverride)
+uint8_t CPU::readRM8(uint8_t modRM, int &cycles, uint32_t addr)
 {
     auto mod = modRM >> 6;
     auto rm = modRM & 7;
 
     if(mod != 3)
     {
-        auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr, segmentOverride);
+        auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr);
         return sys.readMem(offset + segment);
     }
     else
         return reg(static_cast<Reg8>(rm));
 }
 
-uint16_t CPU::readRM16(uint8_t modRM, int &cycles, uint32_t addr, Reg16 segmentOverride)
+uint16_t CPU::readRM16(uint8_t modRM, int &cycles, uint32_t addr)
 {
     auto mod = modRM >> 6;
     auto rm = modRM & 7;
 
     if(mod != 3)
     {
-        auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr, segmentOverride);
+        auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr);
         return readMem16(offset, segment);
     }
     else
         return reg(static_cast<Reg16>(rm));
 }
 
-void CPU::writeRM8(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, Reg16 segmentOverride, bool rw)
+void CPU::writeRM8(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, bool rw)
 {
     auto mod = modRM >> 6;
     auto rm = modRM & 7;
 
     if(mod != 3)
     {
-        auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw, addr, segmentOverride);
+        auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw, addr);
         sys.writeMem(offset + segment, v);
     }
     else
         reg(static_cast<Reg8>(rm)) = v;
 }
 
-void CPU::writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, Reg16 segmentOverride, bool rw)
+void CPU::writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, bool rw)
 {
     auto mod = modRM >> 6;
     auto rm = modRM & 7;
 
     if(mod != 3)
     {
-        auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw, addr, segmentOverride);
+        auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw, addr);
         writeMem16(offset, segment, v);
     }
     else
@@ -2938,7 +2938,7 @@ void CPU::writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, Reg16
 }
 
 template <CPU::ALUOp8 op, bool d, int regCycles, int memCycles>
-void CPU::doALU8(uint32_t addr, Reg16 segmentOverride)
+void CPU::doALU8(uint32_t addr)
 {
     auto modRM = sys.readMem(addr + 1);
     auto r = static_cast<Reg8>((modRM >> 3) & 0x7);
@@ -2949,7 +2949,7 @@ void CPU::doALU8(uint32_t addr, Reg16 segmentOverride)
 
     if(d)
     {
-        src = readRM8(modRM, cycles, addr, segmentOverride);
+        src = readRM8(modRM, cycles, addr);
         dest = reg(r);
 
         reg(r) = op(dest, src, flags);
@@ -2957,9 +2957,9 @@ void CPU::doALU8(uint32_t addr, Reg16 segmentOverride)
     else
     {
         src = reg(r);
-        dest = readRM8(modRM, cycles, addr, segmentOverride);
+        dest = readRM8(modRM, cycles, addr);
 
-        writeRM8(modRM, op(dest, src, flags), cycles, addr, segmentOverride, true);
+        writeRM8(modRM, op(dest, src, flags), cycles, addr, true);
     }
 
     reg(Reg16::IP)++;
@@ -2967,7 +2967,7 @@ void CPU::doALU8(uint32_t addr, Reg16 segmentOverride)
 }
 
 template <CPU::ALUOp16 op, bool d, int regCycles, int memCycles>
-void CPU::doALU16(uint32_t addr, Reg16 segmentOverride)
+void CPU::doALU16(uint32_t addr)
 {
     auto modRM = sys.readMem(addr + 1);
     auto r = static_cast<Reg16>((modRM >> 3) & 0x7);
@@ -2980,7 +2980,7 @@ void CPU::doALU16(uint32_t addr, Reg16 segmentOverride)
 
     if(d)
     {
-        src = readRM16(modRM, cycles, addr, segmentOverride);
+        src = readRM16(modRM, cycles, addr);
         dest = reg(r);
 
         reg(r) = op(dest, src, flags);
@@ -2988,9 +2988,9 @@ void CPU::doALU16(uint32_t addr, Reg16 segmentOverride)
     else
     {
         src = reg(r);
-        dest = readRM16(modRM, cycles, addr, segmentOverride);
+        dest = readRM16(modRM, cycles, addr);
 
-        writeRM16(modRM, op(dest, src, flags), cycles, addr, segmentOverride, true);
+        writeRM16(modRM, op(dest, src, flags), cycles, addr, true);
     }
 
     reg(Reg16::IP)++;
