@@ -480,86 +480,6 @@ void CPU::executeInstruction()
         return mod; // mod 1 == 8bit, mod 2 == 16bit  
     };
 
-    // ALU helpers
-
-    auto alu8 = [this, addr, &segmentOverride](uint8_t(*op)(uint8_t, uint8_t, uint16_t &), bool d, int regCycles, int memCycles)
-    {
-        auto modRM = sys.readMem(addr + 1);
-        auto r = static_cast<Reg8>((modRM >> 3) & 0x7);
-
-        int cycles = (modRM >> 6) == 3 ? regCycles : memCycles;
-
-        uint8_t src, dest;
-
-        if(d)
-        {
-            src = readRM8(modRM, cycles, addr, segmentOverride);
-            dest = reg(r);
-
-            reg(r) = op(dest, src, flags);
-        }
-        else
-        {
-            src = reg(r);
-            dest = readRM8(modRM, cycles, addr, segmentOverride);
-
-            writeRM8(modRM, op(dest, src, flags), cycles, addr, segmentOverride, true);
-        }
-
-        reg(Reg16::IP)++;
-        cyclesExecuted(cycles);
-    };
-
-    auto alu16 = [this, addr, &segmentOverride](uint16_t(*op)(uint16_t, uint16_t, uint16_t &), bool d, int regCycles, int memCycles)
-    {
-        auto modRM = sys.readMem(addr + 1);
-        auto r = static_cast<Reg16>((modRM >> 3) & 0x7);
-
-        int transfers = d ? 1 : 2;
-
-        int cycles = (modRM >> 6) == 3 ? regCycles : (memCycles + transfers * 4);
-
-        uint16_t src, dest;
-
-        if(d)
-        {
-            src = readRM16(modRM, cycles, addr, segmentOverride);
-            dest = reg(r);
-
-            reg(r) = op(dest, src, flags);
-        }
-        else
-        {
-            src = reg(r);
-            dest = readRM16(modRM, cycles, addr, segmentOverride);
-
-            writeRM16(modRM, op(dest, src, flags), cycles, addr, segmentOverride, true);
-        }
-
-        reg(Reg16::IP)++;
-        cyclesExecuted(cycles);
-    };
-
-    auto alu8AImm = [this, addr](uint8_t(*op)(uint8_t, uint8_t, uint16_t &))
-    {
-        auto imm = sys.readMem(addr + 1);
-
-        reg(Reg8::AL) = op(reg(Reg8::AL), imm, flags);
-
-        reg(Reg16::IP)++;
-        cyclesExecuted(4);
-    };
-
-    auto alu16AImm = [this, addr](uint16_t(*op)(uint16_t, uint16_t, uint16_t &))
-    {
-        uint16_t imm = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
-
-        reg(Reg16::AX) = op(reg(Reg16::AX), imm, flags);
-
-        reg(Reg16::IP) += 2;
-        cyclesExecuted(4);
-    };
-
     // 7x
     auto jump8 = [this, addr](int cond)
     {
@@ -620,22 +540,22 @@ void CPU::executeInstruction()
     switch(opcode)
     {
         case 0x00: // ADD r/m8 r8
-            alu8(doAdd, false, 3, 16);
+            doALU8<doAdd>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x01: // ADD r/m16 r16
-            alu16(doAdd, false, 3, 16);
+            doALU16<doAdd>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x02: // ADD r8 r/m8
-            alu8(doAdd, true, 3, 9);
+            doALU8<doAdd>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x03: // ADD r16 r/m16
-            alu16(doAdd, true, 3, 9);
+            doALU16<doAdd>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x04: // ADD AL imm8
-            alu8AImm(doAdd);
+            doALU8AImm<doAdd>(addr);
             break;
         case 0x05: // ADD AX imm16
-            alu16AImm(doAdd);
+            doALU16AImm<doAdd>(addr);
             break;
 
         case 0x06: // PUSH seg
@@ -667,79 +587,79 @@ void CPU::executeInstruction()
         }
 
         case 0x08: // OR r/m8 r8
-            alu8(doOr, false, 3, 16);
+            doALU8<doOr>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x09: // OR r/m16 r16
-            alu16(doOr, false, 3, 16);
+            doALU16<doOr>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x0A: // OR r8 r/m8
-            alu8(doOr, true, 3, 9);
+            doALU8<doOr>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x0B: // OR r16 r/m16
-            alu16(doOr, true, 3, 9);
+            doALU16<doOr>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x0C: // OR AL imm8
-            alu8AImm(doOr);
+            doALU8AImm<doOr>(addr);
             break;
         case 0x0D: // OR AX imm16
-            alu16AImm(doOr);
+            doALU16AImm<doOr>(addr);
             break;
 
         case 0x10: // ADC r/m8 r8
-            alu8(doAddWithCarry, false, 3, 16);
+            doALU8<doAddWithCarry>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x11: // ADC r/m16 r16
-            alu16(doAddWithCarry, false, 3, 16);
+            doALU16<doAddWithCarry>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x12: // ADC r8 r/m8
-            alu8(doAddWithCarry, true, 3, 9);
+            doALU8<doAddWithCarry>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x13: // ADC r16 r/m16
-            alu16(doAddWithCarry, true, 3, 9);
+            doALU16<doAddWithCarry>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x14: // ADC AL imm8
-            alu8AImm(doAddWithCarry);
+            doALU8AImm<doAddWithCarry>(addr);
             break;
         case 0x15: // ADC AX imm16
-            alu16AImm(doAddWithCarry);
+            doALU16AImm<doAddWithCarry>(addr);
             break;
 
         case 0x18: // SBB r/m8 r8
-            alu8(doSubWithBorrow, false, 3, 16);
+            doALU8<doSubWithBorrow>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x19: // SBB r/m16 r16
-            alu16(doSubWithBorrow, false, 3, 16);
+            doALU16<doSubWithBorrow>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x1A: // SBB r8 r/m8
-            alu8(doSubWithBorrow, true, 3, 9);
+            doALU8<doSubWithBorrow>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x1B: // SBB r16 r/m16
-            alu16(doSubWithBorrow, true, 3, 9);
+            doALU16<doSubWithBorrow>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x1C: // SBB AL imm8
-            alu8AImm(doSubWithBorrow);
+            doALU8AImm<doSubWithBorrow>(addr);
             break;
         case 0x1D: // SBB AX imm16
-            alu16AImm(doSubWithBorrow);
+            doALU16AImm<doSubWithBorrow>(addr);
             break;
     
         case 0x20: // AND r/m8 r8
-            alu8(doAnd, false, 3, 16);
+            doALU8<doAnd>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x21: // AND r/m16 r16
-            alu16(doAnd, false, 3, 16);
+            doALU16<doAnd>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x22: // AND r8 r/m8
-            alu8(doAnd, true, 3, 9);
+            doALU8<doAnd>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x23: // AND r16 r/m16
-            alu16(doAnd, true, 3, 9);
+            doALU16<doAnd>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x24: // AND AL imm8
-            alu8AImm(doAnd);
+            doALU8AImm<doAnd>(addr);
             break;
         case 0x25: // AND AX imm16
-            alu16AImm(doAnd);
+            doALU16AImm<doAnd>(addr);
             break;
 
         case 0x27: // DAA
@@ -772,41 +692,41 @@ void CPU::executeInstruction()
         }
 
         case 0x28: // SUB r/m8 r8
-            alu8(doSub, false, 3, 16);
+            doALU8<doSub>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x29: // SUB r/m16 r16
-            alu16(doSub, false, 3, 16);
+            doALU16<doSub>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x2A: // SUB r8 r/m8
-            alu8(doSub, true, 3, 9);
+            doALU8<doSub>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x2B: // SUB r16 r/m16
-            alu16(doSub, true, 3, 9);
+            doALU16<doSub>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x2C: // SUB AL imm8
-            alu8AImm(doSub);
+            doALU8AImm<doSub>(addr);
             break;
         case 0x2D: // SUB AX imm16
-            alu16AImm(doSub);
+            doALU16AImm<doSub>(addr);
             break;
 
         case 0x30: // XOR r/m8 r8
-            alu8(doXor, false, 3, 16);
+            doALU8<doXor>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x31: // XOR r/m16 r16
-            alu16(doXor, false, 3, 16);
+            doALU16<doXor>(false, 3, 16, addr, segmentOverride);
             break;
         case 0x32: // XOR r8 r/m8
-            alu8(doXor, true, 3, 9);
+            doALU8<doXor>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x33: // XOR r16 r/m16
-            alu16(doXor, true, 3, 9);
+            doALU16<doXor>(true, 3, 9, addr, segmentOverride);
             break;
         case 0x34: // XOR AL imm8
-            alu8AImm(doXor);
+            doALU8AImm<doXor>(addr);
             break;
         case 0x35: // XOR AX imm16
-            alu16AImm(doXor);
+            doALU16AImm<doXor>(addr);
             break;
 
         case 0x38: // CMP r/m8 r8
@@ -3015,6 +2935,88 @@ void CPU::writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, Reg16
     }
     else
         reg(static_cast<Reg16>(rm)) = v;
+}
+
+template <CPU::ALUOp8 op>
+void CPU::doALU8(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segmentOverride)
+{
+    auto modRM = sys.readMem(addr + 1);
+    auto r = static_cast<Reg8>((modRM >> 3) & 0x7);
+
+    int cycles = (modRM >> 6) == 3 ? regCycles : memCycles;
+
+    uint8_t src, dest;
+
+    if(d)
+    {
+        src = readRM8(modRM, cycles, addr, segmentOverride);
+        dest = reg(r);
+
+        reg(r) = op(dest, src, flags);
+    }
+    else
+    {
+        src = reg(r);
+        dest = readRM8(modRM, cycles, addr, segmentOverride);
+
+        writeRM8(modRM, op(dest, src, flags), cycles, addr, segmentOverride, true);
+    }
+
+    reg(Reg16::IP)++;
+    cyclesExecuted(cycles);
+}
+
+template <CPU::ALUOp16 op>
+void CPU::doALU16(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segmentOverride)
+{
+    auto modRM = sys.readMem(addr + 1);
+    auto r = static_cast<Reg16>((modRM >> 3) & 0x7);
+
+    int transfers = d ? 1 : 2;
+
+    int cycles = (modRM >> 6) == 3 ? regCycles : (memCycles + transfers * 4);
+
+    uint16_t src, dest;
+
+    if(d)
+    {
+        src = readRM16(modRM, cycles, addr, segmentOverride);
+        dest = reg(r);
+
+        reg(r) = op(dest, src, flags);
+    }
+    else
+    {
+        src = reg(r);
+        dest = readRM16(modRM, cycles, addr, segmentOverride);
+
+        writeRM16(modRM, op(dest, src, flags), cycles, addr, segmentOverride, true);
+    }
+
+    reg(Reg16::IP)++;
+    cyclesExecuted(cycles);
+}
+
+template <CPU::ALUOp8 op>
+void CPU::doALU8AImm(uint32_t addr)
+{
+    auto imm = sys.readMem(addr + 1);
+
+    reg(Reg8::AL) = op(reg(Reg8::AL), imm, flags);
+
+    reg(Reg16::IP)++;
+    cyclesExecuted(4);
+}
+
+template <CPU::ALUOp16 op>
+void CPU::doALU16AImm(uint32_t addr)
+{
+    uint16_t imm = sys.readMem(addr + 1) | sys.readMem(addr + 2) << 8;
+
+    reg(Reg16::AX) = op(reg(Reg16::AX), imm, flags);
+
+    reg(Reg16::IP) += 2;
+    cyclesExecuted(4);
 }
 
 void CPU::cyclesExecuted(int cycles)

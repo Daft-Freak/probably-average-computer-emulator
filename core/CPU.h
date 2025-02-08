@@ -75,6 +75,20 @@ private:
     void writeRM8(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, Reg16 segmentOverride, bool rw = false);
     void writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, Reg16 segmentOverride, bool rw = false);
 
+    // ALU helpers
+    using ALUOp8 = uint8_t(*)(uint8_t, uint8_t, uint16_t &);
+    using ALUOp16 = uint16_t(*)(uint16_t, uint16_t, uint16_t &);
+
+    template<ALUOp8 op>
+    void doALU8(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segmentOverride);
+    template<ALUOp16 op>
+    void doALU16(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segmentOverride);
+
+    template<ALUOp8 op>
+    void doALU8AImm(uint32_t addr);
+    template<ALUOp16 op>
+    void doALU16AImm(uint32_t addr);
+
     void cyclesExecuted(int cycles);
 
     void serviceInterrupt(uint8_t vector);
