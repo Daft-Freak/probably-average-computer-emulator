@@ -468,99 +468,6 @@ void CPU::executeInstruction()
 
     // R/M helpers
 
-    // rw is true if this is a write that was read in the same op (to avoid counting disp twice)
-    // TODO: should addr cycles be counted twice?
-    auto getEffectiveAddress = [this, addr, segmentOverride](int mod, int rm, int &cycles, bool rw) -> std::tuple<uint16_t, uint32_t>
-    {
-        uint16_t memAddr = 0;
-        Reg16 segBase = Reg16::DS;
-        switch(rm)
-        {
-            case 0: // BX + SI
-                memAddr = reg(Reg16::BX) + reg(Reg16::SI);
-                cycles += 7;
-                break;
-            case 1: // BX + DI
-                memAddr = reg(Reg16::BX) + reg(Reg16::DI);
-                cycles += 8;
-                break;
-            case 2: // BP + SI
-                memAddr = reg(Reg16::BP) + reg(Reg16::SI);
-                segBase = Reg16::SS;
-                cycles += 8;
-                break;
-            case 3: // BP + DI
-                memAddr = reg(Reg16::BP) + reg(Reg16::DI);
-                segBase = Reg16::SS;
-                cycles += 7;
-                break;
-            case 4:
-                memAddr = reg(Reg16::SI);
-                cycles += 5;
-                break;
-            case 5:
-                memAddr = reg(Reg16::DI);
-                cycles += 5;
-                break;
-            case 6:
-                if(mod == 0) // direct
-                {
-                    memAddr = sys.readMem(addr + 2) | sys.readMem(addr + 3) << 8;
-
-                    if(!rw)
-                        reg(Reg16::IP) += 2;
-                    cycles += 6;
-                }
-                else
-                {
-                    // default to stack segment
-                    memAddr = reg(Reg16::BP);
-                    segBase = Reg16::SS;
-                    cycles += 5;
-                }
-                break;
-            case 7:
-                memAddr = reg(Reg16::BX);
-                cycles += 5;
-                break;
-        }
-
-        // add disp
-        if(mod == 1)
-        {
-            uint16_t disp = sys.readMem(addr + 2);
-
-            // sign extend
-            if(disp & 0x80)
-                disp |= 0xFF00;
-
-            if(!rw)
-                reg(Reg16::IP)++;
-
-            memAddr += disp;
-            cycles += 4; // 5 -> 9, 7 -> 11, 8 -> 12
-        }
-        else if(mod == 2)
-        {
-            uint16_t disp = sys.readMem(addr + 2) | sys.readMem(addr + 3) << 8;
-
-            if(!rw)
-                reg(Reg16::IP) += 2;
-
-            memAddr += disp;
-            cycles += 4;
-        }
-
-        // apply segment override
-        if(segmentOverride != Reg16::AX)
-        {
-            segBase = segmentOverride;
-            cycles += 2;
-        }
-
-        return {memAddr, reg(segBase) << 4};
-    };
-
     auto getDispLen = [this](uint8_t modRM)
     {
         auto mod = modRM >> 6;
@@ -575,56 +482,56 @@ void CPU::executeInstruction()
         return mod; // mod 1 == 8bit, mod 2 == 16bit  
     };
 
-    auto readRM8 = [this, addr, &getEffectiveAddress](uint8_t modRM, int &cycles) -> uint8_t
+    auto readRM8 = [this, addr, &segmentOverride](uint8_t modRM, int &cycles) -> uint8_t
     {
         auto mod = modRM >> 6;
         auto rm = modRM & 7;
 
         if(mod != 3)
         {
-            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr, segmentOverride);
             return sys.readMem(offset + segment);
         }
         else
             return reg(static_cast<Reg8>(rm));
     };
 
-    auto readRM16 = [this, addr, &getEffectiveAddress](uint8_t modRM, int &cycles) -> uint16_t
+    auto readRM16 = [this, addr, &segmentOverride](uint8_t modRM, int &cycles) -> uint16_t
     {
         auto mod = modRM >> 6;
         auto rm = modRM & 7;
 
         if(mod != 3)
         {
-            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr, segmentOverride);
             return readMem16(offset, segment);
         }
         else
             return reg(static_cast<Reg16>(rm));
     };
 
-    auto writeRM8 = [this, addr, &getEffectiveAddress](uint8_t modRM, uint8_t v, int &cycles, bool rw = false)
+    auto writeRM8 = [this, addr, &segmentOverride](uint8_t modRM, uint8_t v, int &cycles, bool rw = false)
     {
         auto mod = modRM >> 6;
         auto rm = modRM & 7;
 
         if(mod != 3)
         {
-            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw, addr, segmentOverride);
             sys.writeMem(offset + segment, v);
         }
         else
             reg(static_cast<Reg8>(rm)) = v;
     };
 
-    auto writeRM16 = [this, addr, &getEffectiveAddress](uint8_t modRM, uint16_t v, int &cycles, bool rw = false)
+    auto writeRM16 = [this, addr, &segmentOverride](uint8_t modRM, uint16_t v, int &cycles, bool rw = false)
     {
         auto mod = modRM >> 6;
         auto rm = modRM & 7;
 
         if(mod != 3)
         {
-            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, rw, addr, segmentOverride);
             writeMem16(offset, segment, v);
         }
         else
@@ -1420,7 +1327,7 @@ void CPU::executeInstruction()
 
             int cycles = 2;
             // the only time we don't want the segment added...
-            reg(static_cast<Reg16>(r)) = std::get<0>(getEffectiveAddress(modRM >> 6, modRM & 7, cycles, false));
+            reg(static_cast<Reg16>(r)) = std::get<0>(getEffectiveAddress(modRM >> 6, modRM & 7, cycles, false, addr, segmentOverride));
 
             reg(Reg16::IP)++;
             cyclesExecuted(cycles);
@@ -2137,7 +2044,7 @@ void CPU::executeInstruction()
 
             int cycles = 16 + 2 * 4;
     
-            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr, segmentOverride);
             reg(static_cast<Reg16>(r)) = readMem16(offset, segment);
             reg(Reg16::ES) = readMem16(offset + 2, segment);
             
@@ -2156,7 +2063,7 @@ void CPU::executeInstruction()
 
             int cycles = 16 + 2 * 4;
     
-            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false);
+            auto [offset, segment] = getEffectiveAddress(mod, rm, cycles, false, addr, segmentOverride);
             reg(static_cast<Reg16>(r)) = readMem16(offset, segment);
             reg(Reg16::DS) = readMem16(offset + 2, segment);
             
@@ -2943,7 +2850,7 @@ void CPU::executeInstruction()
 
                     // need the addr again...
                     int cycleTmp;
-                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true);
+                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true, addr, segmentOverride);
                     auto newCS = readMem16(offset + 2, segment);
 
                     // push CS
@@ -2972,7 +2879,7 @@ void CPU::executeInstruction()
 
                     // need the addr again...
                     int cycleTmp;
-                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true);
+                    auto [offset, segment] = getEffectiveAddress(modRM >> 6, modRM & 7, cycleTmp, true, addr, segmentOverride);
                     auto newCS = readMem16(offset + 2, segment);
 
                     reg(Reg16::CS) = newCS;
@@ -3017,6 +2924,99 @@ void CPU::writeMem16(uint16_t offset, uint32_t segment, uint16_t data)
 {
     sys.writeMem(offset + segment, data & 0xFF);
     sys.writeMem(((offset + 1) & 0xFFFF) + segment, data >> 8);
+}
+
+// rw is true if this is a write that was read in the same op (to avoid counting disp twice)
+// TODO: should addr cycles be counted twice?
+std::tuple<uint16_t, uint32_t> CPU::getEffectiveAddress(int mod, int rm, int &cycles, bool rw, uint32_t addr, Reg16 segmentOverride)
+{
+    uint16_t memAddr = 0;
+    Reg16 segBase = Reg16::DS;
+    switch(rm)
+    {
+        case 0: // BX + SI
+            memAddr = reg(Reg16::BX) + reg(Reg16::SI);
+            cycles += 7;
+            break;
+        case 1: // BX + DI
+            memAddr = reg(Reg16::BX) + reg(Reg16::DI);
+            cycles += 8;
+            break;
+        case 2: // BP + SI
+            memAddr = reg(Reg16::BP) + reg(Reg16::SI);
+            segBase = Reg16::SS;
+            cycles += 8;
+            break;
+        case 3: // BP + DI
+            memAddr = reg(Reg16::BP) + reg(Reg16::DI);
+            segBase = Reg16::SS;
+            cycles += 7;
+            break;
+        case 4:
+            memAddr = reg(Reg16::SI);
+            cycles += 5;
+            break;
+        case 5:
+            memAddr = reg(Reg16::DI);
+            cycles += 5;
+            break;
+        case 6:
+            if(mod == 0) // direct
+            {
+                memAddr = sys.readMem(addr + 2) | sys.readMem(addr + 3) << 8;
+
+                if(!rw)
+                    reg(Reg16::IP) += 2;
+                cycles += 6;
+            }
+            else
+            {
+                // default to stack segment
+                memAddr = reg(Reg16::BP);
+                segBase = Reg16::SS;
+                cycles += 5;
+            }
+            break;
+        case 7:
+            memAddr = reg(Reg16::BX);
+            cycles += 5;
+            break;
+    }
+
+    // add disp
+    if(mod == 1)
+    {
+        uint16_t disp = sys.readMem(addr + 2);
+
+        // sign extend
+        if(disp & 0x80)
+            disp |= 0xFF00;
+
+        if(!rw)
+            reg(Reg16::IP)++;
+
+        memAddr += disp;
+        cycles += 4; // 5 -> 9, 7 -> 11, 8 -> 12
+    }
+    else if(mod == 2)
+    {
+        uint16_t disp = sys.readMem(addr + 2) | sys.readMem(addr + 3) << 8;
+
+        if(!rw)
+            reg(Reg16::IP) += 2;
+
+        memAddr += disp;
+        cycles += 4;
+    }
+
+    // apply segment override
+    if(segmentOverride != Reg16::AX)
+    {
+        segBase = segmentOverride;
+        cycles += 2;
+    }
+
+    return {memAddr, reg(segBase) << 4};
 }
 
 void CPU::cyclesExecuted(int cycles)

@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <tuple>
 
 class System;
 
@@ -63,6 +64,8 @@ public:
 private:
     uint16_t readMem16(uint16_t offset, uint32_t segment);
     void writeMem16(uint16_t offset, uint32_t segment, uint16_t data);
+
+    std::tuple<uint16_t, uint32_t> getEffectiveAddress(int mod, int rm, int &cycles, bool rw, uint32_t addr, Reg16 segmentOverride);
 
     void cyclesExecuted(int cycles);
 
