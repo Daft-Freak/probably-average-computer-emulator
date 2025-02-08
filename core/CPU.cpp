@@ -540,16 +540,16 @@ void CPU::executeInstruction()
     switch(opcode)
     {
         case 0x00: // ADD r/m8 r8
-            doALU8<doAdd>(false, 3, 16, addr, segmentOverride);
+            doALU8<doAdd, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x01: // ADD r/m16 r16
-            doALU16<doAdd>(false, 3, 16, addr, segmentOverride);
+            doALU16<doAdd, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x02: // ADD r8 r/m8
-            doALU8<doAdd>(true, 3, 9, addr, segmentOverride);
+            doALU8<doAdd, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x03: // ADD r16 r/m16
-            doALU16<doAdd>(true, 3, 9, addr, segmentOverride);
+            doALU16<doAdd, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x04: // ADD AL imm8
             doALU8AImm<doAdd>(addr);
@@ -587,16 +587,16 @@ void CPU::executeInstruction()
         }
 
         case 0x08: // OR r/m8 r8
-            doALU8<doOr>(false, 3, 16, addr, segmentOverride);
+            doALU8<doOr, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x09: // OR r/m16 r16
-            doALU16<doOr>(false, 3, 16, addr, segmentOverride);
+            doALU16<doOr, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x0A: // OR r8 r/m8
-            doALU8<doOr>(true, 3, 9, addr, segmentOverride);
+            doALU8<doOr, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x0B: // OR r16 r/m16
-            doALU16<doOr>(true, 3, 9, addr, segmentOverride);
+            doALU16<doOr, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x0C: // OR AL imm8
             doALU8AImm<doOr>(addr);
@@ -606,16 +606,16 @@ void CPU::executeInstruction()
             break;
 
         case 0x10: // ADC r/m8 r8
-            doALU8<doAddWithCarry>(false, 3, 16, addr, segmentOverride);
+            doALU8<doAddWithCarry, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x11: // ADC r/m16 r16
-            doALU16<doAddWithCarry>(false, 3, 16, addr, segmentOverride);
+            doALU16<doAddWithCarry, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x12: // ADC r8 r/m8
-            doALU8<doAddWithCarry>(true, 3, 9, addr, segmentOverride);
+            doALU8<doAddWithCarry, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x13: // ADC r16 r/m16
-            doALU16<doAddWithCarry>(true, 3, 9, addr, segmentOverride);
+            doALU16<doAddWithCarry, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x14: // ADC AL imm8
             doALU8AImm<doAddWithCarry>(addr);
@@ -625,16 +625,16 @@ void CPU::executeInstruction()
             break;
 
         case 0x18: // SBB r/m8 r8
-            doALU8<doSubWithBorrow>(false, 3, 16, addr, segmentOverride);
+            doALU8<doSubWithBorrow, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x19: // SBB r/m16 r16
-            doALU16<doSubWithBorrow>(false, 3, 16, addr, segmentOverride);
+            doALU16<doSubWithBorrow, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x1A: // SBB r8 r/m8
-            doALU8<doSubWithBorrow>(true, 3, 9, addr, segmentOverride);
+            doALU8<doSubWithBorrow, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x1B: // SBB r16 r/m16
-            doALU16<doSubWithBorrow>(true, 3, 9, addr, segmentOverride);
+            doALU16<doSubWithBorrow, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x1C: // SBB AL imm8
             doALU8AImm<doSubWithBorrow>(addr);
@@ -644,16 +644,16 @@ void CPU::executeInstruction()
             break;
     
         case 0x20: // AND r/m8 r8
-            doALU8<doAnd>(false, 3, 16, addr, segmentOverride);
+            doALU8<doAnd, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x21: // AND r/m16 r16
-            doALU16<doAnd>(false, 3, 16, addr, segmentOverride);
+            doALU16<doAnd, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x22: // AND r8 r/m8
-            doALU8<doAnd>(true, 3, 9, addr, segmentOverride);
+            doALU8<doAnd, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x23: // AND r16 r/m16
-            doALU16<doAnd>(true, 3, 9, addr, segmentOverride);
+            doALU16<doAnd, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x24: // AND AL imm8
             doALU8AImm<doAnd>(addr);
@@ -692,16 +692,16 @@ void CPU::executeInstruction()
         }
 
         case 0x28: // SUB r/m8 r8
-            doALU8<doSub>(false, 3, 16, addr, segmentOverride);
+            doALU8<doSub, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x29: // SUB r/m16 r16
-            doALU16<doSub>(false, 3, 16, addr, segmentOverride);
+            doALU16<doSub, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x2A: // SUB r8 r/m8
-            doALU8<doSub>(true, 3, 9, addr, segmentOverride);
+            doALU8<doSub, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x2B: // SUB r16 r/m16
-            doALU16<doSub>(true, 3, 9, addr, segmentOverride);
+            doALU16<doSub, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x2C: // SUB AL imm8
             doALU8AImm<doSub>(addr);
@@ -711,16 +711,16 @@ void CPU::executeInstruction()
             break;
 
         case 0x30: // XOR r/m8 r8
-            doALU8<doXor>(false, 3, 16, addr, segmentOverride);
+            doALU8<doXor, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x31: // XOR r/m16 r16
-            doALU16<doXor>(false, 3, 16, addr, segmentOverride);
+            doALU16<doXor, false, 3, 16>(addr, segmentOverride);
             break;
         case 0x32: // XOR r8 r/m8
-            doALU8<doXor>(true, 3, 9, addr, segmentOverride);
+            doALU8<doXor, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x33: // XOR r16 r/m16
-            doALU16<doXor>(true, 3, 9, addr, segmentOverride);
+            doALU16<doXor, true, 3, 9>(addr, segmentOverride);
             break;
         case 0x34: // XOR AL imm8
             doALU8AImm<doXor>(addr);
@@ -2937,8 +2937,8 @@ void CPU::writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, Reg16
         reg(static_cast<Reg16>(rm)) = v;
 }
 
-template <CPU::ALUOp8 op>
-void CPU::doALU8(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segmentOverride)
+template <CPU::ALUOp8 op, bool d, int regCycles, int memCycles>
+void CPU::doALU8(uint32_t addr, Reg16 segmentOverride)
 {
     auto modRM = sys.readMem(addr + 1);
     auto r = static_cast<Reg8>((modRM >> 3) & 0x7);
@@ -2966,8 +2966,8 @@ void CPU::doALU8(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segm
     cyclesExecuted(cycles);
 }
 
-template <CPU::ALUOp16 op>
-void CPU::doALU16(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segmentOverride)
+template <CPU::ALUOp16 op, bool d, int regCycles, int memCycles>
+void CPU::doALU16(uint32_t addr, Reg16 segmentOverride)
 {
     auto modRM = sys.readMem(addr + 1);
     auto r = static_cast<Reg16>((modRM >> 3) & 0x7);

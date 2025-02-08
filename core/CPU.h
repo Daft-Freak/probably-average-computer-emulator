@@ -79,10 +79,10 @@ private:
     using ALUOp8 = uint8_t(*)(uint8_t, uint8_t, uint16_t &);
     using ALUOp16 = uint16_t(*)(uint16_t, uint16_t, uint16_t &);
 
-    template<ALUOp8 op>
-    void doALU8(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segmentOverride);
-    template<ALUOp16 op>
-    void doALU16(bool d, int regCycles, int memCycles, uint32_t addr, Reg16 segmentOverride);
+    template<ALUOp8 op, bool d, int regCycles, int memCycles>
+    void doALU8(uint32_t addr, Reg16 segmentOverride);
+    template<ALUOp16 op, bool d, int regCycles, int memCycles>
+    void doALU16(uint32_t addr, Reg16 segmentOverride);
 
     template<ALUOp8 op>
     void doALU8AImm(uint32_t addr);
