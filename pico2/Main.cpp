@@ -49,7 +49,7 @@ static SerialMouse mouse(sys);
 
 static FileFixedIO fixedIO;
 
-static uint32_t emu_time = 0, real_time = 0;
+static uint32_t emu_time = 0, real_time = 0, sync_time = 0;
 
 static void scanlineCallback(const uint8_t *data, int line, int w)
 {
@@ -66,7 +66,9 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     if(line == 0)
     {
         // sync
+        auto start = get_absolute_time();
         while(!display_render_needed()) {}
+        sync_time += absolute_time_diff_us(start, get_absolute_time());
         set_display_size(w, 200);
     }
 
@@ -202,8 +204,8 @@ int main()
             if(emu_time >= 10000000) {
                 
                 int speed = uint64_t(emu_time) * 1000 / real_time;
-                printf("speed %i.%i%% (%ims in %ims)\n", speed / 10, speed % 10, emu_time / 1000, real_time / 1000);
-                emu_time = real_time = 0;
+                printf("speed %i.%i%% (%ims in %ims, sync %ims)\n", speed / 10, speed % 10, emu_time / 1000, real_time / 1000, sync_time / 1000);
+                emu_time = real_time = sync_time = 0;
             }
         }
     }
