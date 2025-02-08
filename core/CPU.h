@@ -67,6 +67,14 @@ private:
 
     std::tuple<uint16_t, uint32_t> getEffectiveAddress(int mod, int rm, int &cycles, bool rw, uint32_t addr, Reg16 segmentOverride);
 
+    // R/M helpers
+
+    uint8_t readRM8(uint8_t modRM, int &cycles, uint32_t addr, Reg16 segmentOverride);
+    uint16_t readRM16(uint8_t modRM, int &cycles, uint32_t addr, Reg16 segmentOverride);
+
+    void writeRM8(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, Reg16 segmentOverride, bool rw = false);
+    void writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, Reg16 segmentOverride, bool rw = false);
+
     void cyclesExecuted(int cycles);
 
     void serviceInterrupt(uint8_t vector);
