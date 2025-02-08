@@ -287,8 +287,8 @@ bool storage_init() {
     sm_config_set_in_shift(&c, false, true, 8);
 
     // MOSI, SCK output are low, MISO is input
-    pio_sm_set_pins_with_mask(sd_pio, sd_sm, 0, (1u << (SD_SCK - base)) | (1u << (SD_MOSI - base)));
-    pio_sm_set_pindirs_with_mask(sd_pio, sd_sm, (1u << (SD_SCK - base)) | (1u << (SD_MOSI - base)), (1u << (SD_SCK - base)) | (1u << (SD_MOSI - base)) | (1u << (SD_MISO - base)));
+    pio_sm_set_pins_with_mask64(sd_pio, sd_sm, 0, (1ull << SD_SCK) | (1ull << SD_MOSI));
+    pio_sm_set_pindirs_with_mask64(sd_pio, sd_sm, (1ull << SD_SCK) | (1ull << SD_MOSI), (1ull << SD_SCK) | (1ull << SD_MOSI) | (1ull << SD_MISO));
     pio_gpio_init(sd_pio, SD_MOSI);
     pio_gpio_init(sd_pio, SD_MISO);
     pio_gpio_init(sd_pio, SD_SCK);
