@@ -3,6 +3,13 @@
 #include <cstring>
 #include <limits>
 
+#ifdef PICO_CPU_IN_RAM
+#include "pico.h"
+#define RAM_FUNC(x) __not_in_flash_func(x)
+#else
+#define RAM_FUNC(x) x
+#endif
+
 #include "System.h"
 
 System::System() : cpu(*this)
@@ -87,7 +94,7 @@ void System::addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevic
     ioDevices.emplace_back(IORange{mask, value, picMask, dev});
 }
 
-uint8_t System::readMem(uint32_t addr)
+uint8_t RAM_FUNC(System::readMem)(uint32_t addr)
 {
     addr &= (maxAddress - 1);
 
@@ -109,7 +116,7 @@ uint8_t System::readMem(uint32_t addr)
     return 0xFF;
 }
 
-void System::writeMem(uint32_t addr, uint8_t data)
+void RAM_FUNC(System::writeMem)(uint32_t addr, uint8_t data)
 {
     addr &= (maxAddress - 1);
 
@@ -143,7 +150,7 @@ const uint8_t *System::mapAddress(uint32_t addr) const
     return nullptr;
 }
 
-uint8_t System::readIOPort(uint16_t addr)
+uint8_t RAM_FUNC(System::readIOPort)(uint16_t addr)
 {
     if(addr < 0x100)
     {
@@ -300,7 +307,7 @@ uint8_t System::readIOPort(uint16_t addr)
     return 0xFF;
 }
 
-void System::writeIOPort(uint16_t addr, uint8_t data)
+void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
 {
     if(addr < 0x100)
     {

@@ -3,6 +3,13 @@
 #include <cstdlib> // exit
 #include <cstring>
 
+#ifdef PICO_CPU_IN_RAM
+#include "pico.h"
+#define RAM_FUNC(x) __not_in_flash_func(x)
+#else
+#define RAM_FUNC(x) x
+#endif
+
 #include "CPU.h"
 #include "System.h"
 
@@ -33,7 +40,7 @@ static constexpr int signBit()
 }
 
 template<class T>
-static T doAdd(T dest, T src, uint16_t &flags)
+static T RAM_FUNC(doAdd)(T dest, T src, uint16_t &flags)
 {
     T res = dest + src;
 
@@ -51,7 +58,7 @@ static T doAdd(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
-static T doAddWithCarry(T dest, T src, uint16_t &flags)
+static T RAM_FUNC(doAddWithCarry)(T dest, T src, uint16_t &flags)
 {
     int c = flags & Flag_C ? 1 : 0;
     T res = dest + src + c;
@@ -71,7 +78,7 @@ static T doAddWithCarry(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
-static T doAnd(T dest, T src, uint16_t &flags)
+static T RAM_FUNC(doAnd)(T dest, T src, uint16_t &flags)
 {
     T res = dest & src;
 
@@ -86,7 +93,7 @@ static T doAnd(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
-static T doDec(T dest, uint16_t &flags)
+static T RAM_FUNC(doDec)(T dest, uint16_t &flags)
 {
     T res = dest - 1;
 
@@ -101,7 +108,7 @@ static T doDec(T dest, uint16_t &flags)
 }
 
 template<class T>
-static T doInc(T dest, uint16_t &flags)
+static T RAM_FUNC(doInc)(T dest, uint16_t &flags)
 {
     T res = dest + 1;
 
@@ -116,7 +123,7 @@ static T doInc(T dest, uint16_t &flags)
 }
 
 template<class T>
-static T doOr(T dest, T src, uint16_t &flags)
+static T RAM_FUNC(doOr)(T dest, T src, uint16_t &flags)
 {
     T res = dest | src;
 
@@ -131,7 +138,7 @@ static T doOr(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
-static T doRotateLeft(T dest, int count, uint16_t &flags)
+static T RAM_FUNC(doRotateLeft)(T dest, int count, uint16_t &flags)
 {
     if(!count)
         return dest;
@@ -152,7 +159,7 @@ static T doRotateLeft(T dest, int count, uint16_t &flags)
 }
 
 template<class T>
-static T doRotateLeftCarry(T dest, int count, uint16_t &flags)
+static T RAM_FUNC(doRotateLeftCarry)(T dest, int count, uint16_t &flags)
 {
     int maxBits = sizeof(T) * 8;
     count %= (maxBits + 1);
@@ -187,7 +194,7 @@ static T doRotateLeftCarry(T dest, int count, uint16_t &flags)
 }
 
 template<class T>
-static T doRotateRight(T dest, int count, uint16_t &flags)
+static T RAM_FUNC(doRotateRight)(T dest, int count, uint16_t &flags)
 {
     if(!count)
         return dest;
@@ -208,7 +215,7 @@ static T doRotateRight(T dest, int count, uint16_t &flags)
 }
 
 template<class T>
-static T doRotateRightCarry(T dest, int count, uint16_t &flags)
+static T RAM_FUNC(doRotateRightCarry)(T dest, int count, uint16_t &flags)
 {
     int maxBits = sizeof(T) * 8;
     count %= (maxBits + 1);
@@ -243,7 +250,7 @@ static T doRotateRightCarry(T dest, int count, uint16_t &flags)
 }
 
 template<class T>
-static T doShiftLeft(T dest, int count, uint16_t &flags)
+static T RAM_FUNC(doShiftLeft)(T dest, int count, uint16_t &flags)
 {
     if(!count)
         return dest;
@@ -267,7 +274,7 @@ static T doShiftLeft(T dest, int count, uint16_t &flags)
 }
 
 template<class T>
-static T doShiftRight(T dest, int count, uint16_t &flags)
+static T RAM_FUNC(doShiftRight)(T dest, int count, uint16_t &flags)
 {
     if(!count)
         return dest;
@@ -291,7 +298,7 @@ static T doShiftRight(T dest, int count, uint16_t &flags)
 }
 
 template<class T>
-static T doShiftRightArith(T dest, int count, uint16_t &flags)
+static T RAM_FUNC(doShiftRightArith)(T dest, int count, uint16_t &flags)
 {
     if(!count)
         return dest;
@@ -321,7 +328,7 @@ static T doShiftRightArith(T dest, int count, uint16_t &flags)
 }
 
 template<class T>
-static T doSub(T dest, T src, uint16_t &flags)
+static T RAM_FUNC(doSub)(T dest, T src, uint16_t &flags)
 {
     T res = dest - src;
 
@@ -339,7 +346,7 @@ static T doSub(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
-static T doSubWithBorrow(T dest, T src, uint16_t &flags)
+static T RAM_FUNC(doSubWithBorrow)(T dest, T src, uint16_t &flags)
 {
     int c = flags & Flag_C ? 1 : 0;
     T res = dest - src - c;
@@ -359,7 +366,7 @@ static T doSubWithBorrow(T dest, T src, uint16_t &flags)
 }
 
 template<class T>
-static T doXor(T dest, T src, uint16_t &flags)
+static T RAM_FUNC(doXor)(T dest, T src, uint16_t &flags)
 {
     T res = dest ^ src;
 
@@ -375,7 +382,7 @@ static T doXor(T dest, T src, uint16_t &flags)
 
 // higher level shift wrapper
 template<class T>
-static T doShift(int exOp, T dest, int count, uint16_t &flags)
+static T RAM_FUNC(doShift)(int exOp, T dest, int count, uint16_t &flags)
 {
     switch(exOp)
     {
@@ -410,7 +417,7 @@ void CPU::reset()
     reg(Reg16::IP) = 0;
 }
 
-void CPU::run(int ms)
+void RAM_FUNC(CPU::run)(int ms)
 {
     int cycles = (clockSpeed * ms) / 1000;
 
@@ -439,7 +446,7 @@ void CPU::run(int ms)
     }
 }
 
-void CPU::executeInstruction()
+void RAM_FUNC(CPU::executeInstruction)()
 {
     auto addr = (reg(Reg16::CS) << 4) + (reg(Reg16::IP)++);
 
@@ -2773,12 +2780,12 @@ void CPU::executeInstruction()
     }
 }
 
-uint16_t CPU::readMem16(uint16_t offset, uint32_t segment)
+uint16_t RAM_FUNC(CPU::readMem16)(uint16_t offset, uint32_t segment)
 {
     return sys.readMem(offset + segment) | sys.readMem(((offset + 1) & 0xFFFF) + segment) << 8;
 }
 
-void CPU::writeMem16(uint16_t offset, uint32_t segment, uint16_t data)
+void RAM_FUNC(CPU::writeMem16)(uint16_t offset, uint32_t segment, uint16_t data)
 {
     sys.writeMem(offset + segment, data & 0xFF);
     sys.writeMem(((offset + 1) & 0xFFFF) + segment, data >> 8);
@@ -2786,7 +2793,7 @@ void CPU::writeMem16(uint16_t offset, uint32_t segment, uint16_t data)
 
 // rw is true if this is a write that was read in the same op (to avoid counting disp twice)
 // TODO: should addr cycles be counted twice?
-std::tuple<uint16_t, uint32_t> CPU::getEffectiveAddress(int mod, int rm, int &cycles, bool rw, uint32_t addr)
+std::tuple<uint16_t, uint32_t> RAM_FUNC(CPU::getEffectiveAddress)(int mod, int rm, int &cycles, bool rw, uint32_t addr)
 {
     uint16_t memAddr = 0;
     Reg16 segBase = Reg16::DS;
@@ -2877,7 +2884,7 @@ std::tuple<uint16_t, uint32_t> CPU::getEffectiveAddress(int mod, int rm, int &cy
     return {memAddr, reg(segBase) << 4};
 }
 
-uint8_t CPU::readRM8(uint8_t modRM, int &cycles, uint32_t addr)
+uint8_t RAM_FUNC(CPU::readRM8)(uint8_t modRM, int &cycles, uint32_t addr)
 {
     auto mod = modRM >> 6;
     auto rm = modRM & 7;
@@ -2891,7 +2898,7 @@ uint8_t CPU::readRM8(uint8_t modRM, int &cycles, uint32_t addr)
         return reg(static_cast<Reg8>(rm));
 }
 
-uint16_t CPU::readRM16(uint8_t modRM, int &cycles, uint32_t addr)
+uint16_t RAM_FUNC(CPU::readRM16)(uint8_t modRM, int &cycles, uint32_t addr)
 {
     auto mod = modRM >> 6;
     auto rm = modRM & 7;
@@ -2905,7 +2912,7 @@ uint16_t CPU::readRM16(uint8_t modRM, int &cycles, uint32_t addr)
         return reg(static_cast<Reg16>(rm));
 }
 
-void CPU::writeRM8(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, bool rw)
+void RAM_FUNC(CPU::writeRM8)(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, bool rw)
 {
     auto mod = modRM >> 6;
     auto rm = modRM & 7;
@@ -2919,7 +2926,7 @@ void CPU::writeRM8(uint8_t modRM, uint8_t v, int &cycles, uint32_t addr, bool rw
         reg(static_cast<Reg8>(rm)) = v;
 }
 
-void CPU::writeRM16(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, bool rw)
+void RAM_FUNC(CPU::writeRM16)(uint8_t modRM, uint16_t v, int &cycles, uint32_t addr, bool rw)
 {
     auto mod = modRM >> 6;
     auto rm = modRM & 7;
@@ -3021,7 +3028,7 @@ void CPU::cyclesExecuted(int cycles)
     cycleCount += cycles;
 }
 
-void CPU::serviceInterrupt(uint8_t vector)
+void RAM_FUNC(CPU::serviceInterrupt)(uint8_t vector)
 {
     auto addr = vector * 4;
 
