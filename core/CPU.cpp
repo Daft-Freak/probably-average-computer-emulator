@@ -445,7 +445,7 @@ void CPU::executeInstruction()
 
     auto opcode = sys.readMem(addr);
     bool rep = false, repZ = true;
-    Reg16 segmentOverride = Reg16::AX; // not a segment reg, also == 0
+    segmentOverride = Reg16::AX; // not a segment reg, also == 0
 
     // prefixes
     while(true)
