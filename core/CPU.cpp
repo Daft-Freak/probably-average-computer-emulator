@@ -480,63 +480,6 @@ void CPU::executeInstruction()
         return mod; // mod 1 == 8bit, mod 2 == 16bit  
     };
 
-    // 7x
-    auto jump8 = [this, addr](int cond)
-    {
-        auto off = static_cast<int8_t>(sys.readMem(addr + 1));
-        bool condVal = false;
-
-        switch(cond)
-        {
-            case 0x0: // JO
-            case 0x1: // JNO
-                condVal = flags & Flag_O;
-                break;
-            case 0x2: // JB/JNAE
-            case 0x3: // JAE/JNB
-                condVal = flags & Flag_C;
-                break;
-            case 0x4: // JE/JZ
-            case 0x5: // JNE/JNZ
-                condVal = flags & Flag_Z;
-                break;
-            case 0x6: // JBE/JNA
-            case 0x7: // JNBE/JA
-                condVal = flags & (Flag_C | Flag_Z);
-                break;
-            case 0x8: // JS
-            case 0x9: // JNS
-                condVal = flags & Flag_S;
-                break;
-            case 0xA: // JP/JPE
-            case 0xB: // JNP/JPO
-                condVal = flags & Flag_P;
-                break;
-            case 0xC: // JL/JNGE
-            case 0xD: // JNL/JGE
-                condVal = !!(flags & Flag_S) != !!(flags & Flag_O);
-                break;
-            case 0xE: // JLE/JNG
-            case 0xF: // JNLE/JG
-                condVal = !!(flags & Flag_S) != !!(flags & Flag_O) || (flags & Flag_Z);
-                break;
-        }
-
-        if(cond & 1)
-            condVal = !condVal;
-
-        if(condVal)
-        {
-            reg(Reg16::IP) = reg(Reg16::IP) + 1 + off;
-            cyclesExecuted(16);
-        }
-        else
-        {
-            reg(Reg16::IP)++;
-            cyclesExecuted(4);
-        }
-    };
-
     switch(opcode)
     {
         case 0x00: // ADD r/m8 r8
@@ -898,7 +841,60 @@ void CPU::executeInstruction()
         case 0x7E: // JLE/JNG
         case 0x7F: // JNLE/JG
         {
-            jump8(opcode & 0xF);
+            int cond = opcode & 0xF;
+
+            auto off = static_cast<int8_t>(sys.readMem(addr + 1));
+            bool condVal = false;
+
+            switch(cond)
+            {
+                case 0x0: // JO
+                case 0x1: // JNO
+                    condVal = flags & Flag_O;
+                    break;
+                case 0x2: // JB/JNAE
+                case 0x3: // JAE/JNB
+                    condVal = flags & Flag_C;
+                    break;
+                case 0x4: // JE/JZ
+                case 0x5: // JNE/JNZ
+                    condVal = flags & Flag_Z;
+                    break;
+                case 0x6: // JBE/JNA
+                case 0x7: // JNBE/JA
+                    condVal = flags & (Flag_C | Flag_Z);
+                    break;
+                case 0x8: // JS
+                case 0x9: // JNS
+                    condVal = flags & Flag_S;
+                    break;
+                case 0xA: // JP/JPE
+                case 0xB: // JNP/JPO
+                    condVal = flags & Flag_P;
+                    break;
+                case 0xC: // JL/JNGE
+                case 0xD: // JNL/JGE
+                    condVal = !!(flags & Flag_S) != !!(flags & Flag_O);
+                    break;
+                case 0xE: // JLE/JNG
+                case 0xF: // JNLE/JG
+                    condVal = !!(flags & Flag_S) != !!(flags & Flag_O) || (flags & Flag_Z);
+                    break;
+            }
+
+            if(cond & 1)
+                condVal = !condVal;
+
+            if(condVal)
+            {
+                reg(Reg16::IP) = reg(Reg16::IP) + 1 + off;
+                cyclesExecuted(16);
+            }
+            else
+            {
+                reg(Reg16::IP)++;
+                cyclesExecuted(4);
+            }
             break;
         }
 
