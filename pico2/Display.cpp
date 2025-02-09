@@ -109,7 +109,7 @@ static bool started = false;
 static volatile bool do_render = true;
 static volatile bool need_mode_change = false;
 static uint8_t *cur_display_buffer = nullptr, *cur_update_buffer = nullptr;
-static uint8_t framebuffer[640 * 240 * 2];
+static uint8_t framebuffer[640 * 200 * 2];
 
 // temp buffer for expanding lines (pixel double)
 // two scanlines + include the cmdlist(s) so we can avoid an irq
@@ -326,7 +326,7 @@ void init_display() {
     irq_set_priority(DMA_IRQ_0, PICO_HIGHEST_IRQ_PRIORITY);
 
     cur_display_buffer = framebuffer;
-    cur_update_buffer = framebuffer + 640 * 240;
+    cur_update_buffer = framebuffer + 640 * 200;
 }
 
 void set_display_size(int w, int h) {
