@@ -121,7 +121,7 @@ void update_mouse_state(int8_t x, int8_t y, bool left, bool right)
     mouse.sync();
 }
 
-static void run_emulator(absolute_time_t &time)
+static void runEmulator(absolute_time_t &time)
 {
     auto now = get_absolute_time();
     auto elapsed = absolute_time_diff_us(time, now) / 1000;
@@ -155,11 +155,11 @@ static void run_emulator(absolute_time_t &time)
 }
 
 #ifdef EMULATOR_ON_CORE1
-static void core1_main()
+static void core1Main()
 {
     auto time = get_absolute_time();
     while(true)
-        run_emulator(time);
+        runEmulator(time);
 }
 #endif
 
@@ -219,14 +219,14 @@ int main()
     irq_set_priority(TIMER0_IRQ_0 + alarmNum, PICO_LOWEST_IRQ_PRIORITY);
 
 #ifdef EMULATOR_ON_CORE1
-    multicore_launch_core1(core1_main);
+    multicore_launch_core1(core1Main);
 #endif
 
     while(true)
     {
         tuh_task();
 #ifndef EMULATOR_ON_CORE1
-        run_emulator(time);
+        runEmulator(time);
 #endif
     }
 
