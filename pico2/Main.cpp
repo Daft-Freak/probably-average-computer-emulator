@@ -4,6 +4,7 @@
 #include "hardware/irq.h"
 #include "hardware/timer.h"
 #include "hardware/vreg.h"
+#include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
 
@@ -120,6 +121,48 @@ void update_mouse_state(int8_t x, int8_t y, bool left, bool right)
     mouse.sync();
 }
 
+static void run_emulator(absolute_time_t &time)
+{
+    auto now = get_absolute_time();
+    auto elapsed = absolute_time_diff_us(time, now) / 1000;
+
+    if(elapsed)
+    {
+        if(elapsed > 10)
+            elapsed = 10;
+
+        auto start = get_absolute_time();
+
+        sys.getCPU().run(elapsed);
+        time = delayed_by_ms(time, elapsed);
+
+        cga.update();
+        sys.updateForDisplay();
+
+        // get "real" time taken
+        auto update_time = absolute_time_diff_us(start, get_absolute_time());
+
+        emu_time += elapsed * 1000;
+        real_time += update_time;
+
+        // every 10s calculate speed
+        if(emu_time >= 10000000) {
+            int speed = uint64_t(emu_time) * 1000 / real_time;
+            printf("speed %i.%i%% (%ims in %ims, sync %ims)\n", speed / 10, speed % 10, emu_time / 1000, real_time / 1000, sync_time / 1000);
+            emu_time = real_time = sync_time = 0;
+        }
+    }
+}
+
+#ifdef EMULATOR_ON_CORE1
+static void core1_main()
+{
+    auto time = get_absolute_time();
+    while(true)
+        run_emulator(time);
+}
+#endif
+
 int main()
 {
     set_sys_clock_khz(250000, false);
@@ -165,6 +208,7 @@ int main()
 
     sys.reset();
 
+    [[maybe_unused]]
     auto time = get_absolute_time();
 
     // fake audio output
@@ -173,41 +217,17 @@ int main()
     hardware_alarm_set_callback(alarmNum, alarmCallback);
     hardware_alarm_set_target(alarmNum, make_timeout_time_ms(5));
     irq_set_priority(TIMER0_IRQ_0 + alarmNum, PICO_LOWEST_IRQ_PRIORITY);
-  
+
+#ifdef EMULATOR_ON_CORE1
+    multicore_launch_core1(core1_main);
+#endif
+
     while(true)
     {
         tuh_task();
-
-        auto now = get_absolute_time();
-        auto elapsed = absolute_time_diff_us(time, now) / 1000;
-
-        if(elapsed)
-        {
-            if(elapsed > 10)
-                elapsed = 10;
-
-            auto start = get_absolute_time();
-
-            sys.getCPU().run(elapsed);
-            time = delayed_by_ms(time, elapsed);
-
-            cga.update();
-            sys.updateForDisplay();
-
-            // get "real" time taken
-            auto update_time = absolute_time_diff_us(start, get_absolute_time());
-
-            emu_time += elapsed * 1000;
-            real_time += update_time;
-
-            // every 10s calculate speed
-            if(emu_time >= 10000000) {
-                
-                int speed = uint64_t(emu_time) * 1000 / real_time;
-                printf("speed %i.%i%% (%ims in %ims, sync %ims)\n", speed / 10, speed % 10, emu_time / 1000, real_time / 1000, sync_time / 1000);
-                emu_time = real_time = sync_time = 0;
-            }
-        }
+#ifndef EMULATOR_ON_CORE1
+        run_emulator(time);
+#endif
     }
 
     return 0;
