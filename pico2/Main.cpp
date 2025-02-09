@@ -61,17 +61,24 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     auto fb = display_get_framebuffer();
     auto ptr = fb + line * w;
 
-    // copy
-    memcpy(ptr, data, w / 2);
-
     if(line == 0)
     {
-        // sync
+        // sync first half
         auto start = get_absolute_time();
-        while(!display_render_needed()) {}
+        while(display_in_first_half()) {};
         sync_time += absolute_time_diff_us(start, get_absolute_time());
         set_display_size(w, 200);
     }
+    else if(line == 100)
+    {
+        // sync second half
+        auto start = get_absolute_time();
+        while(display_in_second_half()) {};
+        sync_time += absolute_time_diff_us(start, get_absolute_time());
+    }
+
+    // copy
+    memcpy(ptr, data, w / 2);
 
     if(line == 199)
     {

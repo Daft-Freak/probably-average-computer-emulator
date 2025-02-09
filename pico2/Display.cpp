@@ -100,16 +100,14 @@ static uint8_t cur_dma_ch = HSTX_DMA_CH_BASE;
 static uint8_t h_shift = 0;
 static uint8_t new_h_shift = 0;
 
-static uint v_scanline = HSTX_NUM_DMA_CHANNELS;
+static volatile uint v_scanline = HSTX_NUM_DMA_CHANNELS;
 static uint32_t in_scanline = 0, last_in_scanline = 1;
 static uint32_t in_scanline_step = 1 << 16;
 static uint32_t new_scanline_step = 0;
 
 static bool started = false;
-static volatile bool do_render = true;
 static volatile bool need_mode_change = false;
-static uint8_t *cur_display_buffer = nullptr, *cur_update_buffer = nullptr;
-static uint8_t framebuffer[640 * 200 * 2];
+static uint8_t framebuffer[640 * 200];
 
 // temp buffer for expanding lines (pixel double)
 // two scanlines + include the cmdlist(s) so we can avoid an irq
@@ -171,7 +169,7 @@ static void __scratch_x("") dma_irq_handler() {
         // expand line if needed
         if(first) {
             auto w = MODE_H_ACTIVE_PIXELS >> h_shift;
-            auto fb_line_ptr = cur_display_buffer + display_line * w;
+            auto fb_line_ptr = framebuffer + display_line * w;
 
             temp_ptr += std::size(vactive_line);
             // palette lookup
@@ -196,13 +194,8 @@ static void __scratch_x("") dma_irq_handler() {
         v_scanline = 0;
         in_scanline = 0;
     } else if(v_scanline == 2) {
-        // new frame, swap buffers and trigger render
+        // new frame
         // wait until scanline 2 so that there are no active lines in progress
-
-        if(!do_render) {
-            std::swap(cur_update_buffer, cur_display_buffer);
-            do_render = true;
-        }
 
         // set h/v shift
         if(need_mode_change) {
@@ -324,15 +317,9 @@ void init_display() {
 
     // set irq to highest priority
     irq_set_priority(DMA_IRQ_0, PICO_HIGHEST_IRQ_PRIORITY);
-
-    cur_display_buffer = framebuffer;
-    cur_update_buffer = framebuffer + 640 * 200;
 }
 
 void set_display_size(int w, int h) {
-    // prevent buffer swap while we're doing this
-    do_render = true;
-
     // set h shift/v scale
     new_h_shift = 0;
     
@@ -367,7 +354,6 @@ void update_display() {
     } else if(new_h_shift != 0xFF) {
         need_mode_change = true;
     }
-    do_render = false;
 
     // check if dma channels have encountered a read error and reset
     // usually this happens because of a breakpoint
@@ -397,10 +383,14 @@ void update_display() {
     }
 }
 
-bool display_render_needed() {
-    return do_render;
+bool display_in_first_half() {
+    return started && v_scanline < MODE_V_TOTAL_LINES / 2;
+}
+
+bool display_in_second_half() {
+    return started && v_scanline >= MODE_V_TOTAL_LINES / 2;
 }
 
 uint8_t *display_get_framebuffer() {
-    return cur_update_buffer;
+    return framebuffer;
 }
