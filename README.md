@@ -60,3 +60,13 @@ Supports the full 640k of memory and 6MB of expanded memory through paging 16k b
 cmake -B build.picovision -DCMAKE_BUILD_TYPE=Release -DPICO_SDK_PATH=path/to/pico-sdk .
 cmake --build build.picovision
 ```
+
+## "Pico 2"
+Theoretically any RP2350-based board with PSRAM and DVI output. Similar to the PicoVision build but without the need for paging memory. Also generally faster.
+
+### Building (Stamp XL + Carrier)
+
+```
+cmake -B build.pico2 -DCMAKE_BUILD_TYPE=Release -DPICO_SDK_PATH=path/to/pico-sdk -DPICO_BOARD=solderparty_rp2350_stamp_xl .
+cmake --build build.pico2
+```
