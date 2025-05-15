@@ -12,3 +12,5 @@ target_link_libraries(PACE_SDL PACECore SDL2::SDL2)
 if(SDL2_SDL2main_FOUND)
     target_link_libraries(PACE_SDL SDL2::SDL2main)
 endif()
+
+install(TARGETS PACE_SDL)

@@ -11,3 +11,7 @@ target_link_libraries(PACEPico2 PACECore PACEPicoShared PACEPicoBIOS hardware_dm
 
 pico_enable_stdio_uart(PACEPico2 1)
 pico_add_extra_outputs(PACEPico2)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/PACEPico2.uf2
+	DESTINATION bin
+)
