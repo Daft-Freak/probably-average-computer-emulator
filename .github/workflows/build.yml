@@ -32,6 +32,7 @@ jobs:
             release-suffix: PicoVision
             cmake-args: -DPICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk -DPICO_BOARD=pico_w
             apt-packages: gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+            is-pico: true
 
           - os: ubuntu-24.04
             name: RP2350 Stamp XL
@@ -39,6 +40,7 @@ jobs:
             release-suffix: RP2350StampXL
             cmake-args: -DPICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk -DPICO_BOARD=solderparty_rp2350_stamp_xl
             apt-packages: gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+            is-pico: true
 
     runs-on: ${{matrix.os}}
 
@@ -54,6 +56,7 @@ jobs:
 
     # pico sdk
     - name: Checkout Pico SDK
+      if: matrix.is-pico
       uses: actions/checkout@v4
       with:
         repository: raspberrypi/pico-sdk
@@ -79,6 +82,7 @@ jobs:
     # grab a BIOS
     # some things don't quite work with this one, but at least we can compile
     - name: Download BIOS
+      if: matrix.is-pico
       working-directory: main
       run: wget -O bios-xt.rom https://github.com/skiselev/8088_bios/blob/v1.0.0/binaries/bios-xt.bin
 
