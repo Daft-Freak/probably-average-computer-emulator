@@ -106,7 +106,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/main/build
-      run: ${{matrix.cmake-prefix}} cmake $GITHUB_WORKSPACE/main -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCPACK_PACKAGE_FILE_NAME=${{env.RELEASE_FILE}} ${{matrix.cmake-args}}
+      run: ${{matrix.cmake-prefix}} cmake $GITHUB_WORKSPACE/main -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCPACK_PACKAGE_FILE_NAME=${{env.RELEASE_FILE}} -DCMAKE_INSTALL_PREFIX=$RUNNER_WORKSPACE/main/build/install ${{matrix.cmake-args}}
 
     # And then run the build itself
     - name: Build
@@ -114,3 +114,13 @@ jobs:
       shell: bash
       run: |
         cmake --build . --config $BUILD_TYPE -j 2
+
+    - name: Prepare Artifact
+      shell: bash
+      run: cmake --build $RUNNER_WORKSPACE/main/build --config $BUILD_TYPE --target install
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{github.event.repository.name}}-${{github.sha}}-${{matrix.name}}
+        path: ${{runner.workspace}}/main/build/install
