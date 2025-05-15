@@ -17,8 +17,11 @@ install(TARGETS PACE_SDL)
 
 # install SDL2.dll on windows for convenience
 if(WIN32)
-    get_target_property(SDL2_LOCATION SDL2::SDL2 IMPORTED_LOCATION)
-    message(${SDL2_LOCATION})
+    get_target_property(SDL2_LOCATION SDL2::SDL2 IMPORTED_LOCATION_RELEASE)
+    if(NOT SDL2_LOCATION)
+        get_target_property(SDL2_LOCATION SDL2::SDL2 IMPORTED_LOCATION)
+    endif()
+
     if(SDL2_LOCATION MATCHES ".dll$")
         install(FILES ${SDL2_LOCATION} DESTINATION bin)
     endif()
