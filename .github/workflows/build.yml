@@ -26,6 +26,10 @@ jobs:
             release-suffix: LIN64
             apt-packages: libsdl2-dev
 
+          - os: windows-latest
+            name: Windows
+            release-suffix: WIN64
+
           - os: ubuntu-24.04
             name: PicoVision
             cache-key: picovision
@@ -78,6 +82,14 @@ jobs:
       run: |
         sudo apt update && sudo apt install ${{matrix.apt-packages}}
         pip3 install 32blit
+
+    # could use this for the linux build too, but it's currently a bit broken there
+    - uses: libsdl-org/setup-sdl@main
+      id: sdl
+      if: runner.os == 'Windows'
+      with:
+        install-linux-dependencies: true
+        version: 2-latest
 
     # grab a BIOS
     # some things don't quite work with this one, but at least we can compile
