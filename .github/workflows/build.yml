@@ -90,6 +90,7 @@ jobs:
       with:
         install-linux-dependencies: true
         version: 2-latest
+        build-type: Release
 
     # grab a BIOS
     # some things don't quite work with this one, but at least we can compile
