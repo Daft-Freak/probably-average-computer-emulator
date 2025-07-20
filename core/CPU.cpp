@@ -831,6 +831,24 @@ void RAM_FUNC(CPU::executeInstruction)()
             break;
         }
 
+        // on 8088 these are aliases of the branch ops below
+        case 0x60:
+        case 0x61:
+        case 0x62:
+        case 0x63:
+        case 0x64:
+        case 0x65:
+        case 0x66:
+        case 0x67:
+        case 0x68:
+        case 0x69:
+        case 0x6A:
+        case 0x6B:
+        case 0x6C:
+        case 0x6D:
+        case 0x6E:
+        case 0x6F:
+
         case 0x70: // JO
         case 0x71: // JNO
         case 0x72: // JB/JNAE
