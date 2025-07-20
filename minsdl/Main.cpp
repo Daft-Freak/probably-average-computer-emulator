@@ -413,6 +413,13 @@ static void scanlineCallback(const uint8_t *data, int line, int w)
     auto ptr32 = reinterpret_cast<uint32_t *>(ptr);
     auto pal32 = reinterpret_cast<const uint32_t *>(palette);
 
+    // bounds checking
+    if(w > 640)
+        w = 640;
+
+    if(line >= 200)
+        return;
+
     auto endPtr = ptr32 + w;
 
     do
