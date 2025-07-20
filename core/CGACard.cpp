@@ -285,15 +285,22 @@ void CGACard::draw(int start, int end)
         auto doSingle = [this, &out](bool cursor, uint8_t attr, uint8_t fontData, int cx)
         {
             int col;
+
+            bool blinkEn = mode & (1 << 5);
             
             if(cursor) 
                 col = attr & 0xF;
             // not cursor or cursor off
-            // blink character
-            else if((attr & 0x80) && !(frame & 16))
-                col = (attr >> 4) & 7;
+            else if(blinkEn)
+            {
+                // blink character
+                if((attr & 0x80) && !(frame & 16))
+                    col = (attr >> 4) & 7;
+                else
+                    col = (fontData & 1 << cx) ? attr & 0xF : (attr >> 4) & 7; // blink enabled so bg col is only three bits
+            }
             else
-                col = (fontData & 1 << cx) ? attr & 0xF : (attr >> 4) & 7;
+                col = ((fontData & 1 << cx) ? attr : (attr >> 4)) & 0xF; // if blink is disabled we can use the high bit of the bg colour
 
             if(cx & 1)
                 *out++ |= col << 4;
@@ -321,6 +328,9 @@ void CGACard::draw(int start, int end)
         }
 
         // full chars
+        bool blinkEn = mode & (1 << 5);
+        auto bgMask = blinkEn ? 7 : 0xF; // if blink is disabled, the blink bit is bg intensity
+
         auto charCount = (end - cycle) / 8;
         while(charCount--)
         {
@@ -337,17 +347,19 @@ void CGACard::draw(int start, int end)
             }
             // blink character (bg fill)
             // also check if char is blank and do the same
-            else if(!fontData || ((attr & 0x80) && !(frame & 16)))
+            else if(!fontData || (blinkEn && (attr & 0x80) && !(frame & 16)))
             {
-                out[0] = out[1] = out[2] = out[3] = ((attr >> 4) & 7) | (attr & 0x70);
+                int bg = (attr >> 4) & bgMask;
+                bg = bg | bg << 4;
+                out[0] = out[1] = out[2] = out[3] = bg;
                 out += 4;
             }
             else
             {
                 for(int i = 0; i < 4; i++, fontData >>= 2)
                 {
-                    int col0 = (fontData & 1) ? attr & 0xF : (attr >> 4) & 7;
-                    int col1 = (fontData & 2) ? attr & 0xF : (attr >> 4) & 7;
+                    int col0 = (fontData & 1) ? attr & 0xF : (attr >> 4) & bgMask;
+                    int col1 = (fontData & 2) ? attr & 0xF : (attr >> 4) & bgMask;
 
                     *out++ = col0 | col1 << 4;
                 }
