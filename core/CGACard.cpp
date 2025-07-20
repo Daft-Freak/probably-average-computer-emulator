@@ -181,6 +181,8 @@ void CGACard::draw(int start, int end)
             // hi-res
             auto addr = curAddr + ((scanline & 1) ? 0x2000 : 0);
 
+            addr &= 0x3FFF;
+
             auto fg = colSelect & 0xF;
 
             int cycle = start;
@@ -232,6 +234,8 @@ void CGACard::draw(int start, int end)
             {
                 auto charAddr = addr + (cycle / 4);
 
+                charAddr &= 0x3FFF;
+
                 auto data = ram[charAddr];
                 auto col = (data << ((cycle & 3) * 2) >> 6) & 3;
 
@@ -276,7 +280,7 @@ void CGACard::draw(int start, int end)
         int cycle = start;
 
         auto out = scanlineBuf + cycle / 2;
-        auto in = ram + curAddr + (cycle / 8) * 2;
+        auto in = ram + (curAddr & 0x3FFF) + (cycle / 8) * 2;
 
         auto doSingle = [this, &out](bool cursor, uint8_t attr, uint8_t fontData, int cx)
         {
