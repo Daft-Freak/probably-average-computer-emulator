@@ -2347,6 +2347,18 @@ void RAM_FUNC(CPU::executeInstruction)()
             break;
         }
 
+        case 0xEF: // OUT AX to DX
+        {
+            auto port = reg(Reg16::DX);
+            auto data = reg(Reg16::AX);
+
+            sys.writeIOPort(port, data);
+            sys.writeIOPort(port + 1, data >> 8);
+
+            cyclesExecuted(8 + 4);
+            break;
+        }
+
         case 0xF5: // CMC
         {
             flags ^= Flag_C;
