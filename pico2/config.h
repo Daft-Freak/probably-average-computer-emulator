@@ -12,7 +12,7 @@
 #error "No PSRAM CS!"
 #endif
 
-#ifdef SOLDERPARTY_RP2350_STAMP_XL
+#ifdef EXTRA_BOARD_STAMP_CARRIER
 #define DVI_CLK_P 14
 #define DVI_D0_P  12
 #define DVI_D1_P  18
