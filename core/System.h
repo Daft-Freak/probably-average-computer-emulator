@@ -22,6 +22,14 @@ class System
 public:
     using MemRequestCallback = uint8_t *(*)(unsigned int block);
 
+    enum class GraphicsConfig
+    {
+        MDA = 0,
+        CGA_80Col,
+        CGA_40Col,
+        Other
+    };
+
     System();
     void reset();
 
@@ -41,6 +49,8 @@ public:
     MemRequestCallback getMemoryRequestCallback() const;
 
     void addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev);
+
+    void setGraphicsConfig(GraphicsConfig config);
 
     uint8_t readMem(uint32_t addr);
     void writeMem(uint32_t addr, uint8_t data);
@@ -174,6 +184,8 @@ private:
     uint32_t lastSpeakerUpdateCycle = 0;
     uint32_t speakerSampleTimer = 0;
     FIFO<int8_t, 1024> speakerQueue; // somewhat unsafe
+
+    GraphicsConfig graphicsConfig = GraphicsConfig::CGA_80Col;
 
     // because this is a giant pile of hacks, it needs to poke around in the DMA controller
     // FIXME: real DMA, remove this

@@ -94,6 +94,11 @@ void System::addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevic
     ioDevices.emplace_back(IORange{mask, value, picMask, dev});
 }
 
+void System::setGraphicsConfig(GraphicsConfig config)
+{
+    graphicsConfig = config;
+}
+
 uint8_t RAM_FUNC(System::readMem)(uint32_t addr)
 {
     addr &= (maxAddress - 1);
@@ -264,10 +269,11 @@ uint8_t RAM_FUNC(System::readIOPort)(uint16_t addr)
 
                 if(ppi.mode & (1 << 0)) // input (lower)
                 {
+                    // the values here are inverted (0 is "on")
                     if(ppi.output[1] & (1 << 3))
                     {
                         // SW1 5-8
-                        ret = 2 | 1 << 2; // 80-col CGA, two floppies
+                        ret = (static_cast<int>(graphicsConfig) ^ 3) | 1 << 2; // two floppies
                     }
                     else
                     {
