@@ -4,6 +4,18 @@ add_executable(PACEPico2
     psram.c
 )
 
+# some additional target-specific options
+option(PICO2_EMULATOR_ON_CORE1 "Run emulator on core1" OFF)
+option(PICO2_CPU_IN_RAM "Move main CPU interpreter+memory access code to RAM" OFF)
+
+if(PICO2_EMULATOR_ON_CORE1)
+    target_compile_definitions(PACEPico2 PRIVATE EMULATOR_ON_CORE1=1)
+endif()
+
+if(PICO2_CPU_IN_RAM)
+    target_compile_definitions(PACEPico2 PRIVATE PICO_CPU_IN_RAM=1)
+endif()
+
 # "extra" board config (the thing the pico is plugged into)
 if(NOT EXTRA_BOARD)
     if(PICO_BOARD STREQUAL "solderparty_rp2350_stamp_xl")
