@@ -213,10 +213,8 @@ void init_display() {
     // reset HSTX to make sure it's in a good state
     reset_unreset_block_num_wait_blocking(RESET_HSTX);
 
-    // divide down if we're overclocking (we probably are)
-#if OVERCLOCK_250
+    // clock is hardcoded to 250MHz overclock in main
     clock_configure(clk_hstx, 0, CLOCKS_CLK_HSTX_CTRL_AUXSRC_VALUE_CLK_SYS, 250000000, 125000000);
-#endif
 
     // Configure HSTX's TMDS encoder for RGB565
     // (it starts from bit 7)

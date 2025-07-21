@@ -1,8 +1,5 @@
 #pragma once
 
-// FIXME: this is a leftover, it doesn't control the overclock
-#define OVERCLOCK_250 1
-
 #ifdef SOLDERPARTY_RP2350_STAMP_XL
 #define DVI_CLK_P 14
 #define DVI_D0_P  12
