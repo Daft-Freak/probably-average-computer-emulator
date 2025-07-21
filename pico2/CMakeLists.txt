@@ -1,5 +1,4 @@
 add_executable(PACEPico2
-    Display.cpp
     Main.cpp
 
     psram.c
@@ -17,6 +16,22 @@ endif()
 
 string(TOUPPER ${EXTRA_BOARD} EXTRA_BOARD_UPPER)
 target_compile_definitions(PACEPico2 PRIVATE EXTRA_BOARD_${EXTRA_BOARD_UPPER}=1)
+
+# driver selection based on boards
+if(EXTRA_BOARD STREQUAL "stamp_carrier")
+    set(DISPLAY_DRIVER "hstx")
+endif()
+
+# select HSTX anyway, but complain about it
+if(NOT DISPLAY_DRIVER)
+    set(DISPLAY_DRIVER "hstx")
+
+    message("No DISPLAY_DRIVER set, assuming HSTX")
+endif()
+
+target_sources(PACEPico2 PRIVATE
+    Display_${DISPLAY_DRIVER}.cpp
+)
 
 # faster flash access
 target_compile_definitions(PACEPico2 PRIVATE PICO_EMBED_XIP_SETUP=1)
