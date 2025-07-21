@@ -9,6 +9,7 @@
 #include "hardware/structs/hstx_fifo.h"
 
 #include "Display.h"
+#include "Palette.h"
 
 #include "config.h"
 
@@ -112,31 +113,6 @@ static uint8_t framebuffer[640 * 200];
 // temp buffer for expanding lines (pixel double)
 // two scanlines + include the cmdlist(s) so we can avoid an irq
 static uint32_t scanline_buffer[(MODE_H_ACTIVE_PIXELS * sizeof(uint16_t) + sizeof(vactive_line)) / sizeof(uint32_t) * 2];
-
-static constexpr uint16_t col_565(uint8_t r, uint8_t g, uint8_t b) {
-    return (r >> 3) | ((g >> 2) << 5) | ((b >> 3) << 11);
-}
-
-static uint16_t cga_palette[16]
-{
-    col_565(0x00, 0x00, 0x00), // black
-    col_565(0x00, 0x00, 0xAA), // blue
-    col_565(0x00, 0xAA, 0x00), // green
-    col_565(0x00, 0xAA, 0xAA), // cyan
-    col_565(0xAA, 0x00, 0x00), // red
-    col_565(0xAA, 0x00, 0xAA), // magenta
-    col_565(0xAA, 0x55, 0x00), // brown
-    col_565(0xAA, 0xAA, 0xAA), // light grey
-
-    col_565(0x55, 0x55, 0x55), // dark grey
-    col_565(0x55, 0x55, 0xFF), // light blue
-    col_565(0x55, 0xFF, 0x55), // light green
-    col_565(0x55, 0xFF, 0xFF), // light cyan
-    col_565(0xFF, 0x55, 0x55), // light red
-    col_565(0xFF, 0x55, 0xFF), // light magenta
-    col_565(0xFF, 0xFF, 0x55), // yellow
-    col_565(0xFF, 0xFF, 0xFF), // white
-};
 
 static void __scratch_x("") dma_irq_handler() {
     // cur_dma_ch indicates the channel that just finished, which is the one
