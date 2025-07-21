@@ -18,8 +18,12 @@ endif()
 string(TOUPPER ${EXTRA_BOARD} EXTRA_BOARD_UPPER)
 target_compile_definitions(PACEPico2 PRIVATE EXTRA_BOARD_${EXTRA_BOARD_UPPER}=1)
 
+# faster flash access
 target_compile_definitions(PACEPico2 PRIVATE PICO_EMBED_XIP_SETUP=1)
+# for config.h
 target_include_directories(PACEPico2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+
+# usual setup
 target_link_libraries(PACEPico2 PACECore PACEPicoShared PACEPicoBIOS hardware_dma pico_multicore pico_stdlib)
 
 pico_enable_stdio_uart(PACEPico2 1)
