@@ -2,10 +2,14 @@
 
 // PSRAM config first as that only depends on the board
 // and not any additional thing it's plugged into
-#ifdef SOLDERPARTY_RP2350_STAMP_XL
-#define PSRAM_CS_PIN 8
-#elif defined(PIMORONI_PICO_PLUS2_RP2350)
+#ifdef PIMORONI_PICO_PLUS2_RP2350
 #define PSRAM_CS_PIN PIMORONI_PICO_PLUS2_PSRAM_CS_PIN
+#elif defined(PIMORONI_PICO_PLUS2_W_RP2350)
+#define PSRAM_CS_PIN PIMORONI_PICO_PLUS2_W_PSRAM_CS_PIN
+#elif defined(SOLDERPARTY_RP2350_STAMP_XL)
+#define PSRAM_CS_PIN 8
+#else
+#error "No PSRAM CS!"
 #endif
 
 #ifdef SOLDERPARTY_RP2350_STAMP_XL
