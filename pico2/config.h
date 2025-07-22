@@ -8,7 +8,7 @@
 #define PSRAM_CS_PIN PIMORONI_PICO_PLUS2_W_PSRAM_CS_PIN
 #elif defined(SOLDERPARTY_RP2350_STAMP_XL)
 #define PSRAM_CS_PIN 8
-#else
+#elif !defined(DISABLE_PSRAM)
 #error "No PSRAM CS!"
 #endif
 

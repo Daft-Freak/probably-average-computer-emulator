@@ -31,7 +31,9 @@ static FATFS fs;
 
 static System sys;
 
+#ifndef DISABLE_PSRAM
 static AboveBoard aboveBoard(sys);
+#endif
 
 static CGACard cga(sys);
 static FloppyController fdc(sys);
@@ -43,6 +45,10 @@ static FixedDiskAdapter fixDisk(sys);
 static SerialMouse mouse(sys);
 
 static FileFixedIO fixedIO;
+
+#ifdef DISABLE_PSRAM
+static uint8_t ram[256 * 1024];
+#endif
 
 static uint32_t emu_time = 0, real_time = 0, sync_time = 0;
 
@@ -165,9 +171,11 @@ int main()
     init_display();
     set_display_size(320, 200);
 
+#ifndef DISABLE_PSRAM
     size_t psramSize = psram_init(PSRAM_CS_PIN);
 
     printf("detected %i bytes PSRAM\n", psramSize);
+#endif
 
     // init storage/filesystem
     auto res = f_mount(&fs, "", 1);
@@ -179,9 +187,14 @@ int main()
     }
 
     // emulator init
+#ifdef DISABLE_PSRAM
+    sys.addMemory(0, sizeof(ram), ram);
+#else
     auto psram = reinterpret_cast<uint8_t *>(PSRAM_LOCATION);
     sys.addMemory(0, 640 * 1024, psram);
     sys.setMemoryRequestCallback(requestMem);
+#endif
+
     cga.setScanlineCallback(scanlineCallback);
 
     auto bios = _binary_bios_xt_rom_start;
