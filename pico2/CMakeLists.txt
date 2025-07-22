@@ -50,8 +50,11 @@ target_compile_definitions(PACEPico2 PRIVATE PICO_EMBED_XIP_SETUP=1)
 # for config.h
 target_include_directories(PACEPico2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
+# PIO headers
+pico_generate_pio_header(PACEPico2 ${CMAKE_CURRENT_LIST_DIR}/dpi.pio)
+
 # usual setup
-target_link_libraries(PACEPico2 PACECore PACEPicoShared PACEPicoBIOS hardware_dma pico_multicore pico_stdlib)
+target_link_libraries(PACEPico2 PACECore PACEPicoShared PACEPicoBIOS hardware_dma hardware_spi pico_multicore pico_stdlib)
 
 pico_enable_stdio_uart(PACEPico2 1)
 pico_add_extra_outputs(PACEPico2)
