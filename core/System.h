@@ -183,7 +183,7 @@ private:
 
     uint32_t lastSpeakerUpdateCycle = 0;
     uint32_t speakerSampleTimer = 0;
-    SpeakerAudioCallback speakerCb;
+    SpeakerAudioCallback speakerCb = nullptr;
 
     GraphicsConfig graphicsConfig = GraphicsConfig::CGA_80Col;
 
