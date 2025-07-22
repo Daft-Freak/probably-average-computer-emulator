@@ -897,7 +897,7 @@ void System::calculateNextPITUpdate()
 void System::updateSpeaker(uint32_t target)
 {
     static const int fracBits = 8;
-    static const int sampleRate = 22050;
+    static const int sampleRate = 44100;
     static const int divider = (4772726 << fracBits) / sampleRate;
 
     target &= ~3; // avoid getting ahead of PIT

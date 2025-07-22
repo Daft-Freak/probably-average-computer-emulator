@@ -595,7 +595,7 @@ int main(int argc, char *argv[])
     // audio
     SDL_AudioSpec spec{};
 
-    spec.freq = 22050;
+    spec.freq = 44100;
     spec.format = AUDIO_S16;
     spec.channels = 1;
     spec.samples = 512;
