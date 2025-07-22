@@ -18,6 +18,8 @@
 static bool quit = false;
 static bool turbo = false;
 
+static SDL_AudioDeviceID audioDevice;
+
 static System sys;
 
 static AboveBoard aboveBoard(sys);
@@ -297,18 +299,6 @@ static XTScancode scancodeMap[SDL_NUM_SCANCODES]
     XTScancode::RightAlt,
 };
 
-static void audioCallback(void *userdata, Uint8 *stream, int len)
-{
-    auto ptr = reinterpret_cast<int16_t *>(stream);
-    for(int i = 0; i < len / 2; i++)
-    {
-        while(!quit && !sys.hasSpeakerSample())
-            std::this_thread::yield();
-
-        *ptr++ = sys.getSpeakerSample() << 4;
-    }
-}
-
 static void pollEvents()
 {
     const int escMod = KMOD_RCTRL | KMOD_RSHIFT;
@@ -449,6 +439,12 @@ static uint8_t *requestMem(unsigned int block)
     return aboveRAM + addr;
 }
 
+static void speakerCallback(int8_t sample)
+{
+    int16_t sample16 = sample << 4;
+    SDL_QueueAudio(audioDevice, &sample16, sizeof(sample16));
+}
+
 int main(int argc, char *argv[])
 {
     int screenWidth = 640;
@@ -515,6 +511,8 @@ int main(int argc, char *argv[])
     auto &cpu = sys.getCPU();
     sys.addMemory(0, sizeof(ram), ram);
     sys.setMemoryRequestCallback(requestMem);
+    if(!turbo)
+        sys.setSpeakerAudioCallback(speakerCallback);
 
     std::ifstream biosFile(basePath + biosPath, std::ios::binary);
 
@@ -601,18 +599,17 @@ int main(int argc, char *argv[])
     spec.format = AUDIO_S16;
     spec.channels = 1;
     spec.samples = 512;
-    spec.callback = audioCallback;
 
-    auto dev = SDL_OpenAudioDevice(nullptr, false, &spec, nullptr, 0);
+    audioDevice = SDL_OpenAudioDevice(nullptr, false, &spec, nullptr, 0);
 
-    if(!dev)
+    if(!audioDevice)
     {
         std::cerr << "Failed to open audio: " << SDL_GetError() << "\n";
         quit = true;
     }
 
     if(!turbo)
-        SDL_PauseAudioDevice(dev, 0);
+        SDL_PauseAudioDevice(audioDevice, 0);
 
     auto lastTick = SDL_GetTicks();
     auto startTime = SDL_GetTicks();
@@ -679,7 +676,7 @@ int main(int argc, char *argv[])
         printf("Ran for %ums\n", runTime);
     }
 
-    SDL_CloseAudioDevice(dev);
+    SDL_CloseAudioDevice(audioDevice);
 
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);

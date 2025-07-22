@@ -21,6 +21,7 @@ class System
 {
 public:
     using MemRequestCallback = uint8_t *(*)(unsigned int block);
+    using SpeakerAudioCallback = void(*)(int8_t sample);
 
     enum class GraphicsConfig
     {
@@ -73,8 +74,7 @@ public:
 
     void sendKey(XTScancode scancode, bool down);
 
-    bool hasSpeakerSample() const;
-    int8_t getSpeakerSample();
+    void setSpeakerAudioCallback(SpeakerAudioCallback cb);
 
     static constexpr int getMemoryBlockSize() {return blockSize;}
     static constexpr int getNumMemoryBlocks() {return maxAddress / blockSize;}
@@ -183,7 +183,7 @@ private:
 
     uint32_t lastSpeakerUpdateCycle = 0;
     uint32_t speakerSampleTimer = 0;
-    FIFO<int8_t, 1024> speakerQueue; // somewhat unsafe
+    SpeakerAudioCallback speakerCb;
 
     GraphicsConfig graphicsConfig = GraphicsConfig::CGA_80Col;
 

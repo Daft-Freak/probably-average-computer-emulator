@@ -781,15 +781,11 @@ void System::sendKey(XTScancode scancode, bool down)
     flagPICInterrupt(1);
 }
 
-bool System::hasSpeakerSample() const
+void System::setSpeakerAudioCallback(SpeakerAudioCallback cb)
 {
-    return !speakerQueue.empty();
+    speakerCb = cb;
 }
 
-int8_t System::getSpeakerSample()
-{
-    return speakerQueue.pop();
-}
 
 void System::updatePIT()
 {
@@ -912,8 +908,7 @@ void System::updateSpeaker(uint32_t target)
     {
         speakerSampleTimer -= divider;
 
-        while(speakerQueue.full()); // wait
-
-        speakerQueue.push(value ? 127 : -128);
+        if(speakerCb)
+            speakerCb(value ? 127 : -127);
     }
 }

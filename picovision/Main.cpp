@@ -287,16 +287,6 @@ static std::forward_list<MemBlockMapping>::iterator cacheFlush()
     return firstDirty;
 }
 
-static void alarmCallback(uint alarmNum)
-{
-    // TODO: audio output
-    while(sys.hasSpeakerSample())
-        sys.getSpeakerSample();
-
-    timer_hw->intr = 1 << alarmNum;
-    hardware_alarm_set_target(alarmNum, make_timeout_time_ms(5));
-}
-
 void update_key_state(XTScancode code, bool state)
 {
     sys.sendKey(code, state);
@@ -361,13 +351,6 @@ int main()
 
     auto time = get_absolute_time();
 
-    // fake audio output
-    // (since the core audio output is all over the place we can't just drain between updates)
-    int alarmNum = hardware_alarm_claim_unused(true);
-    hardware_alarm_set_callback(alarmNum, alarmCallback);
-    hardware_alarm_set_target(alarmNum, make_timeout_time_ms(5));
-    irq_set_priority(TIMER_IRQ_0 + alarmNum, PICO_LOWEST_IRQ_PRIORITY);
-  
     while(true)
     {
         tuh_task();
