@@ -24,6 +24,12 @@
 #define SD_MISO   38
 #define SD_CS     36
 
+#elif defined(EXTRA_BOARD_VGABOARD)
+#define SD_SCK     5
+#define SD_MOSI   18
+#define SD_MISO   19
+#define SD_CS     22
+
 #elif defined(PIMORONI_PICO_PLUS2_RP2350)
 // as I was using a mess of jumper wires, there's not really a right answer here
 #define DVI_CLK_P 14

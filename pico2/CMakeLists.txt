@@ -34,6 +34,10 @@ if(EXTRA_BOARD STREQUAL "stamp_carrier")
     set(DISPLAY_DRIVER "hstx")
 endif()
 
+if(EXTRA_BOARD STREQUAL "vgaboard")
+    set(DISPLAY_DRIVER "dpi")
+endif()
+
 # select HSTX anyway, but complain about it
 if(NOT DISPLAY_DRIVER)
     set(DISPLAY_DRIVER "hstx")
