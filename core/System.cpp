@@ -808,7 +808,7 @@ void System::updatePIT()
             
                 // realodNextCycle is only set for mode 2
                 // go high again
-                pit.outState |= ~(1 << i);
+                pit.outState |= (1 << i);
                 // and trigger interrupt if needed
                 if(i == 0)
                     flagPICInterrupt(0);
