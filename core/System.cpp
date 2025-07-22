@@ -803,7 +803,16 @@ void System::updatePIT()
         for(int i = 0; i < 3; i++)
         {
             if(reloaded & (1 << i))
+            {
                 pit.counter[i] = pit.reload[i]; // reload after reaching 1 on the last cycle
+            
+                // realodNextCycle is only set for mode 2
+                // go high again
+                pit.outState |= ~(1 << i);
+                // and trigger interrupt if needed
+                if(i == 0)
+                    flagPICInterrupt(0);
+            }
         }
 
         for(int i = 0; i < 3; i++)
@@ -832,7 +841,10 @@ void System::updatePIT()
                     flagPICInterrupt(0);
             }
             else if(mode == 2 && pit.counter[i] == 1)
+            {
                 pit.reloadNextCycle |= 1 << i;
+                pit.outState &= ~(1 << i);
+            }
             else if(mode == 3 && pit.counter[i] == 0)
             {
                 if(i == 2)
