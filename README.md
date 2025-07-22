@@ -62,11 +62,25 @@ cmake --build build.picovision
 ```
 
 ## "Pico 2"
-Theoretically any RP2350-based board with PSRAM and DVI output. Similar to the PicoVision build but without the need for paging memory. Also generally faster.
+Theoretically any RP2350-based board with PSRAM and DVI/DPI output. Similar to the PicoVision build but without the need for paging memory. Also generally faster.
 
 ### Building (Stamp XL + Carrier)
 
 ```
 cmake -B build.pico2 -DCMAKE_BUILD_TYPE=Release -DPICO_SDK_PATH=path/to/pico-sdk -DPICO_BOARD=solderparty_rp2350_stamp_xl .
 cmake --build build.pico2
+```
+
+### Building (Pico Plus 2 + VGA Board)
+
+```
+cmake -B build.pico2 -DCMAKE_BUILD_TYPE=Release -DPICO_SDK_PATH=path/to/pico-sdk -DPICO_BOARD=pimoroni_pico_plus2_rp2350 -DEXTRA_BOARD=vgaboard .
+cmake --build build.pico2
+```
+
+### Additional Options
+
+```sh
+-DPICO2_EMULATOR_ON_CORE1=1 # Run emulator on core1
+-DPICO2_CPU_IN_RAM=1        # Move main CPU interpreter+memory access code to RAM
 ```
