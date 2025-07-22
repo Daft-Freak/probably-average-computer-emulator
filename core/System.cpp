@@ -922,6 +922,6 @@ void System::updateSpeaker(uint32_t target)
         speakerSampleTimer -= divider;
 
         if(speakerCb)
-            speakerCb(value ? 127 : -127);
+            speakerCb(value ? 127 : -128);
     }
 }
