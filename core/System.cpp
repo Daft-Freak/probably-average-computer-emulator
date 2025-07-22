@@ -797,9 +797,12 @@ void System::updatePIT()
     {
         int step = std::min(elapsed, (pit.nextUpdateCycle - pit.lastUpdateCycle) / 4);
 
+        int reloaded = pit.reloadNextCycle;
+        pit.reloadNextCycle = 0;
+
         for(int i = 0; i < 3; i++)
         {
-            if(pit.reloadNextCycle & (1 << i))
+            if(reloaded & (1 << i))
                 pit.counter[i] = pit.reload[i]; // reload after reaching 1 on the last cycle
         }
 
@@ -816,7 +819,7 @@ void System::updatePIT()
 
             if(mode == 3) // mode 3 decrements twice
                 pit.counter[i] -= step * 2;
-            else if(!(pit.reloadNextCycle & (1 << i)))
+            else if(!(reloaded & (1 << i)))
                 pit.counter[i] -= step;
 
             if(mode == 0 && pit.counter[i] == 0 && !(pit.outState & (1 << i)))
@@ -851,8 +854,6 @@ void System::updatePIT()
         // recalculate next
         if(pit.lastUpdateCycle == pit.nextUpdateCycle || pit.reloadNextCycle)
             calculateNextPITUpdate();
-
-        pit.reloadNextCycle = 0;
     }
 }
 
