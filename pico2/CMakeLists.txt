@@ -42,6 +42,7 @@ if(EXTRA_BOARD STREQUAL "stamp_carrier")
 endif()
 
 if(EXTRA_BOARD STREQUAL "vgaboard")
+    set(AUDIO_DRIVER "i2s")
     set(DISPLAY_DRIVER "dpi")
 endif()
 
