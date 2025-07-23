@@ -14,8 +14,6 @@ public:
 
     void run(int ms);
 
-    uint32_t getCycleCount() const {return cycleCount;}
-
     enum class Reg8
     {
         AL = 0,
@@ -95,7 +93,6 @@ private:
 
     // internal state
     int cyclesToRun = 0;
-    uint32_t cycleCount = 0;
 
     // registers
     uint16_t regs[13];

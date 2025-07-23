@@ -36,6 +36,8 @@ public:
 
     CPU &getCPU() {return cpu;}
 
+    uint32_t getCycleCount() const {return cycleCount;}
+
     void addMemory(uint32_t base, uint32_t size, uint8_t *ptr);
     void addReadOnlyMemory(uint32_t base, uint32_t size, const uint8_t *ptr);
 
@@ -62,6 +64,11 @@ public:
     void writeIOPort(uint16_t addr, uint8_t data);
 
     void flagPICInterrupt(int index);
+
+    void addCPUCycles(int cycles)
+    {
+        cycleCount += cycles;
+    }
 
     void updateForInterrupts();
     void updateForDisplay();
@@ -98,6 +105,8 @@ private:
     static constexpr int cpuClkDiv = 3; // 4.7727MHz
 
     CPU cpu;
+
+    uint32_t cycleCount = 0;
 
     static const int maxAddress = 1 << 20;
     static const int blockSize = 16 * 1024;

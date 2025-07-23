@@ -23,7 +23,7 @@ void CGACard::setScanlineCallback(ScanlineCallback cb)
 
 void CGACard::update()
 {
-    auto elapsed = sys.getCPU().getCycleCount() - lastUpdateCycle;
+    auto elapsed = sys.getCycleCount() - lastUpdateCycle;
 
     elapsed *= 3; // system clock
 
@@ -32,7 +32,7 @@ void CGACard::update()
         elapsed /= 2;
     
     // FIXME: this loses a cycle sometimes in 40-col mode
-    lastUpdateCycle = sys.getCPU().getCycleCount();
+    lastUpdateCycle = sys.getCycleCount();
 
     int lineClocks = (regs[0/*h total*/] + 1) * 8;
     int hDisplayed = regs[1/* h disp*/] * 8;

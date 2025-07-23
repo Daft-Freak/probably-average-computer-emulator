@@ -425,7 +425,7 @@ void RAM_FUNC(CPU::run)(int ms)
 
     while(cyclesToRun > 0)
     {
-        auto oldCycles = cycleCount;
+        auto oldCycles = sys.getCycleCount();
 
         if(flags & Flag_I)
         {
@@ -438,7 +438,7 @@ void RAM_FUNC(CPU::run)(int ms)
         executeInstruction();
 
         // sync for interrupts
-        uint32_t exec = cycleCount - oldCycles;
+        uint32_t exec = sys.getCycleCount() - oldCycles;
 
         bool shouldUpdate = sys.getNextInterruptCycle() - oldCycles <= exec;
         if(shouldUpdate)
@@ -3055,7 +3055,7 @@ void CPU::doALU16AImm(uint32_t addr)
 void CPU::cyclesExecuted(int cycles)
 {
     cyclesToRun -= cycles;
-    cycleCount += cycles;
+    sys.addCPUCycles(cycles);
 }
 
 void RAM_FUNC(CPU::serviceInterrupt)(uint8_t vector)

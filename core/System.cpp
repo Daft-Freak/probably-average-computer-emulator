@@ -500,7 +500,7 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
                     }
 
                     pic.mask = data;
-                    calculateNextInterruptCycle(cpu.getCycleCount());
+                    calculateNextInterruptCycle(getCycleCount());
                 }
                 break;
             }
@@ -530,7 +530,7 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
                         if(mode != 1 && mode != 5)
                         {
                             if(channel == 2)
-                                updateSpeaker(cpu.getCycleCount());
+                                updateSpeaker(getCycleCount());
 
                             pit.active |= (1 << channel);
                             pit.counter[channel] = pit.reload[channel];
@@ -545,7 +545,7 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
                                 pit.outState |= (1 << channel);
 
                             calculateNextPITUpdate();
-                            calculateNextInterruptCycle(cpu.getCycleCount());
+                            calculateNextInterruptCycle(getCycleCount());
                         }
                     }
 
@@ -588,7 +588,7 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
                     printf("PIT ch%i access %i mode %i\n", channel, access, mode);
 
                     calculateNextPITUpdate();
-                    calculateNextInterruptCycle(cpu.getCycleCount());
+                    calculateNextInterruptCycle(getCycleCount());
                 }
 
                 break;
@@ -606,7 +606,7 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
                 if(port == 1 && (changed & 3))
                 {
                     updatePIT();
-                    updateSpeaker(cpu.getCycleCount());
+                    updateSpeaker(getCycleCount());
                 }
 
                 if(port == 1 && (changed & (1 << 7)))
@@ -624,16 +624,16 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
                     if(data & (1 << 6))
                     {
                         // needs to be a long pulse (BIOS is going for 20ms)
-                        if(cpu.getCycleCount() - keyboardClockLowCycle > 100000)
+                        if(getCycleCount() - keyboardClockLowCycle > 100000)
                         {
                             // send reply a little later
-                            keyboardTestReplyCycle = cpu.getCycleCount();
+                            keyboardTestReplyCycle = getCycleCount();
                             keyboardTestDelay = 1000;
-                            calculateNextInterruptCycle(cpu.getCycleCount());
+                            calculateNextInterruptCycle(getCycleCount());
                         }
                     }
                     else
-                        keyboardClockLowCycle = cpu.getCycleCount();
+                        keyboardClockLowCycle = getCycleCount();
                 }
 
                 ppi.output[port] = data;
@@ -691,7 +691,7 @@ void System::updateForInterrupts()
     // response from keyboard self-test
     if(keyboardTestDelay)
     {
-        keyboardTestDelay -= cpu.getCycleCount() - keyboardTestReplyCycle;
+        keyboardTestDelay -= getCycleCount() - keyboardTestReplyCycle;
 
         if(keyboardTestDelay <= 0)
         {
@@ -700,13 +700,13 @@ void System::updateForInterrupts()
             flagPICInterrupt(1);
         }
         else
-            keyboardTestReplyCycle = cpu.getCycleCount();
+            keyboardTestReplyCycle = getCycleCount();
     }
 
     // timer
     if(!(pic.mask & 1))
     {
-        auto passed = cpu.getCycleCount() - pit.lastUpdateCycle;
+        auto passed = getCycleCount() - pit.lastUpdateCycle;
         if(passed >= pit.nextUpdateCycle - pit.lastUpdateCycle)
             updatePIT();
     }
@@ -717,14 +717,14 @@ void System::updateForInterrupts()
             dev.dev->updateForInterrupts();
     }
 
-    calculateNextInterruptCycle(cpu.getCycleCount());
+    calculateNextInterruptCycle(getCycleCount());
 }
 
 void System::updateForDisplay()
 {
     // PIT may update speaker, so we need to run that first
     updatePIT();
-    updateSpeaker(cpu.getCycleCount());
+    updateSpeaker(getCycleCount());
 }
 
 void System::calculateNextInterruptCycle(uint32_t cycleCount)
@@ -789,7 +789,7 @@ void System::setSpeakerAudioCallback(SpeakerAudioCallback cb)
 
 void System::updatePIT()
 {
-    auto elapsed = cpu.getCycleCount() - pit.lastUpdateCycle;
+    auto elapsed = getCycleCount() - pit.lastUpdateCycle;
 
     elapsed /= 4; // PIT clock is four times slower than CPU clock
 

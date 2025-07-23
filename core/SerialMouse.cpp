@@ -53,7 +53,7 @@ void SerialMouse::sync()
 
 void SerialMouse::update()
 {
-    auto elapsed = sys.getCPU().getCycleCount() - lastUpdateCycle;
+    auto elapsed = sys.getCycleCount() - lastUpdateCycle;
 
     if(!cpuCyclesPerWord)
     {
@@ -203,7 +203,7 @@ void SerialMouse::updateForInterrupts()
     if(!interruptEnable)
         return;
 
-    auto elapsed = sys.getCPU().getCycleCount() - lastUpdateCycle;
+    auto elapsed = sys.getCycleCount() - lastUpdateCycle;
 
     if(elapsed >= wordCycleCounter)
         update();
@@ -235,5 +235,5 @@ void SerialMouse::updateTimings()
     // (this emulator does not yet support multiple clocks...)
     cpuCyclesPerWord = System::getCPUClockSpeed() * bits / baud;
 
-    sys.calculateNextInterruptCycle(sys.getCPU().getCycleCount());
+    sys.calculateNextInterruptCycle(sys.getCycleCount());
 }
