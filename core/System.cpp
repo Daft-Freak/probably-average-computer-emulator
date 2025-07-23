@@ -828,7 +828,9 @@ void System::updatePIT()
 
             if(mode == 3) // mode 3 decrements twice
                 pit.counter[i] -= step * 2;
-            else if(!(reloaded & (1 << i)))
+            else if((reloaded & (1 << i))) // don't decrement on the cycle that reloads
+                pit.counter[i] -= (step - 1);
+            else
                 pit.counter[i] -= step;
 
             if(mode == 0 && pit.counter[i] == 0 && !(pit.outState & (1 << i)))
