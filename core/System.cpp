@@ -624,11 +624,11 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
                     if(data & (1 << 6))
                     {
                         // needs to be a long pulse (BIOS is going for 20ms)
-                        if(getCycleCount() - keyboardClockLowCycle > 100000)
+                        if(getCycleCount() - keyboardClockLowCycle > 300000)
                         {
                             // send reply a little later
                             keyboardTestReplyCycle = getCycleCount();
-                            keyboardTestDelay = 1000;
+                            keyboardTestDelay = 3000;
                             calculateNextInterruptCycle(getCycleCount());
                         }
                     }
@@ -791,11 +791,11 @@ void System::updatePIT()
 {
     auto elapsed = getCycleCount() - pit.lastUpdateCycle;
 
-    elapsed /= 4; // PIT clock is four times slower than CPU clock
+    elapsed /= pitClkDiv;
 
     while(elapsed)
     {
-        int step = std::min(elapsed, (pit.nextUpdateCycle - pit.lastUpdateCycle) / 4);
+        int step = std::min(elapsed, (pit.nextUpdateCycle - pit.lastUpdateCycle) / pitClkDiv);
 
         int reloaded = pit.reloadNextCycle;
         pit.reloadNextCycle = 0;
@@ -848,7 +848,7 @@ void System::updatePIT()
             else if(mode == 3 && pit.counter[i] == 0)
             {
                 if(i == 2)
-                    updateSpeaker(pit.lastUpdateCycle + (step - 1) * 4);
+                    updateSpeaker(pit.lastUpdateCycle + (step - 1) * pitClkDiv);
 
                 // toggle out and reload
                 // TODO: should delay low by one cycle if odd count
@@ -860,7 +860,7 @@ void System::updatePIT()
             }
         }
 
-        pit.lastUpdateCycle += step * 4;
+        pit.lastUpdateCycle += step * pitClkDiv;
         elapsed -= step;
 
         // recalculate next
@@ -891,16 +891,16 @@ void System::calculateNextPITUpdate()
             step = remaining;
     }
 
-    pit.nextUpdateCycle = pit.lastUpdateCycle + step * 4;
+    pit.nextUpdateCycle = pit.lastUpdateCycle + step * pitClkDiv;
 }
 
 void System::updateSpeaker(uint32_t target)
 {
     static const int fracBits = 8;
     static const int sampleRate = 44100;
-    static const int divider = (4772726 << fracBits) / sampleRate;
+    static const int divider = (unsigned(systemClock) << fracBits) / sampleRate;
 
-    target &= ~3; // avoid getting ahead of PIT
+    target = (target / pitClkDiv) * pitClkDiv; // avoid getting ahead of PIT
 
     auto elapsed = target - lastSpeakerUpdateCycle;
     lastSpeakerUpdateCycle = target;

@@ -25,14 +25,14 @@ void CGACard::update()
 {
     auto elapsed = sys.getCycleCount() - lastUpdateCycle;
 
-    elapsed *= 3; // system clock
-
     // 80-col mode uses full system clock, other modes use half
     if(!(mode & (1 << 0)))
+    {
         elapsed /= 2;
-    
-    // FIXME: this loses a cycle sometimes in 40-col mode
-    lastUpdateCycle = sys.getCycleCount();
+        lastUpdateCycle += elapsed * 2;
+    }
+    else
+        lastUpdateCycle += elapsed;
 
     int lineClocks = (regs[0/*h total*/] + 1) * 8;
     int hDisplayed = regs[1/* h disp*/] * 8;

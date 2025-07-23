@@ -233,7 +233,7 @@ void SerialMouse::updateTimings()
 
     // get rough number of cpu cycles per word
     // (this emulator does not yet support multiple clocks...)
-    cpuCyclesPerWord = System::getCPUClockSpeed() * bits / baud;
+    cpuCyclesPerWord = System::getClockSpeed() * bits / baud;
 
     sys.calculateNextInterruptCycle(sys.getCycleCount());
 }

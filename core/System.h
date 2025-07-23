@@ -67,7 +67,7 @@ public:
 
     void addCPUCycles(int cycles)
     {
-        cycleCount += cycles;
+        cycleCount += cycles * cpuClkDiv;
     }
 
     void updateForInterrupts();
@@ -83,6 +83,7 @@ public:
 
     void setSpeakerAudioCallback(SpeakerAudioCallback cb);
 
+    static constexpr int getClockSpeed() {return systemClock;}
     static constexpr int getCPUClockSpeed() {return systemClock / cpuClkDiv;}
 
     static constexpr int getMemoryBlockSize() {return blockSize;}
@@ -103,6 +104,8 @@ private:
     // clocks
     static constexpr int systemClock = 14318180;
     static constexpr int cpuClkDiv = 3; // 4.7727MHz
+    static constexpr int periphClkDiv = 6; // 2.38637MHz
+    static constexpr int pitClkDiv = periphClkDiv * 2; // 1.19318MHz
 
     CPU cpu;
 
