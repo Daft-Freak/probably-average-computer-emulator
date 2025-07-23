@@ -419,7 +419,7 @@ void CPU::reset()
 
 void RAM_FUNC(CPU::run)(int ms)
 {
-    int cycles = (clockSpeed * ms) / 1000;
+    int cycles = (System::getCPUClockSpeed() * ms) / 1000;
 
     cyclesToRun += cycles;
 

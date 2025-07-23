@@ -76,6 +76,8 @@ public:
 
     void setSpeakerAudioCallback(SpeakerAudioCallback cb);
 
+    static constexpr int getCPUClockSpeed() {return systemClock / cpuClkDiv;}
+
     static constexpr int getMemoryBlockSize() {return blockSize;}
     static constexpr int getNumMemoryBlocks() {return maxAddress / blockSize;}
 
@@ -90,6 +92,10 @@ private:
     void updatePIT();
     void calculateNextPITUpdate();
     void updateSpeaker(uint32_t target);
+
+    // clocks
+    static constexpr int systemClock = 14318180;
+    static constexpr int cpuClkDiv = 3; // 4.7727MHz
 
     CPU cpu;
 
