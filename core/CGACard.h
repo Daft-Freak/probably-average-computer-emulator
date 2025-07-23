@@ -8,6 +8,8 @@ public:
 
     CGACard(System &sys);
 
+    void remove();
+
     bool isInVBlank() const;
 
     void setScanlineCallback(ScanlineCallback cb);

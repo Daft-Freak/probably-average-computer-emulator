@@ -9,6 +9,13 @@ CGACard::CGACard(System &sys) : sys(sys)
     sys.addIODevice(0x3F0, 0x3D0, 0, this);
 }
 
+void CGACard::remove()
+{
+    sys.addMemory(0xB8000, sizeof(ram), nullptr);
+    sys.addMemory(0xBC000, sizeof(ram), nullptr);
+    sys.removeIODevice(this);
+}
+
 bool CGACard::isInVBlank() const
 {
     int charHeight = regs[9/*max char scan*/] + 1;
