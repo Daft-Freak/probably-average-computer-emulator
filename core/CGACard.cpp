@@ -126,7 +126,7 @@ uint8_t CGACard::read(uint16_t addr)
             // the low "accessible" bit is the inverse of DE
             bool de = scanlineCycle < hDisplayed && scanline < vDisplayed;
 
-            return 0xF0 | status | (de ? 0 : 1);
+            return 0xE0 | status | (de ? 0 : 1);
         }
     }
     return 0xFF;
