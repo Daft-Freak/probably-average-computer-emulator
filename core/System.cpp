@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
@@ -92,6 +93,12 @@ System::MemRequestCallback System::getMemoryRequestCallback() const
 void System::addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev)
 {
     ioDevices.emplace_back(IORange{mask, value, picMask, dev});
+}
+
+void System::removeIODevice(IODevice *dev)
+{
+    auto it = std::remove_if(ioDevices.begin(), ioDevices.end(), [dev](auto &r){return r.dev == dev;});
+    ioDevices.erase(it, ioDevices.end());
 }
 
 void System::setGraphicsConfig(GraphicsConfig config)

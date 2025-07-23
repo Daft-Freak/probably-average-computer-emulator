@@ -52,6 +52,7 @@ public:
     MemRequestCallback getMemoryRequestCallback() const;
 
     void addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev);
+    void removeIODevice(IODevice *dev);
 
     void setGraphicsConfig(GraphicsConfig config);
 
