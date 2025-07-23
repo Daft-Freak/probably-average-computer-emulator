@@ -64,6 +64,7 @@ target_include_directories(PACEPico2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 # PIO headers
 pico_generate_pio_header(PACEPico2 ${CMAKE_CURRENT_LIST_DIR}/dpi.pio)
+pico_generate_pio_header(PACEPico2 ${CMAKE_CURRENT_LIST_DIR}/i2s.pio)
 
 # usual setup
 target_link_libraries(PACEPico2 PACECore PACEPicoShared PACEPicoBIOS hardware_dma hardware_spi pico_multicore pico_stdlib)
