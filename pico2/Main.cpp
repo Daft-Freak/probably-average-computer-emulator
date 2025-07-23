@@ -15,6 +15,7 @@
 #include "config.h"
 #include "psram.h"
 
+#include "Audio.h"
 #include "BIOS.h"
 #include "DiskIO.h"
 #include "Display.h"
@@ -105,6 +106,12 @@ static uint8_t *requestMem(unsigned int block)
     return psram + 640 * 1024 + addr;
 }
 
+static void speakerCallback(int8_t sample)
+{
+    int16_t sample16 = sample << 4;
+    audio_queue_sample(sample16);
+}
+
 void update_key_state(XTScancode code, bool state)
 {
     sys.sendKey(code, state);
@@ -186,6 +193,8 @@ int main()
         while(true);
     }
 
+    init_audio();
+
     // emulator init
 #ifdef DISABLE_PSRAM
     sys.addMemory(0, sizeof(ram), ram);
@@ -194,6 +203,8 @@ int main()
     sys.addMemory(0, 640 * 1024, psram);
     sys.setMemoryRequestCallback(requestMem);
 #endif
+
+    sys.setSpeakerAudioCallback(speakerCallback);
 
     cga.setScanlineCallback(scanlineCallback);
 

@@ -35,6 +35,8 @@ string(TOUPPER ${EXTRA_BOARD} EXTRA_BOARD_UPPER)
 target_compile_definitions(PACEPico2 PRIVATE EXTRA_BOARD_${EXTRA_BOARD_UPPER}=1)
 
 # driver selection based on boards
+set(AUDIO_DRIVER none)
+
 if(EXTRA_BOARD STREQUAL "stamp_carrier")
     set(DISPLAY_DRIVER "hstx")
 endif()
@@ -51,6 +53,7 @@ if(NOT DISPLAY_DRIVER)
 endif()
 
 target_sources(PACEPico2 PRIVATE
+    Audio_${AUDIO_DRIVER}.cpp
     Display_${DISPLAY_DRIVER}.cpp
 )
 
