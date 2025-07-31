@@ -2023,6 +2023,10 @@ void RAM_FUNC(CPU::executeInstruction)()
             break;
         }
 
+        case 0xCC: // INT 3
+            serviceInterrupt(3);
+            break;
+
         case 0xCD: // INT
         {
             auto imm = sys.readMem(addr + 1);
