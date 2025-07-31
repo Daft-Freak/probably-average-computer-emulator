@@ -683,6 +683,9 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
 
 void System::flagPICInterrupt(int index)
 {
+    if(pic.mask & (1 << index))
+        return;
+
     pic.request |= 1 << index;
 }
 
