@@ -77,6 +77,7 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
                     if(controlBlock[0] == 0x0C/*init characteristics*/)
                     {
                         commandDataLen = 8; // has an extra 8 bytes
+                        status &= ~(1 << 2); // clear bus
                         break;
                     }
                 }
@@ -214,9 +215,11 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
                 }
 
                 // needs to be set after "init characteristics"
-                status |= (1 << 1); // IO mode
+                status |= 1 << 2 | 1 << 1; // bus, IO mode
 
-                status &= ~(1 << 0); // clear request
+                // newer BIOS expects request to be set at the end of this too
+                if(controlBlock[0] == 0x0C)
+                    status |= 1 << 0; // request
 
                 controlBlockOffset = 0;
                 commandDataOffset = commandDataLen = 0;
