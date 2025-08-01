@@ -4,6 +4,7 @@ target_sources(PACECore INTERFACE
     AboveBoard.cpp
     CGACard.cpp
     CPU.cpp
+    EGACard.cpp
     FixedDiskAdapter.cpp
     FloppyController.cpp
     SerialMouse.cpp
