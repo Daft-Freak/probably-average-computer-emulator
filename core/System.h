@@ -23,6 +23,9 @@ public:
     using MemRequestCallback = uint8_t *(*)(unsigned int block);
     using SpeakerAudioCallback = void(*)(int8_t sample);
 
+    using MemReadCallback = uint8_t(*)(uint32_t addr, void *);
+    using MemWriteCallback = void(*)(uint32_t addr, uint8_t data, void *);
+
     enum class GraphicsConfig
     {
         MDA = 0,
@@ -50,6 +53,8 @@ public:
 
     void setMemoryRequestCallback(MemRequestCallback cb);
     MemRequestCallback getMemoryRequestCallback() const;
+
+    void setMemAccessCallbacks(uint32_t baseAddr, uint32_t size, MemReadCallback readCb, MemWriteCallback writeCb, void *userData = nullptr);
 
     void addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev);
     void removeIODevice(IODevice *dev);
@@ -120,6 +125,11 @@ private:
     uint32_t memReadOnly[maxAddress / blockSize / 32];
 
     MemRequestCallback memReqCb = nullptr;
+
+    uint32_t memAccessCbBase, memAccessCbEnd;
+    MemReadCallback memReadCb = nullptr;
+    MemWriteCallback memWriteCb = nullptr;
+    void *memAccessUserData;
 
     struct DMA
     {

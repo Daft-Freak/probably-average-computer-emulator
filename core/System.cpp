@@ -90,6 +90,16 @@ System::MemRequestCallback System::getMemoryRequestCallback() const
     return memReqCb;
 }
 
+// this is entirely because EGA memory mapping is mad
+void System::setMemAccessCallbacks(uint32_t baseAddr, uint32_t size, MemReadCallback readCb, MemWriteCallback writeCb, void *userData)
+{
+    memAccessCbBase = baseAddr;
+    memAccessCbEnd = baseAddr + size;
+    memReadCb = readCb;
+    memWriteCb = writeCb;
+    memAccessUserData = userData;
+}
+
 void System::addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev)
 {
     ioDevices.emplace_back(IORange{mask, value, picMask, dev});
@@ -125,6 +135,10 @@ uint8_t RAM_FUNC(System::readMem)(uint32_t addr)
     if(ptr)
         return ptr[addr];
 
+    // final attempt for complicated mappings
+    if(memReadCb && addr >= memAccessCbBase && addr < memAccessCbEnd)
+        return memReadCb(addr, memAccessUserData);
+
     return 0xFF;
 }
 
@@ -154,7 +168,12 @@ void RAM_FUNC(System::writeMem)(uint32_t addr, uint8_t data)
             memDirty[block / 32] |= (1 << (block % 32));
 
         ptr[addr] = data;
+
+        return;
     }
+
+    if(memWriteCb && addr >= memAccessCbBase && addr < memAccessCbEnd)
+        memWriteCb(addr, data, memAccessUserData);
 }
 
 const uint8_t *System::mapAddress(uint32_t addr) const
