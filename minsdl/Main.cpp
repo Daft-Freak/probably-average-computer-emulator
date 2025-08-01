@@ -7,6 +7,7 @@
 
 #include "AboveBoard.h"
 #include "CGACard.h"
+#include "EGACard.h"
 #include "FixedDiskAdapter.h"
 #include "FloppyController.h"
 #include "Scancode.h"
@@ -23,7 +24,9 @@ static SDL_AudioDeviceID audioDevice;
 static System sys;
 
 static AboveBoard aboveBoard(sys);
+// one of these will get removed later
 static CGACard cga(sys);
+static EGACard ega(sys); 
 static FixedDiskAdapter fixDisk(sys);
 static FloppyController fdc(sys);
 static SerialMouse mouse(sys);
@@ -36,6 +39,7 @@ static int curScreenW = 0;
 
 static uint8_t biosROM[0x10000];
 static uint8_t fixedDiskBIOSROM[16 * 1024];
+static uint8_t egaBIOSROM[16 * 1024];
 
 static FileFloppyIO floppyIO;
 static FileFixedIO fixedIO;
@@ -459,6 +463,8 @@ int main(int argc, char *argv[])
     std::string floppyPaths[FileFloppyIO::maxDrives];
     std::string fixedPaths[FileFixedIO::maxDrives];
 
+    bool useEGA = false;
+
     int i = 1;
 
     for(; i < argc; i++)
@@ -493,6 +499,8 @@ int main(int argc, char *argv[])
             if(n >= 0 && n < FileFixedIO::maxDrives)
                 fixedPaths[n] = argv[++i];
         }
+        else if(arg == "--ega")
+            useEGA = true;
         else
             break;
     }
@@ -543,6 +551,31 @@ int main(int argc, char *argv[])
         std::cout << "loading fixed-disk adapter ROM at C8000\n";
         biosFile.read(reinterpret_cast<char *>(fixedDiskBIOSROM), sizeof(fixedDiskBIOSROM));
         sys.addReadOnlyMemory(0xC8000, sizeof(fixedDiskBIOSROM), fixedDiskBIOSROM);
+        biosFile.close();
+    }
+
+    if(useEGA)
+    {
+        biosFile.open(basePath + "ega-bios.bin");
+        if(biosFile)
+        {
+            std::cout << "loading EGA BIOS ROM at C0000\n";
+            biosFile.read(reinterpret_cast<char *>(egaBIOSROM), sizeof(egaBIOSROM));
+
+            if(egaBIOSROM[0x3FFF] == 0x55 && egaBIOSROM[0x3FFE] == 0xAA)
+            {
+                // the ROM is stored backwards, flip it around
+                for(int i = 0; i < 0x2000; i++)
+                    std::swap(egaBIOSROM[i], egaBIOSROM[0x3FFF - i]);
+            }
+
+            sys.addReadOnlyMemory(0xC0000, sizeof(egaBIOSROM), egaBIOSROM);
+        }
+        else
+        {
+            std::cerr << "ega-bios.bin not found in " << basePath << ", not enabling EGA\n";
+            useEGA = false;
+        }
     }
 
     // try to open floppy disk image(s)
@@ -571,7 +604,17 @@ int main(int argc, char *argv[])
     fdc.setIOInterface(&floppyIO);
     fixDisk.setIOInterface(&fixedIO);
 
-    cga.setScanlineCallback(scanlineCallback);
+    if(useEGA)
+    {
+        cga.remove();
+        sys.setGraphicsConfig(System::GraphicsConfig::Other);
+        ega.setScanlineCallback(scanlineCallback);
+    }
+    else
+    {
+        ega.remove();
+        cga.setScanlineCallback(scanlineCallback);
+    }
 
     sys.reset();
 
@@ -649,14 +692,20 @@ int main(int argc, char *argv[])
                     break;
             }
 
-            cga.update();
+            if(useEGA)
+                ega.update();
+            else
+                cga.update();
             sys.updateForDisplay();
         }
         else
         {
             cpu.run(now - lastTick);
 
-            cga.update();
+            if(useEGA)
+                ega.update();
+            else
+                cga.update();
             sys.updateForDisplay();
         }
 
