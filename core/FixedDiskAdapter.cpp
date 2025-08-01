@@ -46,8 +46,12 @@ uint8_t FixedDiskAdapter::read(uint16_t addr)
             return ret;
         }
 
-        case 0x322: // drive settings?
-            break;
+        case 0x322: // switch settings
+            // the meaning depends on which controller's BIOS we're using...
+            // 1st/2nd card has    0=306C/2H 1=375C/8H 2=306C/6H 3=306C/4H
+            // 3rd (20MB) card has 0=306C/4H 1=612C/4H 2=615C/4H 3=306C/8H
+            // so we're getting 10MB for the older one and 20MB for the newer one by default
+            return 0xFF;
 
         default:
             printf("FXD R %04X @~%04X\n", addr, sys.getCPU().reg(CPU::Reg16::IP));
