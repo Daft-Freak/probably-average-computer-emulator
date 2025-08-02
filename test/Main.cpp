@@ -176,18 +176,15 @@ int main(int argc, char *argv[])
         // skip unimpl
         // ... exit(1) was a bad move...
         auto k = opcode.key();
-        if(k == "0F" || k == "2F"/*DAS*/ || k == "37"/*AAA*/ || k == "3F"/*AAS*/ || k == "CC"/*INT 3*/ || k == "CE"/*INTO*/ ||
-           k == "E5" /*IN w*/ || k == "E7" /*OUT w*/ || k == "ED" /*IN w*/ || k == "EF" /*OUT w*/)
-        {
+        if(k == "0F" || k == "2F"/*DAS*/ || k == "37"/*AAA*/ || k == "3F"/*AAS*/ || k == "CE"/*INTO*/ || k == "E5" /*IN w*/ || k == "E7" /*OUT w*/)
             continue;
-        }
         //
 
         // de-noise
         // segment mov fails due to not masking reg
         // AAM has wrong(undefined) flags on trap
         // IN fails due to emulating some ports
-        if(k == "8C"/*seg*/ || k == "8E"/*seg*/ || k == "D4"/*AAM*/ || k == "E4" /*IN*/ || k == "EC"/*IN*/)
+        if(k == "8C"/*seg*/ || k == "8E"/*seg*/ || k == "D4"/*AAM*/ || k == "E4" /*IN*/ || k == "EC"/*IN*/ || k == "ED" /*IN w*/)
             continue;
         //
 
@@ -202,11 +199,6 @@ int main(int argc, char *argv[])
 
                 if(subValue["status"] != "normal")
                     continue;
-
-                // unimpl
-                if(k == "F6" && subOpcode.key() == "7")
-                    continue;
-                //
 
                 // de-noise
                 // DIV has wrong(undefined) flags on trap
