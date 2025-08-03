@@ -152,8 +152,8 @@ static T RAM_FUNC(doRotateLeft)(T dest, int count, uint16_t &flags)
 
     flags = (flags & ~Flag_C) | (carry ? Flag_C : 0);
 
-    if(count == 1)
-        flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carry ? Flag_O : 0); // msb of result != carry flag
+    // "undefined" for rotate counts other than 1
+    flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carry ? Flag_O : 0); // msb of result != carry flag
 
     return res;
 }
@@ -161,22 +161,27 @@ static T RAM_FUNC(doRotateLeft)(T dest, int count, uint16_t &flags)
 template<class T>
 static T RAM_FUNC(doRotateLeftCarry)(T dest, int count, uint16_t &flags)
 {
-    int maxBits = sizeof(T) * 8;
-    count %= (maxBits + 1);
-
     if(!count)
         return dest;
+
+    int maxBits = sizeof(T) * 8;
+    count %= (maxBits + 1);
 
     bool carryIn = flags & Flag_C, carryOut;
     T res;
 
-    if(count == 1)
+    if(!count)
+    {
+        // rotated a multiple of the data size + carry
+        // so we shifted the carry flag all the way through
+        carryOut = carryIn;
+        res = dest;
+    }
+    else if(count == 1)
     {
         carryOut = dest & signBit<T>();
 
         res = dest << 1 | (carryIn ? 1 : 0);
-
-        flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carryOut ? Flag_O : 0); // msb of result != carry flag
     }
     else
     {
@@ -189,7 +194,8 @@ static T RAM_FUNC(doRotateLeftCarry)(T dest, int count, uint16_t &flags)
     }
 
     flags = (flags & ~Flag_C) | (carryOut ? Flag_C : 0);
-
+    // "undefined" for rotate counts other than 1
+    flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carryOut ? Flag_O : 0); // msb of result != carry flag
     return res;
 }
 
@@ -208,8 +214,8 @@ static T RAM_FUNC(doRotateRight)(T dest, int count, uint16_t &flags)
 
     flags = (flags & ~Flag_C) | (carry ? Flag_C : 0);
 
-    if(count == 1)
-        flags = (flags & ~Flag_O) | ((res & signBit<T>()) != (res << 1 & signBit<T>()) ? Flag_O : 0); // highest two bits mismatch
+    // "undefined" for rotate counts other than 1
+    flags = (flags & ~Flag_O) | ((res & signBit<T>()) != (res << 1 & signBit<T>()) ? Flag_O : 0); // highest two bits mismatch
 
     return res;
 }
@@ -217,22 +223,27 @@ static T RAM_FUNC(doRotateRight)(T dest, int count, uint16_t &flags)
 template<class T>
 static T RAM_FUNC(doRotateRightCarry)(T dest, int count, uint16_t &flags)
 {
-    int maxBits = sizeof(T) * 8;
-    count %= (maxBits + 1);
-
     if(!count)
         return dest;
+
+    int maxBits = sizeof(T) * 8;
+    count %= (maxBits + 1);
 
     bool carryIn = flags & Flag_C, carryOut;
     T res;
 
-    if(count == 1)
+    if(!count)
+    {
+        // rotated a multiple of the data size + carry
+        // so we shifted the carry flag all the way through
+        carryOut = carryIn;
+        res = dest;
+    }
+    else if(count == 1)
     {
         carryOut = dest & 1;
 
         res = dest >> 1 | (carryIn ? signBit<T>() : 0);
-
-        flags = (flags & ~Flag_O) | ((res & signBit<T>()) != (res << 1 & signBit<T>()) ? Flag_O : 0); // highest two bits mismatch
     }
     else
     {
@@ -245,6 +256,8 @@ static T RAM_FUNC(doRotateRightCarry)(T dest, int count, uint16_t &flags)
     }
 
     flags = (flags & ~Flag_C) | (carryOut ? Flag_C : 0);
+    // "undefined" for rotate counts other than 1
+    flags = (flags & ~Flag_O) | ((res & signBit<T>()) != (res << 1 & signBit<T>()) ? Flag_O : 0); // highest two bits mismatch
 
     return res;
 }
@@ -267,8 +280,8 @@ static T RAM_FUNC(doShiftLeft)(T dest, int count, uint16_t &flags)
           | (res == 0 ? Flag_Z : 0)
           | (res & signBit<T>() ? Flag_S : 0);
 
-    if(count == 1)
-        flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carry ? Flag_O : 0); // msb of result != carry flag
+    // "undefined" for shift counts other than 1
+    flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != carry ? Flag_O : 0); // msb of result != carry flag
 
     return res;
 }
@@ -291,8 +304,8 @@ static T RAM_FUNC(doShiftRight)(T dest, int count, uint16_t &flags)
           | (res == 0 ? Flag_Z : 0)
           | (res & signBit<T>() ? Flag_S : 0);
 
-    if(count == 1)
-        flags = (flags & ~Flag_O) | (dest & signBit<T>() ? Flag_O : 0);
+    // "undefined" for shift counts other than 1
+    flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != !!(res & (signBit<T>() >> 1)) ? Flag_O : 0);
 
     return res;
 }
@@ -318,8 +331,8 @@ static T RAM_FUNC(doShiftRightArith)(T dest, int count, uint16_t &flags)
           | (res == 0 ? Flag_Z : 0)
           | (res & signBit<T>() ? Flag_S : 0);
 
-    if(count == 1)
-        flags = flags & ~Flag_O; // always cleared as the highest two bits will be the same
+    // "undefined" for shift counts other than 1
+    flags = flags & ~Flag_O; // always cleared as the highest two bits will be the same
 
     return res;
 }
