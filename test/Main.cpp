@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
 {
     sys.addMemory(0, sizeof(ram), ram);
 
-    auto metadata = json::parse(std::ifstream("8088/v1/metadata.json"));
+    auto metadata = json::parse(std::ifstream("8088/v2/metadata.json"));
 
     for(auto &opcode : metadata["opcodes"].items())
     {
@@ -211,10 +211,10 @@ int main(int argc, char *argv[])
 
                 std::cout << "opcode " << opcode.key() << " r " << subOpcode.key() << std::endl;
 
-                auto data = readGZ("8088/v1/" + opcode.key() + "." + subOpcode.key() + ".json.gz");
+                auto data = readGZ("8088/v2/" + opcode.key() + "." + subOpcode.key() + ".json.gz");
 
                 if(data.empty() && subOpcode.key() == "0")
-                    data = readGZ("8088/v1/" + opcode.key() + ".json.gz");
+                    data = readGZ("8088/v2/" + opcode.key() + ".json.gz");
 
                 if(data.empty())
                 {
@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
             if(value.contains("flags-mask"))
                 flagsMask = value["flags-mask"];
 
-            auto data = readGZ("8088/v1/" + opcode.key() + ".json.gz");
+            auto data = readGZ("8088/v2/" + opcode.key() + ".json.gz");
 
             if(data.length())
                 doOpTest(data, flagsMask);
