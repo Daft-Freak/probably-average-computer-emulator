@@ -305,7 +305,7 @@ static T RAM_FUNC(doShiftRight)(T dest, int count, uint16_t &flags)
           | (res & signBit<T>() ? Flag_S : 0);
 
     // "undefined" for shift counts other than 1
-    flags = (flags & ~Flag_O) | (!!(res & signBit<T>()) != !!(res & (signBit<T>() >> 1)) ? Flag_O : 0);
+    flags = (flags & ~Flag_O) | ((res & (signBit<T>() >> 1)) ? Flag_O : 0);
 
     return res;
 }
