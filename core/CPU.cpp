@@ -306,14 +306,11 @@ static T RAM_FUNC(doShiftRightArith)(T dest, int count, uint16_t &flags)
     int maxBits = sizeof(T) * 8;
 
     // anything >= the total number of bits fills the result with the top bit
-    if(count >= maxBits)
-        count = maxBits - 1;
-
-    bool carry = dest & (1 << (count - 1));
+    bool carry = count >= maxBits ? (dest & signBit<T>()) : dest & (1 << (count - 1));
 
     std::make_signed_t<T> sDest = dest;
 
-    T res = sDest >> count;
+    T res = count >= maxBits ? sDest >> (maxBits - 1) : sDest >> count;
 
     flags = (flags & ~(Flag_C | Flag_P | Flag_Z | Flag_S))
           | (carry ? Flag_C : 0)
