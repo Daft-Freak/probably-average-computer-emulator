@@ -495,7 +495,7 @@ void RAM_FUNC(System::writeIOPort)(uint16_t addr, uint8_t data)
                         for(auto &dev : ioDevices)
                         {
                             if(dev.picMask & enabled)
-                                dev.dev->updateForInterrupts();
+                                dev.dev->updateForInterrupts(data);
                         }
                     }
 
@@ -717,7 +717,7 @@ void System::updateForInterrupts()
     for(auto &dev : ioDevices)
     {
         if(dev.picMask & ~pic.mask)
-            dev.dev->updateForInterrupts();
+            dev.dev->updateForInterrupts(pic.mask);
     }
 
     calculateNextInterruptCycle(getCycleCount());

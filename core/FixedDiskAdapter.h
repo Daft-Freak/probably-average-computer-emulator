@@ -22,7 +22,7 @@ public:
     uint8_t read(uint16_t addr) override;
     void write(uint16_t addr, uint8_t data) override;
 
-    void updateForInterrupts() override {};
+    void updateForInterrupts(uint8_t mask) override {};
     int getCyclesToNextInterrupt(uint32_t cycleCount) override {return 0;}
 
 private:

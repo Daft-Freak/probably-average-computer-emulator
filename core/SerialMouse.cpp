@@ -198,7 +198,7 @@ void SerialMouse::write(uint16_t addr, uint8_t data)
     }
 }
 
-void SerialMouse::updateForInterrupts()
+void SerialMouse::updateForInterrupts(uint8_t mask)
 {
     if(!interruptEnable)
         return;
