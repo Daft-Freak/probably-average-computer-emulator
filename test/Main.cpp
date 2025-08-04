@@ -162,6 +162,9 @@ static void doOpTest(const std::string &testData, uint16_t flagsMask)
 int main(int argc, char *argv[])
 {
     sys.addMemory(0, sizeof(ram), ram);
+    // remove the chipset so IO does nothing
+    // (yes this is a bit of a hack)
+    sys.removeIODevice(&sys.getChipset());
 
     auto metadata = json::parse(std::ifstream("8088/v2/metadata.json"));
 
@@ -183,8 +186,7 @@ int main(int argc, char *argv[])
         // de-noise
         // segment mov fails due to not masking reg
         // AAM has wrong(undefined) flags on trap
-        // IN fails due to emulating some ports
-        if(k == "8C"/*seg*/ || k == "8E"/*seg*/ || k == "D4"/*AAM*/ || k == "E4" /*IN*/ || k == "EC"/*IN*/ || k == "ED" /*IN w*/)
+        if(k == "8C"/*seg*/ || k == "8E"/*seg*/ || k == "D4"/*AAM*/)
             continue;
         //
 
