@@ -7,6 +7,8 @@
 #include "FIFO.h"
 #include "Scancode.h"
 
+class System;
+
 class IODevice
 {
 public:
@@ -17,109 +19,35 @@ public:
     virtual int getCyclesToNextInterrupt(uint32_t cycleCount) = 0;
 };
 
-class System
+class Chipset final : public IODevice
 {
 public:
-    using MemRequestCallback = uint8_t *(*)(unsigned int block);
     using SpeakerAudioCallback = void(*)(int8_t sample);
 
-    enum class GraphicsConfig
-    {
-        MDA = 0,
-        CGA_80Col,
-        CGA_40Col,
-        Other
-    };
+    Chipset(System &sys);
 
-    System();
-    void reset();
+    uint8_t read(uint16_t addr) override;
+    void write(uint16_t addr, uint8_t data) override;
 
-    CPU &getCPU() {return cpu;}
+    void updateForInterrupts(uint8_t mask) override;
+    int getCyclesToNextInterrupt(uint32_t cycleCount) override;
 
-    uint32_t getCycleCount() const {return cycleCount;}
-
-    void addMemory(uint32_t base, uint32_t size, uint8_t *ptr);
-    void addReadOnlyMemory(uint32_t base, uint32_t size, const uint8_t *ptr);
-
-    void removeMemory(unsigned int block);
-
-    uint32_t *getMemoryDirtyMask();
-    bool getMemoryBlockDirty(unsigned int block) const;
-    void setMemoryBlockDirty(unsigned int block);
-    void clearMemoryBlockDirty(unsigned int block);
-
-    void setMemoryRequestCallback(MemRequestCallback cb);
-    MemRequestCallback getMemoryRequestCallback() const;
-
-    void addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev);
-
-    void setGraphicsConfig(GraphicsConfig config);
-
-    uint8_t readMem(uint32_t addr);
-    void writeMem(uint32_t addr, uint8_t data);
-
-    const uint8_t *mapAddress(uint32_t addr) const;
-
-    uint8_t readIOPort(uint16_t addr);
-    void writeIOPort(uint16_t addr, uint8_t data);
-
-    void flagPICInterrupt(int index);
-
-    void addCPUCycles(int cycles)
-    {
-        cycleCount += cycles * cpuClkDiv;
-    }
-
-    void updateForInterrupts();
     void updateForDisplay();
 
-    void calculateNextInterruptCycle(uint32_t cycleCount);
-    uint32_t getNextInterruptCycle() const {return nextInterruptCycle;}
-
+    // PIC access/helpers
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
+    uint8_t getPICMask() const {return pic.mask;}
+
+    void flagPICInterrupt(int index);
     uint8_t acknowledgeInterrupt();
 
+    // PPI/keyboard
     void sendKey(XTScancode scancode, bool down);
 
+    // PIT/speaker
     void setSpeakerAudioCallback(SpeakerAudioCallback cb);
 
-    static constexpr int getClockSpeed() {return systemClock;}
-    static constexpr int getCPUClockSpeed() {return systemClock / cpuClkDiv;}
-
-    static constexpr int getMemoryBlockSize() {return blockSize;}
-    static constexpr int getNumMemoryBlocks() {return maxAddress / blockSize;}
-
 private:
-    struct IORange
-    {
-        uint16_t ioMask, ioValue;
-        uint8_t picMask;
-        IODevice *dev;
-    };
-
-    void updatePIT();
-    void calculateNextPITUpdate();
-    void updateSpeaker(uint32_t target);
-
-    // clocks
-    static constexpr int systemClock = 14318180;
-    static constexpr int cpuClkDiv = 3; // 4.7727MHz
-    static constexpr int periphClkDiv = 6; // 2.38637MHz
-    static constexpr int pitClkDiv = periphClkDiv * 2; // 1.19318MHz
-
-    CPU cpu;
-
-    uint32_t cycleCount = 0;
-
-    static const int maxAddress = 1 << 20;
-    static const int blockSize = 16 * 1024;
-
-    uint8_t *memMap[maxAddress / blockSize];
-    uint32_t memDirty[maxAddress / blockSize / 32];
-    uint32_t memReadOnly[maxAddress / blockSize / 32];
-
-    MemRequestCallback memReqCb = nullptr;
-
     struct DMA
     {
         uint16_t baseAddress[4];
@@ -181,6 +109,11 @@ private:
         uint8_t output[3];
     };
 
+    void updatePIT();
+    void calculateNextPITUpdate();
+    void updateSpeaker(uint32_t target);
+
+    System &sys;
 
     DMA dma;
 
@@ -189,10 +122,6 @@ private:
     PIT pit;
 
     PPI ppi;
-
-    std::vector<IORange> ioDevices;
-
-    uint32_t nextInterruptCycle = 0;
 
     FIFO<uint8_t, 8> keyboardQueue;
     uint32_t keyboardClockLowCycle = 0;
@@ -203,10 +132,121 @@ private:
     uint32_t speakerSampleTimer = 0;
     SpeakerAudioCallback speakerCb = nullptr;
 
-    GraphicsConfig graphicsConfig = GraphicsConfig::CGA_80Col;
-
     // because this is a giant pile of hacks, it needs to poke around in the DMA controller
     // FIXME: real DMA, remove this
     friend class FloppyController;
     friend class FixedDiskAdapter;
+};
+
+class System
+{
+public:
+    using SpeakerAudioCallback = Chipset::SpeakerAudioCallback;
+    using MemRequestCallback = uint8_t *(*)(unsigned int block);
+
+    enum class GraphicsConfig
+    {
+        MDA = 0,
+        CGA_80Col,
+        CGA_40Col,
+        Other
+    };
+
+    System();
+    void reset();
+
+    CPU &getCPU() {return cpu;}
+
+    uint32_t getCycleCount() const {return cycleCount;}
+
+    void addMemory(uint32_t base, uint32_t size, uint8_t *ptr);
+    void addReadOnlyMemory(uint32_t base, uint32_t size, const uint8_t *ptr);
+
+    void removeMemory(unsigned int block);
+
+    uint32_t *getMemoryDirtyMask();
+    bool getMemoryBlockDirty(unsigned int block) const;
+    void setMemoryBlockDirty(unsigned int block);
+    void clearMemoryBlockDirty(unsigned int block);
+
+    void setMemoryRequestCallback(MemRequestCallback cb);
+    MemRequestCallback getMemoryRequestCallback() const;
+
+    Chipset &getChipset() {return chipset;}
+
+    void addIODevice(uint16_t mask, uint16_t value, uint8_t picMask, IODevice *dev);
+
+    void setGraphicsConfig(GraphicsConfig config);
+    GraphicsConfig getGraphicsConfig() const {return graphicsConfig;}
+
+    uint8_t readMem(uint32_t addr);
+    void writeMem(uint32_t addr, uint8_t data);
+
+    const uint8_t *mapAddress(uint32_t addr) const;
+
+    uint8_t readIOPort(uint16_t addr);
+    void writeIOPort(uint16_t addr, uint8_t data);
+
+    void flagPICInterrupt(int index);
+
+    void addCPUCycles(int cycles)
+    {
+        cycleCount += cycles * cpuClkDiv;
+    }
+
+    void updateForInterrupts();
+    void updateForInterrupts(uint8_t updateMask, uint8_t picMask);
+    void updateForDisplay();
+
+    void calculateNextInterruptCycle(uint32_t cycleCount);
+    uint32_t getNextInterruptCycle() const {return nextInterruptCycle;}
+
+    bool hasInterrupt() const {return chipset.hasInterrupt();}
+    uint8_t acknowledgeInterrupt();
+
+    void sendKey(XTScancode scancode, bool down);
+
+    void setSpeakerAudioCallback(SpeakerAudioCallback cb);
+
+    static constexpr int getClockSpeed() {return systemClock;}
+    static constexpr int getCPUClockSpeed() {return systemClock / cpuClkDiv;}
+    static constexpr int getPITClockDiv() {return pitClkDiv;}
+
+    static constexpr int getMemoryBlockSize() {return blockSize;}
+    static constexpr int getNumMemoryBlocks() {return maxAddress / blockSize;}
+
+private:
+    struct IORange
+    {
+        uint16_t ioMask, ioValue;
+        uint8_t picMask;
+        IODevice *dev;
+    };
+
+    // clocks
+    static constexpr int systemClock = 14318180;
+    static constexpr int cpuClkDiv = 3; // 4.7727MHz
+    static constexpr int periphClkDiv = 6; // 2.38637MHz
+    static constexpr int pitClkDiv = periphClkDiv * 2; // 1.19318MHz
+
+    CPU cpu;
+
+    uint32_t cycleCount = 0;
+
+    static const int maxAddress = 1 << 20;
+    static const int blockSize = 16 * 1024;
+
+    uint8_t *memMap[maxAddress / blockSize];
+    uint32_t memDirty[maxAddress / blockSize / 32];
+    uint32_t memReadOnly[maxAddress / blockSize / 32];
+
+    MemRequestCallback memReqCb = nullptr;
+
+    Chipset chipset;
+
+    std::vector<IORange> ioDevices;
+
+    uint32_t nextInterruptCycle = 0;
+
+    GraphicsConfig graphicsConfig = GraphicsConfig::CGA_80Col;
 };

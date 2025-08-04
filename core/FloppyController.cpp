@@ -148,7 +148,7 @@ void FloppyController::write(uint16_t addr, uint8_t data)
                     // transfers data through DMA...
                     // super-hack
                     bool failed = false;
-                    auto &dma = sys.dma;
+                    auto &dma = sys.getChipset().dma;
                     auto dmaSize = dma.currentWordCount[2] + 1;
                     auto destAddr = dma.currentAddress[2];
                     auto destHigh = dma.highAddr[2] << 16;

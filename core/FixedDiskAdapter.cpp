@@ -131,7 +131,7 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
                     // transfers data through DMA...
                     // super-hack
                     
-                    auto &dma = sys.dma;
+                    auto &dma = sys.getChipset().dma;
                     auto dmaSize = dma.currentWordCount[3] + 1;
                     auto destAddr = dma.currentAddress[3];
                     auto destHigh = dma.highAddr[3] << 16;
@@ -167,7 +167,7 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
                 else if(controlBlock[0] == 0x0A) // write
                 {
                     // hack the second
-                    auto &dma = sys.dma;
+                    auto &dma = sys.getChipset().dma;
                     auto dmaSize = dma.currentWordCount[3] + 1;
                     auto srcAddr = dma.currentAddress[3];
                     auto destHigh = dma.highAddr[3] << 16;
