@@ -126,6 +126,8 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
 
                     responseLen = 5;
                 }
+                else if(controlBlock[0] == 0x05) // ready verify
+                {}
                 else if(controlBlock[0] == 0x08) // read
                 {
                     // transfers data through DMA...
