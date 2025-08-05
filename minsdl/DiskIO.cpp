@@ -28,7 +28,7 @@ void FileFloppyIO::openDisk(int unit, std::string path)
 
     file[unit].close();
 
-    file[unit].open(path);
+    file[unit].open(path, std::ios::binary);
     if(file[unit])
     {
         file[unit].seekg(0, std::ios::end);
