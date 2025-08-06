@@ -15,6 +15,8 @@ public:
     void updateForInterrupts(uint8_t mask) override {}
     int getCyclesToNextInterrupt(uint32_t cycleCount) override {return 0;}
 
+    void dmaAck(int ch, bool write) override {}
+
 private:
     System &sys;
 
