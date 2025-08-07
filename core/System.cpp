@@ -641,6 +641,9 @@ void Chipset::updateDMA()
             // complete
             dma.status |= 1 << i;
 
+            if(dma.requestedDev[i])
+                dma.requestedDev[i]->dmaComplete(i);
+
             // auto-init
             if(dma.mode[i] & (1 << 4))
             {

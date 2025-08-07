@@ -22,6 +22,7 @@ public:
 
     uint8_t dmaRead(int ch) override {return 0xFF;}
     void dmaWrite(int ch, uint8_t data) override {}
+    void dmaComplete(int ch) override {}
 
 private:
     void updateTimings();
