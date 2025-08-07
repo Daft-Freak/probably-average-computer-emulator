@@ -705,7 +705,7 @@ void Chipset::calculateNextPITUpdate()
 
         int remaining = pit.counter[i];
 
-        if(mode == 2)
+        if(mode == 2 && remaining > 1)
             remaining--; // count to 1
         else if(mode == 3)
             remaining /= 2; // double-decrement
