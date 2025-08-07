@@ -18,7 +18,9 @@ public:
     virtual void updateForInterrupts(uint8_t mask) = 0;
     virtual int getCyclesToNextInterrupt(uint32_t cycleCount) = 0;
 
-    virtual void dmaAck(int ch, bool write) = 0;
+    // these are reversed from the DMA controller's perspective...
+    virtual uint8_t dmaRead(int ch) = 0;
+    virtual void dmaWrite(int ch, uint8_t data) = 0;
 };
 
 class Chipset final : public IODevice
@@ -34,7 +36,8 @@ public:
     void updateForInterrupts(uint8_t mask) override;
     int getCyclesToNextInterrupt(uint32_t cycleCount) override;
 
-    void dmaAck(int ch, bool write) override;
+    uint8_t dmaRead(int ch) override {return 0xFF;}
+    void dmaWrite(int ch, uint8_t data) override;
 
     void updateForDisplay();
 

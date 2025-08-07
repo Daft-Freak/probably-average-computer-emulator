@@ -548,7 +548,7 @@ int Chipset::getCyclesToNextInterrupt(uint32_t cycleCount)
     return toUpdate;
 }
 
-void Chipset::dmaAck(int ch, bool write)
+void Chipset::dmaWrite(int ch, uint8_t data)
 {
     dmaRequest(0, false);
 }
@@ -603,8 +603,29 @@ void Chipset::updateDMA()
         int dir = (dma.mode[i] >> 2) & 3;
         bool dec = dma.mode[i] & (1 << 5);
 
-        if(dma.requestedDev[i])
-            dma.requestedDev[i]->dmaAck(i, dir == 1);
+        auto addr = (dma.highAddr[i] << 16) + dma.currentAddress[i];
+
+        switch(dir)
+        {
+            case 0: // verify
+                break; // doesn't transfer anything
+            
+            case 1: // write
+            {
+                uint8_t data = 0xFF;
+                if(dma.requestedDev[i])
+                    data = dma.requestedDev[i]->dmaRead(i);
+
+                sys.writeMem(addr, data);
+                break;
+            }
+
+            case 2: // read
+                if(dma.requestedDev[i])
+                    dma.requestedDev[i]->dmaWrite(i, sys.readMem(addr));
+                
+                break;
+        }
 
         // update count/addr
         if(dec)
