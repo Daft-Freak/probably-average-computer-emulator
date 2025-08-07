@@ -38,11 +38,6 @@ uint8_t Chipset::read(uint16_t addr)
 
             dma.flipFlop = !dma.flipFlop;
 
-            // xt boot hack
-            if(channel == 0 && !dma.flipFlop && !(dma.mask & 1))
-                dma.currentAddress[channel]++;
-            //
-
             return ret;
         }
         case 0x01: // DMA channel 0 word count
@@ -219,12 +214,7 @@ void Chipset::write(uint16_t addr, uint8_t data)
             if(data & (1 << 2))
                 dma.mask |= 1 << channel;
             else
-            {
                 dma.mask &= ~(1 << channel);
-            
-                if(channel == 0)
-                    dma.status |= 1; // report TC0 for XT BIOS
-            }
             break;
         }
         case 0x0B: // DMA mode
