@@ -134,7 +134,7 @@ void FloppyController::write(uint16_t addr, uint8_t data)
                     [[maybe_unused]] auto headAgain = command[3];
                     auto record = command[4];
                     auto number = command[5];
-                    auto endOfTrack = command[6];
+                    //auto endOfTrack = command[6];
                     //auto gapLength = command[7];
                     //auto dataLength = command[8];
 
@@ -143,50 +143,12 @@ void FloppyController::write(uint16_t addr, uint8_t data)
                     assert(multiTrack);
                     assert(mfm);
 
-                    auto sectorSize = 128 << number;
+                    //auto sectorSize = 128 << number;
 
-                    // transfers data through DMA...
-                    // super-hack
+                    // read first sector
                     bool failed = false;
-                    auto &dma = sys.getChipset().dma;
-                    auto dmaSize = dma.currentWordCount[2] + 1;
-                    auto destAddr = dma.currentAddress[2];
-                    auto destHigh = dma.highAddr[2] << 16;
-                    while(dmaSize)
-                    {
-                        uint8_t buf[512];
-
-                        if(!io || !io->read(unit, buf, cylinder, head, record))
-                        {
-                            failed = true;
-                            break;
-                        }
-
-                        for(int i = 0; i < sectorSize; i++)
-                            sys.writeMem(destHigh + destAddr + i, buf[i]);
-
-                        dmaSize -= sectorSize;
-                        destAddr += sectorSize;
-
-                        // update offset
-                        record++;
-                        if(record > endOfTrack)
-                        {
-                            record = 1;
-                            if(head == 0)
-                                head = 1;
-                            else
-                            {
-                                head = 0;
-                                cylinder++;
-                            }
-                        }
-                    }
-
-                    // FIXME: if !auto else reload
-                    dma.currentAddress[2] = destAddr;
-                    dma.currentWordCount[2] = 0;
-                    // resets every time anyway...
+                    if(!io || !io->read(unit, sectorBuf, cylinder, head, record))
+                        failed = true;
 
                     status[0] = unit | head << 2;
 
@@ -202,8 +164,17 @@ void FloppyController::write(uint16_t addr, uint8_t data)
                     result[5] = record;
                     result[6] = number;
 
-                    if(digitalOutput & (1 << 3))
-                        sys.flagPICInterrupt(6);
+                    if(!failed)
+                    {
+                        // start DMA if we didn't immediately fail
+                        sectorBufOffset = 0;
+                        sys.getChipset().dmaRequest(2, true, this);
+                    }
+                    else
+                    {
+                        if(digitalOutput & (1 << 3))
+                            sys.flagPICInterrupt(6);
+                    }
                 }
                 else if(command[0] == 0x07) // recalibrate
                 {
@@ -293,4 +264,47 @@ void FloppyController::write(uint16_t addr, uint8_t data)
             break;
         }
     }
+}
+
+uint8_t FloppyController::dmaRead(int ch)
+{
+    // check if we need to read the next sector
+    if(sectorBufOffset == 512)
+    {
+        int unit = command[1] & 3;
+        auto &cylinder = command[2];
+        auto &head = command[3];
+        auto &record = command[4];
+        auto endOfTrack = command[6];
+
+        // update offset
+        record++;
+        if(record > endOfTrack)
+        {
+            record = 1;
+            if(head == 0)
+                head = 1;
+            else
+            {
+                head = 0;
+                cylinder++;
+            }
+        }
+
+        // attempt to read next sector
+        if(!io || !io->read(unit, sectorBuf, cylinder, head, record))
+            status[0] |= 1 << 6; // error (TODO: should we stop the DMA now?)
+
+        sectorBufOffset = 0;
+    }
+
+    return sectorBuf[sectorBufOffset++];
+}
+
+void FloppyController::dmaComplete(int ch)
+{
+    sys.getChipset().dmaRequest(2, false);
+
+    if(digitalOutput & (1 << 3))
+        sys.flagPICInterrupt(6);
 }

@@ -149,7 +149,6 @@ private:
 
     // because this is a giant pile of hacks, it needs to poke around in the DMA controller
     // FIXME: real DMA, remove this
-    friend class FloppyController;
     friend class FixedDiskAdapter;
 };
 
