@@ -15,7 +15,8 @@
 
 Chipset::Chipset(System &sys) : sys(sys)
 {
-
+    for(auto &dev : dma.requestedDev)
+        dev = nullptr;
 }
 
 uint8_t Chipset::read(uint16_t addr)
@@ -557,11 +558,93 @@ int Chipset::getCyclesToNextInterrupt(uint32_t cycleCount)
     return toUpdate;
 }
 
+void Chipset::dmaAck(int ch, bool write)
+{
+    dmaRequest(0, false);
+}
+
 void Chipset::updateForDisplay()
 {
     // PIT may update speaker, so we need to run that first
     updatePIT();
     updateSpeaker(sys.getCycleCount());
+}
+
+void Chipset::dmaRequest(int ch, bool active, IODevice *dev)
+{
+    // disabled
+    if(dma.command & (1 << 2))
+        return;
+
+    // if active is false, dev should be null
+    dma.requestedDev[ch] = dev;
+
+    // update requests
+    if(active)
+        dma.request |= 1 << ch;
+    else
+        dma.request &= ~(1 << ch);
+}
+
+void Chipset::updateDMA()
+{
+    // disabled
+    if(dma.command & (1 << 2))
+        return;
+
+    // will need to sync the PIT channel generating DREQs
+    if(!(dma.mask & 1))
+    {
+        auto passed = sys.getCycleCount() - pit.lastUpdateCycle;
+        if(passed >= pit.nextUpdateCycle - pit.lastUpdateCycle)
+            updatePIT();
+    }
+    
+    auto active = dma.request & ~(dma.mask);
+    if(!active)
+        return;
+
+    // find highest priority channel
+    for(int i = 0; i < 4; i++)
+    {
+        if(!(active & (1 << i)))
+            continue;
+
+        int dir = (dma.mode[i] >> 2) & 3;
+        bool dec = dma.mode[i] & (1 << 5);
+
+        if(dma.requestedDev[i])
+            dma.requestedDev[i]->dmaAck(i, dir == 1);
+
+        // update count/addr
+        if(dec)
+            dma.currentAddress[i]--;
+        else
+            dma.currentAddress[i]++;
+
+        dma.currentWordCount[i]--;
+
+        // rollover
+        if(dma.currentWordCount[i] == 0xFFFF)
+        {
+            // complete
+            dma.status |= 1 << i;
+
+            // auto-init
+            if(dma.mode[i] & (1 << 4))
+            {
+                dma.currentAddress[i] = dma.baseAddress[i];
+                dma.currentWordCount[i] = dma.baseWordCount[i];
+            }
+            else // set mask
+                dma.mask |= (1 << i);
+        }
+
+        // some time passed
+        // FIXME: definitely not accurate
+        sys.addCPUCycles(2);
+        return;
+    }
 }
 
 void Chipset::flagPICInterrupt(int index)
@@ -630,9 +713,11 @@ void Chipset::updatePIT()
                 // realodNextCycle is only set for mode 2
                 // go high again
                 pit.outState |= (1 << i);
-                // and trigger interrupt if needed
+                // and trigger interrupt/dma if needed
                 if(i == 0)
                     flagPICInterrupt(0);
+                else if(i == 1)
+                    dmaRequest(0, true, this);
             }
         }
 

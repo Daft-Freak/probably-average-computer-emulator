@@ -34,9 +34,13 @@ public:
     void updateForInterrupts(uint8_t mask) override;
     int getCyclesToNextInterrupt(uint32_t cycleCount) override;
 
-    void dmaAck(int ch, bool write) override {}
+    void dmaAck(int ch, bool write) override;
 
     void updateForDisplay();
+
+    // DMA
+    void dmaRequest(int ch, bool active, IODevice *dev = nullptr);
+    void updateDMA();
 
     // PIC access/helpers
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
@@ -74,6 +78,8 @@ private:
         bool flipFlop = false;
 
         uint8_t highAddr[4];
+
+        IODevice *requestedDev[4];
     };
 
     struct PIC

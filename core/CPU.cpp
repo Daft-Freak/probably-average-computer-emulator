@@ -437,6 +437,9 @@ void RAM_FUNC(CPU::run)(int ms)
     {
         auto oldCycles = sys.getCycleCount();
 
+        // if need update?
+        sys.getChipset().updateDMA();
+
         if(flags & Flag_I)
         {
             if(!delayInterrupt && sys.hasInterrupt())
