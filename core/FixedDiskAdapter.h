@@ -25,9 +25,9 @@ public:
     void updateForInterrupts(uint8_t mask) override {};
     int getCyclesToNextInterrupt(uint32_t cycleCount) override {return 0;}
 
-    uint8_t dmaRead(int ch) override {return 0xFF;}
-    void dmaWrite(int ch, uint8_t data) override {}
-    void dmaComplete(int ch) override {}
+    uint8_t dmaRead(int ch) override;
+    void dmaWrite(int ch, uint8_t data) override;
+    void dmaComplete(int ch) override;
 
 private:
     System &sys;
@@ -46,6 +46,10 @@ private:
 
     uint16_t numCylinders[2];
     uint8_t numHeads[2];
+
+    uint8_t sectorBuf[512];
+    int sectorBufOffset = 0;
+    uint32_t curSectorLBA = 0;
 
     FixedDiskIO *io = nullptr;
 };

@@ -88,9 +88,12 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
 
                 // now we really have all the data
 
-                status |= (1 << 5); // interrupt?
-                if(dmaIntrMask & 2)
-                    sys.flagPICInterrupt(5);
+                if(controlBlock[0] != 0x08/*read*/ && controlBlock[0] != 0xA) // will trigger irq at end of dma
+                {
+                    status |= (1 << 5); // interrupt?
+                    if(dmaIntrMask & 2)
+                        sys.flagPICInterrupt(5);
+                }
 
                 int drive = (controlBlock[1] >> 5) & 1;
                 int head = controlBlock[1] & 0x1F;
@@ -98,7 +101,6 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
                 int cylinder = controlBlock[3] | (controlBlock[2] & 0xC0) << 2;
     
                 const int sectorsPerTrack = 17;
-                const int sectorSize = 512;
                 bool failed = false;
 
                 auto outData = this->data;
@@ -130,76 +132,52 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
                 {}
                 else if(controlBlock[0] == 0x08) // read
                 {
-                    // transfers data through DMA...
-                    // super-hack
-                    
-                    auto &dma = sys.getChipset().dma;
-                    auto dmaSize = dma.currentWordCount[3] + 1;
-                    auto destAddr = dma.currentAddress[3];
-                    auto destHigh = dma.highAddr[3] << 16;
+                    curSectorLBA = ((cylinder * numHeads[drive] + head) * sectorsPerTrack) + sector;
 
-                    auto lba = ((cylinder * numHeads[drive] + head) * sectorsPerTrack) + sector;
-
-                    while(dmaSize && (dmaIntrMask & 1))
-                    {
-                        uint8_t buf[512];
-
-                        if(!io || !io->read(drive, buf, lba))
-                        {
-                            failed = true;
-                            break;
-                        }
-
-                        for(int i = 0; i < sectorSize; i++)
-                            sys.writeMem(destHigh + destAddr + i, buf[i]);
-
-                        dmaSize -= sectorSize;
-                        destAddr += sectorSize;
-                        lba++;
-                    }
+                    if(!io || !io->read(drive, sectorBuf, curSectorLBA))
+                        failed = true;
 
                     sense[0] |= 1 << 7; // address valid
                     
                     // set an error if failed
                     // TODO: set different errors for no drive and read fail
                     if(failed)
+                    {
                         sense[0] |= 4; // not ready
+
+                        status |= (1 << 5); // interrupt
+                        if(dmaIntrMask & 2)
+                            sys.flagPICInterrupt(5);
+                    }
+                    else
+                    {
+                        // start DMA if we didn't immediately fail
+                        sectorBufOffset = 0;
+                        sys.getChipset().dmaRequest(3, true, this);
+                    }
 
                 }
                 else if(controlBlock[0] == 0x0A) // write
                 {
-                    // hack the second
-                    auto &dma = sys.getChipset().dma;
-                    auto dmaSize = dma.currentWordCount[3] + 1;
-                    auto srcAddr = dma.currentAddress[3];
-                    auto destHigh = dma.highAddr[3] << 16;
-
-                    auto lba = ((cylinder * numHeads[drive] + head) * sectorsPerTrack) + sector;
-
-                    while(dmaSize && (dmaIntrMask & 1))
-                    {
-                        uint8_t buf[512];
-
-                        for(int i = 0; i < sectorSize; i++)
-                            buf[i] = sys.readMem(destHigh + srcAddr + i);
-
-                        if(!io || !io->write(drive, buf, lba))
-                        {
-                            failed = true;
-                            break;
-                        }
-
-                        dmaSize -= sectorSize;
-                        srcAddr += sectorSize;
-                        lba++;
-                    }
+                    curSectorLBA = ((cylinder * numHeads[drive] + head) * sectorsPerTrack) + sector;
 
                     sense[0] |= 1 << 7; // address valid
                     
-                    // set an error if failed
-                    // TODO: set different errors for no drive and read fail
-                    if(failed)
+                    // set error if no disk
+                    if(!io)
+                    {
                         sense[0] |= 4; // not ready
+
+                        status |= (1 << 5); // interrupt
+                        if(dmaIntrMask & 2)
+                            sys.flagPICInterrupt(5);
+                    }
+                    else
+                    {
+                        // start DMA
+                        sectorBufOffset = 0;
+                        sys.getChipset().dmaRequest(3, true, this);
+                    }
                 }
                 else if(controlBlock[0] == 0x0C) // init characteristics
                 {
@@ -275,4 +253,48 @@ void FixedDiskAdapter::write(uint16_t addr, uint8_t data)
         default:
             printf("FXD W %04X = %02X @~%04X\n", addr, data, sys.getCPU().reg(CPU::Reg16::IP));
     }
+}
+
+uint8_t FixedDiskAdapter::dmaRead(int ch)
+{
+    // check if we need to read the next sector
+    if(sectorBufOffset == 512)
+    {
+        int drive = (controlBlock[1] >> 5) & 1;
+
+        curSectorLBA++;
+
+        // attempt to read next sector
+        if(!io || !io->read(drive, sectorBuf, curSectorLBA))
+            sense[0] |= 1 << 7; // not ready (TODO: should we stop the DMA now?)
+
+        sectorBufOffset = 0;
+    }
+
+    return sectorBuf[sectorBufOffset++];
+}
+
+void FixedDiskAdapter::dmaWrite(int ch, uint8_t data)
+{
+    sectorBuf[sectorBufOffset++] = data;
+
+    // check if we need to write a sector
+    if(sectorBufOffset == 512)
+    {
+        int drive = (controlBlock[1] >> 5) & 1;
+
+        if(!io || !io->write(drive, sectorBuf, curSectorLBA++))
+            sense[0] |= 1 << 7; // not ready (TODO: should we stop the DMA now?)
+
+        sectorBufOffset = 0;
+    }
+}
+
+void FixedDiskAdapter::dmaComplete(int ch)
+{
+    sys.getChipset().dmaRequest(3, false);
+
+    status |= (1 << 5);
+    if(dmaIntrMask & 2)
+        sys.flagPICInterrupt(5);
 }

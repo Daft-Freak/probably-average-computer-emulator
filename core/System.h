@@ -146,10 +146,6 @@ private:
     uint32_t lastSpeakerUpdateCycle = 0;
     uint32_t speakerSampleTimer = 0;
     SpeakerAudioCallback speakerCb = nullptr;
-
-    // because this is a giant pile of hacks, it needs to poke around in the DMA controller
-    // FIXME: real DMA, remove this
-    friend class FixedDiskAdapter;
 };
 
 class System
