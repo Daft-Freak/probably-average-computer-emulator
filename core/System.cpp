@@ -228,7 +228,8 @@ void Chipset::write(uint16_t addr, uint8_t data)
             static const char *dirStr[]{"verify", "write", "read", "ILLEGAL"};
             static const char *modeStr[]{"demand", "single", "block", "cascade"};
 
-            printf("DMA ch%i %s%s %s %s\n", channel, autoInit ? "auto-init ": "", modeStr[mode], dirStr[dir], dec ? "decrement" : "increment");
+            if(mode != 1)
+                printf("DMA ch%i %s%s %s %s\n", channel, autoInit ? "auto-init ": "", modeStr[mode], dirStr[dir], dec ? "decrement" : "increment");
 
             dma.mode[channel] = data;
             break;
