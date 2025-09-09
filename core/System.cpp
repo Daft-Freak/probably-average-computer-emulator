@@ -774,7 +774,7 @@ void Chipset::updatePIT()
             else if(mode == 3 && pit.counter[i] == 0)
             {
                 if(i == 2)
-                    updateSpeaker(pit.lastUpdateCycle + (step - 1) * System::getPITClockDiv());
+                    updateSpeaker(pit.lastUpdateCycle + step * System::getPITClockDiv());
 
                 // toggle out and reload
                 // TODO: should delay low by one cycle if odd count
