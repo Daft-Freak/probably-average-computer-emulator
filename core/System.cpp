@@ -722,26 +722,11 @@ void Chipset::updatePIT()
         int reloaded = pit.reloadNextCycle;
         pit.reloadNextCycle = 0;
 
-        for(int i = 0; i < 3; i++)
-        {
-            if(reloaded & (1 << i))
-            {
-                pit.counter[i] = pit.reload[i]; // reload after reaching 1 on the last cycle
-            
-                // realodNextCycle is only set for mode 2
-                // go high again
-                pit.outState |= (1 << i);
-                // and trigger interrupt/dma if needed
-                if(i == 0)
-                    flagPICInterrupt(0);
-                else if(i == 1)
-                    dmaRequest(0, true, this);
-            }
-        }
+        int active = pit.active;
 
-        for(int i = 0; i < 3; i++)
+        for(int i = 0; active; i++, active >>= 1)
         {
-            if(!(pit.active & (1 << i)))
+            if(!(active & 1))
                 continue;
 
             // ch2 gate
@@ -752,8 +737,21 @@ void Chipset::updatePIT()
 
             if(mode == 3) // mode 3 decrements twice
                 pit.counter[i] -= step * 2;
-            else if((reloaded & (1 << i))) // don't decrement on the cycle that reloads
-                pit.counter[i] -= (step - 1);
+            else if(reloaded & (1 << i)) // reload
+            {
+                assert(step == 1);
+                // reload after reaching 1 on the last cycle
+                pit.counter[i] = pit.reload[i];
+
+                // reloadNextCycle is only set for mode 2
+                // go high again
+                pit.outState |= (1 << i);
+                // and trigger interrupt/dma if needed
+                if(i == 0)
+                    flagPICInterrupt(0);
+                else if(i == 1)
+                    dmaRequest(0, true, this);
+            }
             else
                 pit.counter[i] -= step;
 
@@ -790,7 +788,10 @@ void Chipset::updatePIT()
         elapsed -= step;
 
         // recalculate next
-        if(pit.lastUpdateCycle == pit.nextUpdateCycle || pit.reloadNextCycle)
+        // shortcut if we know it's the next cycle
+        if(pit.reloadNextCycle)
+            pit.nextUpdateCycle = pit.lastUpdateCycle + System::getPITClockDiv();
+        else if(pit.lastUpdateCycle == pit.nextUpdateCycle || pit.reloadNextCycle)
             calculateNextPITUpdate();
     }
 }
