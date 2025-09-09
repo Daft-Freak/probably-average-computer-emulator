@@ -1044,7 +1044,8 @@ void System::updateForInterrupts()
     auto mask = chipset.getPICMask();
     for(auto &dev : ioDevices)
     {
-        if(dev.picMask & ~mask)
+        // always update the chipset (irq0)
+        if((dev.picMask & ~mask) || (dev.picMask & 1))
             dev.dev->updateForInterrupts(mask);
     }
 
@@ -1072,7 +1073,8 @@ void System::calculateNextInterruptCycle(uint32_t cycleCount)
     auto mask = chipset.getPICMask();
     for(auto &dev : ioDevices)
     {
-        if(dev.picMask & ~mask)
+        // always check the chipset (irq0)
+        if((dev.picMask & ~mask) || (dev.picMask & 1))
             toUpdate = std::min(toUpdate, dev.dev->getCyclesToNextInterrupt(cycleCount));
     }
 
