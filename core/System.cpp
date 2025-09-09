@@ -599,7 +599,33 @@ void Chipset::updateDMA()
     auto active = dma.request & ~(dma.mask);
 
     // find highest priority channel
-    for(int i = 0; i < 4; i++)
+    if(active & 1)
+    {
+        // shortcut RAM refresh channel
+        assert(!(dma.mode[0] & (1 << 5))); // increment
+
+        dmaRequest(0, false);
+        dma.currentAddress[0]++;
+        dma.currentWordCount[0]--;
+
+        if(dma.currentWordCount[0] == 0xFFFF)
+        {
+            // complete
+            dma.status |= 1;
+
+            // auto-init
+            assert(dma.mode[0] & (1 << 4));
+            assert(dma.currentAddress[0] == dma.baseAddress[0]);
+            assert(dma.currentWordCount[0] == dma.baseWordCount[0]);
+        }
+
+        // some time passed
+        // FIXME: definitely not accurate
+        sys.addCPUCycles(2);
+        return;
+    }
+
+    for(int i = 1; i < 4; i++)
     {
         if(!(active & (1 << i)))
             continue;
