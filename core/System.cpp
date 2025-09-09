@@ -503,6 +503,18 @@ void Chipset::write(uint16_t addr, uint8_t data)
             dma.highAddr[1] = data;
             break;
 
+        case 0xA0: // NMI mask
+        {
+            bool newState = data & 0x80;
+
+            if(newState != nmiEnabled)
+            {
+                printf("NMI %sabled\n", newState ? "en" : "dis");
+                nmiEnabled = newState;
+            }
+            break;
+        }
+
         default:
             printf("IO W %04X = %02X\n", addr, data);
     }

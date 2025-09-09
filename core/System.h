@@ -138,6 +138,8 @@ private:
 
     PPI ppi;
 
+    bool nmiEnabled = false;
+
     FIFO<uint8_t, 8> keyboardQueue;
     uint32_t keyboardClockLowCycle = 0;
     uint32_t keyboardTestReplyCycle = 0;
