@@ -538,7 +538,8 @@ void Chipset::updateForInterrupts(uint8_t mask)
     }
 
     // timer
-    if(!(mask & 1))
+    // also update for DMA request
+    if(!(mask & 1) || !(dma.mask & 1))
     {
         auto passed = sys.getCycleCount() - pit.lastUpdateCycle;
         if(passed >= pit.nextUpdateCycle - pit.lastUpdateCycle)
@@ -555,7 +556,7 @@ int Chipset::getCyclesToNextInterrupt(uint32_t cycleCount)
         toUpdate = std::min(toUpdate, static_cast<int>(keyboardTestDelay - (cycleCount - keyboardTestReplyCycle)));
 
     // timer
-    if(!(pic.mask & 1))
+    if(!(pic.mask & 1) || !(dma.mask & 1))
         toUpdate = std::min(toUpdate, static_cast<int>(pit.nextUpdateCycle - cycleCount));
 
     return toUpdate;
@@ -595,17 +596,7 @@ void Chipset::updateDMA()
     if(dma.command & (1 << 2))
         return;
 
-    // will need to sync the PIT channel generating DREQs
-    if(!(dma.mask & 1))
-    {
-        auto passed = sys.getCycleCount() - pit.lastUpdateCycle;
-        if(passed >= pit.nextUpdateCycle - pit.lastUpdateCycle)
-            updatePIT();
-    }
-    
     auto active = dma.request & ~(dma.mask);
-    if(!active)
-        return;
 
     // find highest priority channel
     for(int i = 0; i < 4; i++)
