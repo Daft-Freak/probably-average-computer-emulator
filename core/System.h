@@ -46,6 +46,7 @@ public:
     // DMA
     void dmaRequest(int ch, bool active, IODevice *dev = nullptr);
     void updateDMA();
+    bool needDMAUpdate() const {return dma.request & ~dma.mask;}
 
     // PIC access/helpers
     bool hasInterrupt() const {return pic.request & ~pic.mask;}
