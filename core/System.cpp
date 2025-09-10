@@ -30,6 +30,10 @@ uint8_t Chipset::read(uint16_t addr)
         {
             int channel = addr / 2;
 
+            // sync the request timer
+            if(channel == 0)
+                updatePIT();
+
             uint8_t ret;
             if(dma.flipFlop)
                 ret = dma.currentAddress[channel] >> 8;
@@ -557,7 +561,12 @@ int Chipset::getCyclesToNextInterrupt(uint32_t cycleCount)
 
     // timer
     if(!(pic.mask & 1) || !(dma.mask & 1))
-        toUpdate = std::min(toUpdate, static_cast<int>(pit.nextUpdateCycle - cycleCount));
+        toUpdate = std::min(toUpdate, static_cast<int>(pit.nextNonRefreshUpdateCycle - cycleCount));
+
+    // might be late for a PIT update sometimes
+    // usually hit this when recalculating because the PIC mask has changed
+    if(toUpdate < 0)
+        toUpdate = 0;
 
     return toUpdate;
 }
@@ -579,6 +588,10 @@ void Chipset::dmaRequest(int ch, bool active, IODevice *dev)
     // disabled
     if(dma.command & (1 << 2))
         return;
+
+    // hack around the fact that we don't accurately update the PIT channel used to trigger the refresh DMA
+    if(ch == 0 && active)
+        dmaRefreshRequests++;
 
     // if active is false, dev should be null
     dma.requestedDev[ch] = dev;
@@ -604,9 +617,13 @@ void Chipset::updateDMA()
         // shortcut RAM refresh channel
         assert(!(dma.mode[0] & (1 << 5))); // increment
 
-        dmaRequest(0, false);
-        dma.currentAddress[0]++;
-        dma.currentWordCount[0]--;
+        int step = std::min(dmaRefreshRequests, dma.currentWordCount[0] + 1);
+        dmaRefreshRequests -= step;
+        if(dmaRefreshRequests == 0)
+            dmaRequest(0, false);
+        
+        dma.currentAddress[0] += step;
+        dma.currentWordCount[0] -= step;
 
         if(dma.currentWordCount[0] == 0xFFFF)
         {
@@ -620,7 +637,7 @@ void Chipset::updateDMA()
         }
 
         // some time passed
-        // FIXME: definitely not accurate
+        // FIXME: even less accurate
         sys.addCPUCycles(2);
         return;
     }
@@ -816,7 +833,7 @@ void Chipset::updatePIT()
         // recalculate next
         // shortcut if we know it's the next cycle
         if(pit.reloadNextCycle)
-            pit.nextUpdateCycle = pit.lastUpdateCycle + System::getPITClockDiv();
+            pit.nextUpdateCycle = pit.nextNonRefreshUpdateCycle = pit.lastUpdateCycle + System::getPITClockDiv();
         else if(pit.lastUpdateCycle == pit.nextUpdateCycle || pit.reloadNextCycle)
             calculateNextPITUpdate();
     }
@@ -826,6 +843,7 @@ void Chipset::calculateNextPITUpdate()
 {
     // find first channel to trigger
     int step = 0xFFFF;
+    int stepNo1 = 0xFFFF;
     for(int i = 0; i < 3; i++)
     {
         if(!(pit.active & (1 << i)))
@@ -844,11 +862,19 @@ void Chipset::calculateNextPITUpdate()
         else if(mode == 3)
             remaining /= 2; // double-decrement
 
-        if(remaining > 0 && remaining < step)
-            step = remaining;
+        if(remaining > 0)
+        {
+            if(remaining < step)
+                step = remaining;
+
+            // special "next update, but not the one that triggers ram refresh" counter
+            if(remaining < stepNo1 && i != 1)
+                stepNo1 = remaining;
+        }
     }
 
     pit.nextUpdateCycle = pit.lastUpdateCycle + step * System::getPITClockDiv();
+    pit.nextNonRefreshUpdateCycle = pit.lastUpdateCycle + stepNo1 * System::getPITClockDiv();
 }
 
 void Chipset::updateSpeaker(uint32_t target)
