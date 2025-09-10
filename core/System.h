@@ -117,6 +117,7 @@ private:
 
         uint32_t lastUpdateCycle = 0;
         uint32_t nextUpdateCycle = 0;
+        uint32_t nextNonRefreshUpdateCycle = 0;
     };
 
     struct PPI
@@ -140,6 +141,8 @@ private:
     PPI ppi;
 
     bool nmiEnabled = false;
+
+    int dmaRefreshRequests = 0;
 
     FIFO<uint8_t, 8> keyboardQueue;
     uint32_t keyboardClockLowCycle = 0;
