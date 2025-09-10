@@ -3,7 +3,7 @@
 ## Features
 
 - Mostly complete 8088 CPU core
-- Basic chipset support (PIC/PIT/PPI), DMA is mostly missing so disk support is a bit of a hack]
+- Basic chipset support (DMA/PIC/PIT/PPI)
 - Keyboard input
 - Colour Graphics Adapter
 - Some floppy controller support
