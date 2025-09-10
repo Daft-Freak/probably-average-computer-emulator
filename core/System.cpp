@@ -831,6 +831,10 @@ void Chipset::calculateNextPITUpdate()
         if(!(pit.active & (1 << i)))
             continue;
 
+        // ch2 gate
+        if(i == 2 && !(ppi.output[1] & 1))
+            continue;
+
         int mode = (pit.control[i] >> 1) & 7;
 
         int remaining = pit.counter[i];
