@@ -523,6 +523,14 @@ int main(int argc, char *argv[])
         size_t readLen = biosFile.gcount();
 
         uint32_t biosBase = 0xF0000;
+
+        // special case 8K ROM (memory handling uses 16K blocks)
+        if(readLen == 8192)
+        {
+            memcpy(biosROM + 8192, biosROM, 8192);
+            readLen = 16 * 1024;
+        }
+
         // move shorter ROM to end (so reset vector is in the right place)
         if(readLen < sizeof(biosROM))
             biosBase += sizeof(biosROM) - readLen;
