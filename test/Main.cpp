@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
         // skip unimpl
         // ... exit(1) was a bad move...
         auto k = opcode.key();
-        if(k == "0F" || k == "2F"/*DAS*/ || k == "37"/*AAA*/ || k == "3F"/*AAS*/ || k == "CE"/*INTO*/ || k == "E5" /*IN w*/ || k == "E7" /*OUT w*/)
+        if(k == "0F" || k == "37"/*AAA*/ || k == "3F"/*AAS*/ || k == "CE"/*INTO*/ || k == "E5" /*IN w*/ || k == "E7" /*OUT w*/)
             continue;
         //
 

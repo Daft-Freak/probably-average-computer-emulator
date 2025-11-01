@@ -673,6 +673,35 @@ void RAM_FUNC(CPU::executeInstruction)()
             doALU16AImm<doSub>(addr);
             break;
 
+        case 0x2F: // DAS
+        {
+            int val = reg(Reg8::AL);
+
+            int cmp2 = (flags & Flag_A) ? 0x9F : 0x99;
+
+            if((reg(Reg8::AL) & 0xF) > 9 || (flags & Flag_A))
+            {
+                reg(Reg8::AL) -= 6;
+                flags |= Flag_A;
+            }
+
+            if(val > cmp2 || (flags & Flag_C))
+            {
+                reg(Reg8::AL) -= 0x60;
+                flags |= Flag_C;
+            }
+
+            val = reg(Reg8::AL);
+
+            flags = (flags & ~(Flag_P | Flag_Z | Flag_S))
+                  | (val == 0 ? Flag_Z : 0)
+                  | (val & 0x80 ? Flag_S : 0)
+                  | (parity(val) ? Flag_P : 0);
+
+            cyclesExecuted(4);
+            break;
+        }
+
         case 0x30: // XOR r/m8 r8
             doALU8<doXor, false, 3, 16>(addr);
             break;
