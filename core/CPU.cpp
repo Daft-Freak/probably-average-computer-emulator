@@ -448,7 +448,10 @@ void RAM_FUNC(CPU::run)(int ms)
 
         delayInterrupt = false;
 
-        executeInstruction();
+        if(!halted)
+            executeInstruction();
+        else
+            cyclesExecuted(1); // FIXME: do something smarter
 
         // sync for interrupts
         uint32_t exec = sys.getCycleCount() - oldCycles;
@@ -2423,6 +2426,13 @@ void RAM_FUNC(CPU::executeInstruction)()
             break;
         }
 
+        case 0xF4: // HLT
+        {
+            halted = true;
+            cyclesExecuted(2);
+            break;
+        }
+
         case 0xF5: // CMC
         {
             flags ^= Flag_C;
@@ -3132,4 +3142,6 @@ void RAM_FUNC(CPU::serviceInterrupt)(uint8_t vector)
     reg(Reg16::CS) = newCS;
     reg(Reg16::IP) = newIP;
     cyclesExecuted(51 + 5 * 4); // timing for INT
+
+    halted = false;
 }
